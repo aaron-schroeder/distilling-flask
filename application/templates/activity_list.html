@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+  
+{% block header %}
+  <h1>{% block title %}Your most recent activities{% endblock %}</h1>
+{% endblock %}
+
+{% block content %}
+  {% for act in resp_json %}
+    {# Provide a link to the activity detail dashboard, #}
+    {# which uses the id in the url to retrieve the activity data. #}
+    <a href="/dash-activity/{{ act['id'] }}">{{ act['name'] }}</a> ({{ act['start_date_local'] }})
+    <br>
+  {% endfor %}
+{% endblock %}
