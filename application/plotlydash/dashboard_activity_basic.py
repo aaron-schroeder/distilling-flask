@@ -35,9 +35,10 @@ def add_dashboard_to_flask(server):
     server=server,
     routes_pathname_prefix='/dash-activity/',
     
-    # Not yet.
-    # external_stylesheets=['/static/css/styles.css'],
-    external_stylesheets=[dbc.themes.BOOTSTRAP],
+    external_stylesheets=[
+      dbc.themes.BOOTSTRAP,
+      # '/static/css/styles.css',  # Not yet.
+    ],
     
     # Turn this on to avoid using local scripts.
     #external_scripts=[
@@ -224,7 +225,8 @@ def create_layout(dash_app, df=None, **kwargs):
       # For athlete_callback_reverse
       html.Div(id=DUMMY_XY_TO_MAP_ID),
     ],
-    id='dash-container'
+    id='dash-container',
+    #className='container',
   )
 
   #return dash_app
@@ -258,6 +260,8 @@ def init_callbacks(dash_app):
   def update_figs(pathname):
     """Where all the data-related magic happens."""
 
+    # Extract the activity id from the url, whatever it is.
+    # eg `/whatever/whateverelse/activity_id/` -> `activity_id`
     activity_id = os.path.basename(os.path.normpath(pathname))
 
     stream_list = stravatalk.get_activity_json(activity_id, ACCESS_TOKEN)
@@ -320,9 +324,8 @@ def init_callback_map_to_xy(dash_app):
 
 def init_callback_xy_to_map(dash_app):
   # Hover on xy graph -> hover on map
-  dash_app.clientside_callback(
-    """
-    function(hoverData) {{
+  script_text = """
+    function(hoverDataElev, hoverDataSpeed) {{
       var myPlot = document.getElementById('{0}')
 
       if (!myPlot.children[1]) {{
@@ -330,6 +333,7 @@ def init_callback_xy_to_map(dash_app):
       }}
       myPlot.children[1].id = '{0}_js'
 
+      hoverData = hoverDataElev || hoverDataSpeed;
       if (hoverData) {{
         // This should be of the form '?-mapbox'
         //var map_uid = document.getElementsByClassName('mapboxgl-map')[0].id;
@@ -340,7 +344,7 @@ def init_callback_xy_to_map(dash_app):
         div = document.getElementById('{0}_js');
         var evt = [
           {{curveNumber:0, pointNumber: t}}, 
-          {{curveNumber:1, pointNumber: t}}
+          //{{curveNumber:1, pointNumber: t}}
         ];
         Plotly.Fx.hover(
           '{0}_js',
@@ -350,12 +354,13 @@ def init_callback_xy_to_map(dash_app):
       }}
       return window.dash_clientside.no_update
     }}
-    """.format(MAP_ID),
+    """.format(MAP_ID)
+
+  dash_app.clientside_callback(
+    script_text,
     Output(DUMMY_XY_TO_MAP_ID, 'data-hover'),
-    # I GET IT NOW. This provides me with 3 hoverData inputs.
-    # The function should work with all 3 as args. Raha.
     [
       Input(ELEVATION_ID, 'hoverData'),
-      #Input(SPEED_ID, 'hoverData'),
+      Input(SPEED_ID, 'hoverData'),
     ]
   )

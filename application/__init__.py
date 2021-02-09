@@ -12,7 +12,7 @@ from application.plotlydash.dashboard_activity_basic import create_dash_app
 #import application.plotlydash.dashboard_activity as dashboard
 
 
-def create_flask_app(test_config=None):
+def create_app(test_config=None):
   """Construct core Flask application with embedded Dash app.
 
   The application factory function. Flask auto-detects `create_app`

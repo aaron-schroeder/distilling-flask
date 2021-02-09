@@ -3,7 +3,7 @@ import os
 #from dotenv import load_dotenv
 
 
-# BASEDIR = os.path.abspath(path.dirname(__file__))
+# BASEDIR = os.path.abspath(os.path.dirname(__file__))
 # load_dotenv(os.path.join(BASEDIR, '.env'))
 
 
@@ -21,18 +21,15 @@ class Config:
   # https://flask.palletsprojects.com/en/1.1.x/config/#SECRET_KEY
   # SECRET_KEY = os.environ.get('SECRET_KEY')
   SECRET_KEY = 'dev'
-
-
-  # FLASK_ENV = environ.get('FLASK_ENV')
-  FLASK_ENV = 'development'
-  # FLASK_ENV = 'production'  # not sure when I would need this.
-  # DEBUG = True  # auto turned on when FLASK_ENV = 'development'
+  
+  ENV = 'development'  # auto when FLASK_ENV = 'development'
+  DEBUG = True  # auto when FLASK_ENV = 'development'
 
   # Flask application folder name. No need to hide AFAIK.
   #FLASK_APP = os.environ.get('FLASK_APP')
   FLASK_APP = 'application'
 
-  FLASK_DEBUG = 1  # likely not needed
+  # FLASK_DEBUG = 1  # likely not needed
 
   # Strava token - load from environment variable.
   ACCESS_TOKEN = os.environ.get('ACCESS_TOKEN')

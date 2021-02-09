@@ -16,8 +16,8 @@ application/plotlydash/dashboard_activity_new.py
 application/plotlydash/dashboard_activity_old.py
 application/plotlydash/dashboard_activity.py
 application/plotlydash/plot.py
-application/assets/strava_log_rip.html
-application/assets/application-a6dca5129ff0d670197be3f1fd67f96c98ae27018525299caf35d314bd1ef4da
+application/plotlydash/assets/strava_log_rip.html
+application/plotlydash/assets/application-a6dca5129ff0d670197be3f1fd67f96c98ae27018525299caf35d314bd1ef4da
 run_app_dev.py
 run_simple_app_dev.py
 run_simple_basic_app_dev.py
