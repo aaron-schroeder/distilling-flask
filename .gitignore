@@ -10,6 +10,8 @@ application/mapmatching.py
 application/osmp.py
 application/power.py
 application/stravatalk_next.py
+application/routes_next.py
+requirements_extra.txt
 application/templates/activity_detail.html
 application/templates/get_started.html
 application/plotlydash/dashboard_activity_new.py
