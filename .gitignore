@@ -11,6 +11,7 @@ application/osmp.py
 application/power.py
 application/stravatalk_next.py
 application/routes_next.py
+application/labels_next.py
 requirements_extra.txt
 application/templates/activity_detail.html
 application/templates/get_started.html
@@ -23,6 +24,9 @@ application/plotlydash/assets/application-a6dca5129ff0d670197be3f1fd67f96c98ae27
 run_app_dev.py
 run_simple_app_dev.py
 run_simple_basic_app_dev.py
+run_strava_json_dashboard.py
+run_tcx_dashboard.py
+out/strava_latest.json
 
 # Local compooper stuff
 .vscode/

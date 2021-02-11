@@ -3,7 +3,7 @@ import os
 
 from flask import Flask, request, abort
 from application import config
-from application.plotlydash.dashboard_activity_basic import create_dash_app
+from application.plotlydash.dashboard_activity_basic import create_dash_app_strava
 #from application.plotlydash.dashboard_activity_new import create_dash_app
 #from application.plotlydash.dashboard_activity_basic import create_dash_app
 

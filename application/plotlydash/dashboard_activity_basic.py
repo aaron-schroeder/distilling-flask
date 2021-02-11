@@ -10,6 +10,7 @@ import dash_table
 import pandas as pd
 import plotly.graph_objs as go
 
+from application.labels import StreamLabel
 from application import stravatalk
 from application.plotlydash import plots
 
@@ -66,7 +67,24 @@ def add_dashboard_to_flask(server):
   return dash_app.server
 
 
-def create_dash_app(fname_strava_json, **kwargs):
+def create_dash_app_strava(fname_strava_json):
+  """Construct single-page Dash app that does not talk to strava."""
+
+  with open(fname_strava_json) as json_file:
+    activity_json = json.load(json_file)
+
+  # Load data into an appropriately formatted DataFrame
+  # source-specific
+  df = from_strava_streams(activity_json)
+  #df = df_ops.readers.from_strava_streams(activity_json)
+
+  #app = create_dash_app_df(df)
+  app = create_dash_app_df(df, 'strava')
+
+  return app
+
+
+def create_dash_app_df(df, source_name):
   """Construct single-page Dash app that does not talk to strava.
   
   This is distinct from `create_app` because it returns a Dash app,
@@ -105,26 +123,19 @@ def create_dash_app(fname_strava_json, **kwargs):
     # ],
   )
 
-  # Load data into an appropriately formatted DataFrame
-  with open(fname_strava_json) as json_file:
-    activity_json = json.load(json_file)
-
   # Let's try and break this up into components:
-
-  # --- Reading the file in from json (or whatever format) ---
-  # source-specific
-  df = from_strava_streams(activity_json)
-  #df = df_ops.readers.from_strava_streams(activity_json)
 
   # --- Cleaning the DataFrame that was read in ---
   # source-specific/agnostic
+  # (done in from_strava_streams)
 
-  # if 'latlng' in df.columns: 
-  #   df = df_ops.cleanup_latlng_strava(df) 
+  # --- Converting the column labels to StreamLabels to track ---
+  # --- fields arising from different sources                 ---
+  df.columns = [StreamLabel(col, source_name) for col in df.columns]
 
   # --- Calculating fields from existing fields ---
   # source-agnostic (pkgs)
-  # (This is left up to the user - can be extended)
+  # This is left up to the user - can be extended
 
   # disp[m] = f(lat[deg], lon[deg])
   # disp_latlon = distance.spherical_earth_plane_displacement(df['lat'], df['lon'])
@@ -146,7 +157,7 @@ def create_dash_app(fname_strava_json, **kwargs):
   # --- Generating Dash graphs / plotly figures ---
   # (This is based on what is found in the DF - so in a sense, the DF
   # is the method of communication of what shows up on the plot. This
-  # begs for a standardized system of naming/tracking fields IMO).
+  # begs to use StreamLabels with standard field names IMO).
   # (Or could there be some control in the Dash/plotly functions?
   # But what's the point of that - calculating new cols in the DF only
   # to avoid plotting them...do I need that?)
@@ -169,8 +180,9 @@ def create_dash_app(fname_strava_json, **kwargs):
   # Break this monolithic function up into bite-sized, individually-
   # controllable pieces. At the same time, all the individual functions
   # here require knowledge of how the others operate. So it's like I
-  # need to refactor to make these into individual pipelines. Integrate vertically while separating horizontally.
-  create_layout(app, df, **kwargs)
+  # need to refactor to make these into individual pipelines. 
+  # Integrate vertically while separating horizontally.
+  create_layout(app, df=df)
   #app = create_layout(app, df)
   
   init_callback_map_to_xy(app)
@@ -179,7 +191,15 @@ def create_dash_app(fname_strava_json, **kwargs):
   return app
 
 
-def create_layout(dash_app, df=None, **kwargs):  
+def create_layout(dash_app, df=None):
+  """Catch-all controller function for populating the dashboard.
+  
+  This assumes we will be having a map (latlons), elevation graph
+  (elevation and/or grade), and speed graph (speed/cadence/HR).
+
+  I really think the individual graphs with their corresponding
+  figures should be created together.
+  """
   
   # Thinking of splitting this into individual functions that handle
   # each component and its callbacks.
@@ -190,11 +210,18 @@ def create_layout(dash_app, df=None, **kwargs):
   if df is not None:
     figs = plots.create_xy_plotter_figs(df)
 
+    # Just go with the first source that has both fields.
+    lat_srcs = df.columns.act.field('lat').act.source_names
+    lon_srcs = df.columns.act.field('lon').act.source_names
+    latlon_srcs = list(set(lat_srcs) & set(lon_srcs))
+    if len(latlon_srcs) > 0:
+      latlon_src = latlon_srcs[0]
+
   dash_app.layout = html.Div(
     children=[
       dcc.Graph(
         id=MAP_ID,
-        figure=plots.create_map_fig(df, **kwargs) if df is not None else go.Figure(),
+        figure=plots.create_map_fig(df, latlon_src) if df is not None else go.Figure(),
         config={'doubleClick': False},
       ),
       html.Div(
@@ -219,9 +246,6 @@ def create_layout(dash_app, df=None, **kwargs):
         ],
       ),
 
-      # # For map-to-XY hover callback
-      # html.Div(id=DUMMY_MAP_TO_XY_ID),
-
       # For athlete_callback_reverse
       html.Div(id=DUMMY_XY_TO_MAP_ID),
     ],
@@ -237,6 +261,13 @@ def from_strava_streams(stream_list):
   stream_dict = {stream['type']: stream['data'] for stream in stream_list}
 
   df = pd.DataFrame.from_dict(stream_dict)
+
+  # Rename streams to standard names if they are there, ignore if not.
+  df = df.rename(columns=dict(
+    altitude='elevation',
+    velocity_smooth='speed',
+    grade_smooth='grade'
+  ))
 
   df['lat'] = df['latlng'].apply(lambda x: x[0])
   df['lon'] = df['latlng'].apply(lambda x: x[1])
@@ -268,7 +299,9 @@ def init_callbacks(dash_app):
 
     df = from_strava_streams(stream_list)
 
-    map_fig = plots.create_map_fig(df)
+    df.columns = [StreamLabel(col, 'strava') for col in df.columns]
+
+    map_fig = plots.create_map_fig(df, 'strava')
     xy_figs = plots.create_xy_plotter_figs(df)
 
     return(
@@ -301,7 +334,8 @@ def init_callback_map_to_xy(dash_app):
         //var t = hoverData.points[0].pointIndex
         var t = hoverData.points[0].customdata
         //t = Math.round(t*10)/10
-        Plotly.Fx.hover('{0}_js', {{xval: t, yval:0}})
+        Plotly.Fx.hover('{0}_js', {{xval: t, yval:0}});
+        //Plotly.Fx.hover('{0}_js', [{{curveNumber:0, pointNumber: t}}], 'xy2');
       }}
       return window.dash_clientside.no_update
     }}

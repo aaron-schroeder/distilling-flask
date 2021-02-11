@@ -4,39 +4,63 @@ import datetime
 
 import plotly.graph_objs as go
 
+import application.labels
 
-def create_map_fig(df):
+
+def create_map_fig(df, source_name):
   """Create a map figure using mapbox's plotly package.
 
-  Parameters
-  ----------
-  df (pd.DataFrame):
-    Description.
+  Args:
+    df (pd.DataFrame): column labels must be StreamLabels.
+      This function will look specifically for fields: `lat`, `lon`,
+      and (optional) `time`. If `time` is not found, point numbers
+      will be used instead.
+    source_name (str): The source name to look for the corresponding
+      `lat`, `lon`, and `time` streams in the DF.
 
-  Returns
-  -------
-  map_fig (go.Figure):
-    Description.
+  Returns:
+    map_fig (go.Figure): TODO: Description.
   """
-  map_fig = go.Figure(layout=dict(height=350))
-  
+  # Get the columns of the DataFrame from the given source.
+  # Then convert the labels to field names.
+  df_src = df.act.source(source_name)
+
+  # Should I make this into a DF accessor method? That way,
+  # the DF could possibly save its original source name as an attr.
+  # https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.attrs.html#pandas.DataFrame.attrs
+  df_src.columns = df_src.columns.act.field_names
+
+  map_fig = go.Figure(layout=dict(
+    height=350,
+    margin=dict(b=0,t=0,r=0,l=0),
+  ))
+
+  # These will be single-column DFs because they come from a DF
+  # broken out by `source_name`.
+  lon = df_src['lon']
+  lat = df_src['lat']
+  customdata = df_src['time'] if 'time' in df_src.columns else range(len(df))
+
   map_fig.add_trace(go.Scattermapbox(
-    lon=df['lon'],
-    lat=df['lat'],
-    customdata=df['time'],
+    lon=lon,
+    lat=lat,
+    # lon=df.act.loc('lon', source_name),
+    # lat=df.act.loc('lat', source_name),
+    customdata=customdata,
     name='Full GPS',
     hovertemplate='%{customdata} sec<extra></extra>',
     mode='markers',
   ))
-  
+
+  def calc_center(coord_series):
+    return 0.5 * (coord_series.min() + coord_series.max())
+
   map_fig.update_mapboxes(
     style='open-street-map',
-    center_lat=df['lat'].mean(),
-    center_lon=df['lon'].mean(),
+    center_lat=calc_center(lat),
+    center_lon=calc_center(lon),
     zoom=13,
   )
-
-  map_fig.update_layout(margin=dict(b=0,t=0,r=0,l=0))
 
   return map_fig
 
@@ -49,6 +73,11 @@ def create_xy_plotter_figs(df):
   this to keep track of the operations involved with creating multiple
   graph images in my Dash app.
 
+  Args:
+    df (pd.DataFrame): column labels must be StreamLabels.
+      This function will look specifically for fields: `elevation`,
+      `grade`, `speed`, `heartrate`, and `cadence`.
+
   Returns:
     dict(go.Figure): Maps figure names to plotly Figure instances.
 
@@ -58,57 +87,72 @@ def create_xy_plotter_figs(df):
       default series of plots that emerge based on what fields are
       in the DF. I'll figure out how I want to do it.
   """
-  plotter = Plotter(df, x_series_name='time')
+  plotter = Plotter(df, x_stream_label='time')
 
   # *** ELEVATION TRACES ***
-  # TODO: Put a check for elevation in the DF here? I only proceed 
-  # safely because I know exactly how the DF is prepared.
+
   plotter.init_fig('elevation')
 
   # Update the `elevation` figure's default axis.
-  plotter.figs['elevation'].update_yaxes(
-    range=[
-      math.floor(df['altitude'].min() / 200) * 200,
-      math.ceil(df['altitude'].max() / 200) * 200
-    ],
-    ticksuffix=' m',
-    hoverformat='.2f',
-  )
 
-  # Add trace to the `elevation` figure, on the default yaxis.
-  plotter.add_trace('elevation', 'altitude', visible=True)
+  # TODO: Make the plot axes more general. For example, if there are no 
+  # elevation traces, don't make the elevation axis y1. This affects 
+  # hovering from the map onto the xy traces, specifically when I have
+  # heart rate without speed.
+
+  # Find the first label with 'elevation' field.
+  if df.act.has_field('elevation'):
+    elev_labels = df.columns.act.field('elevation')
+    elev_lbl = elev_labels[0]
+
+    plotter.figs['elevation'].update_yaxes(
+      range=[
+        math.floor(df[elev_lbl].min() / 200) * 200,
+        math.ceil(df[elev_lbl].max() / 200) * 200
+      ],
+      ticksuffix=' m',
+      hoverformat='.2f',
+    )
+
+    # Add matching traces to the `elevation` figure, on the default yaxis.
+    for lbl in elev_labels:
+      plotter.add_trace('elevation', lbl, visible=True)
 
   # *** END OF ELEVATION TRACES ***
 
   # *** GRADE TRACES ***
 
-  # Create a new yaxis for grade on the right side of the 
-  # elevation plot (which has main yaxis1, or yaxis.)
-  # TODO: Consider making this a Plotter method.
-  plotter.figs['elevation'].update_layout(
-    yaxis2=dict(
-      anchor='x',
-      overlaying='y',
-      side='right',
-      #title=dict(text='Grade (%)'),
-      ticksuffix='%',
-      range=[-75, 75],
-      hoverformat='.2f',
-      showticklabels=False,
-      showgrid=False,
-    
-      # Turn on the zeroline and make it visible in this color scheme.
-      zeroline=True,
-      zerolinewidth=1, 
-      zerolinecolor='black',
-    )
-  )
+  if df.act.has_field('grade'):
+    grade_labels = df.columns.act.field('grade')
 
-  # Add grade traces.
-  # TODO: What if Plotter kept track of where each field needed to be
-  # plotted? Like, elevation is y1 and grade is y2 of figure 1, but 
-  # don't make the end user keep track of that.
-  plotter.add_trace('elevation', 'grade_smooth', yaxis='y2', visible=True)
+    # Create a new yaxis for grade on the right side of the 
+    # elevation plot (which has main yaxis1, or yaxis.)
+    # TODO: Consider making this a Plotter method.
+    plotter.figs['elevation'].update_layout(
+      yaxis2=dict(
+        anchor='x',
+        overlaying='y',
+        side='right',
+        #title=dict(text='Grade (%)'),
+        ticksuffix='%',
+        range=[-75, 75],
+        hoverformat='.2f',
+        showticklabels=False,
+        showgrid=False,
+      
+        # Turn on the zeroline and make it visible in this color scheme.
+        zeroline=True,
+        zerolinewidth=1, 
+        zerolinecolor='black',
+      )
+    )
+
+    # Add grade traces.
+    # TODO: What if Plotter kept track of where each field needed to be
+    # plotted? Like, elevation is y1 and grade is y2 of figure 1, but 
+    # don't make the end user keep track of that.
+    for lbl in grade_labels:
+      plotter.add_trace('elevation', lbl, yaxis='y2', visible=True)
 
   # *** END OF GRADE ***
 
@@ -129,8 +173,6 @@ def create_xy_plotter_figs(df):
   )
 
   # See min/mile (mm:ss) instead of m/s.
-  # import datetime
-  # import math
   def speed_to_pace(speed_ms):
     """Came over from `boulderhikes/utils.py`"""
     if speed_ms is None or math.isnan(speed_ms):
@@ -154,50 +196,57 @@ def create_xy_plotter_figs(df):
     
     return mile_pace_time.strftime('%-M:%S')
 
-  speed_text = df['velocity_smooth'].apply(speed_to_pace)
-
-  plotter.add_trace('speed', 'velocity_smooth', 
-                    yaxis='y1', text=speed_text, visible=True)
+  speed_labels = df.columns.act.field('speed')
+  for lbl in speed_labels:
+    speed_text = df[lbl].apply(speed_to_pace)
+    plotter.add_trace('speed', lbl, yaxis='y1', text=speed_text, visible=True)
 
   # *** END OF SPEED / VELOCITY ***
 
-  # *** REMAINING FIELDS ***
-
   # *** HEART RATE ***
-  plotter.figs['speed'].update_layout(
-    yaxis2=dict(
-      anchor='x',
-      overlaying='y',
-      side='right',
-      ticksuffix=' bpm',
-      range=[60, 220],
-      hoverformat='.0f',
-      showticklabels=False,
-      showgrid=False,
-    )
-  )
+  
+  if df.act.has_field('heartrate'):
 
-  plotter.add_trace('speed', 'heartrate', yaxis='y2',
-                    line=dict(color='#d62728'))
+    hr_labels = df.columns.act.field('heartrate')
+
+    plotter.figs['speed'].update_layout(
+      yaxis2=dict(
+        anchor='x',
+        overlaying='y',
+        side='right',
+        ticksuffix=' bpm',
+        range=[60, 220],
+        hoverformat='.0f',
+        showticklabels=False,
+        showgrid=False,
+      )
+    )
+
+    for lbl in hr_labels:
+      plotter.add_trace('speed', lbl, yaxis='y2', line=dict(color='#d62728'))
 
   # *** END OF HEART RATE ***
 
   # *** CADENCE ***
 
-  plotter.figs['speed'].update_layout(
-    yaxis3=dict(
-      anchor='x',
-      overlaying='y',
-      side='right',
-      ticksuffix=' spm',
-      range=[60, 220],
-      hoverformat='.0f',
-      showticklabels=False,
-      showgrid=False,
-    )
-  )
+  if df.act.has_field('cadence'):
+    cad_labels = df.columns.act.field('cadence')
 
-  plotter.add_trace('speed', 'cadence', yaxis='y3', mode='markers', marker=dict(size=2))
+    plotter.figs['speed'].update_layout(
+      yaxis3=dict(
+        anchor='x',
+        overlaying='y',
+        side='right',
+        ticksuffix=' spm',
+        range=[60, 220],
+        hoverformat='.0f',
+        showticklabels=False,
+        showgrid=False,
+      )
+    )
+
+    for lbl in cad_labels:
+      plotter.add_trace('speed', lbl, yaxis='y3', mode='markers', marker=dict(size=2))
 
   # *** END OF CADENCE ***
 
@@ -205,49 +254,56 @@ def create_xy_plotter_figs(df):
 
   # Draw rectangles on the figure corresponding to stopped periods.
   # TODO: Make this into its own function, I think.
-
-  times_stopped = df.index.to_series().groupby(by=(df['moving']))
-
-  # Find all the timestamps when strava switches the user from stopped
-  # to moving, or from moving to stopped.
-  switch_times = df['time'][df['moving'].shift(1) != df['moving']].to_list()
-
-  rect_bounds_all = [
-    (
-      switch_times[i], 
-      switch_times[i+1] - 1
-    )
-    for i in range(0, len(switch_times) - 1)
-  ]
-
-  rect_bounds_all.append((switch_times[-1], df['time'].iloc[-1]))
   
-  if df['moving'][0]:
-    # We start off MOVING.
-    rect_bounds_off = rect_bounds_all[1::2]
-  else:
-    # We start off STOPPED.
-    rect_bounds_off = rect_bounds_all[::2]
+  if df.act.has_field('moving'):
+    # Just pick the first one (hacked together, gross)
+    moving_lbl = df.columns.act.field('moving')[0]
+    time_lbl = df.columns.act.field('time').act.source(moving_lbl.source_name)[0]
 
-  shapes = [
-    dict(
-      type='rect',
-      #layer='below',
-      line={'width': 0}, 
-      #fillcolor='LightSalmon',
-      fillcolor='red',
-      opacity=0.5,
-      xref='x',
-      x0=x[0],
-      x1=x[1],
-      yref='paper',
-      y0=0,
-      y1=1,)
-    for x in rect_bounds_off
-  ]
+    times_stopped = df[time_lbl].groupby(by=(df[moving_lbl]))
 
-  #Something like this.
-  plotter.figs['speed'].update_layout(dict(shapes=shapes,))
+    # Find all the timestamps when strava switches the user from stopped
+    # to moving, or from moving to stopped.
+    switch_times = df[time_lbl][
+      df[moving_lbl].shift(1) != df[moving_lbl]
+    ].to_list()
+
+    rect_bounds_all = [
+      (
+        switch_times[i], 
+        switch_times[i+1] - 1
+      )
+      for i in range(0, len(switch_times) - 1)
+    ]
+
+    rect_bounds_all.append((switch_times[-1], df[time_lbl].iloc[-1]))
+    
+    if df[moving_lbl][0]:
+      # We start off MOVING.
+      rect_bounds_off = rect_bounds_all[1::2]
+    else:
+      # We start off STOPPED.
+      rect_bounds_off = rect_bounds_all[::2]
+
+    shapes = [
+      dict(
+        type='rect',
+        #layer='below',
+        line={'width': 0}, 
+        #fillcolor='LightSalmon',
+        fillcolor='red',
+        opacity=0.5,
+        xref='x',
+        x0=x[0],
+        x1=x[1],
+        yref='paper',
+        y0=0,
+        y1=1,)
+      for x in rect_bounds_off
+    ]
+
+    #Something like this.
+    plotter.figs['speed'].update_layout(dict(shapes=shapes,))
 
   # *** END OF MOVING/STOPPED ***
 
@@ -256,11 +312,17 @@ def create_xy_plotter_figs(df):
 
 
 class Plotter(object):
-  def __init__(self, df, x_series_name='time'):
+  def __init__(self, df, x_stream_label='time'):
+    """
+    Args:
+      x_stream_label (str or labels.StreamLabel): column label for the
+        desired x-axis series in the DataFrame. If a string, the first
+        column with a StreamLabel bearing the same field_name.
+    """
     self.df = df
     #self.fig = self.init_fig()
     self.figs = {}
-    self.set_x_series_name(x_series_name)
+    self.set_x_stream_label(x_stream_label)
 
   def init_fig(self, fig_name):
     # Should I add kwargs? We will see.
@@ -273,6 +335,7 @@ class Plotter(object):
       #plot_bgcolor='rgba(0,0,0,0)',
       #legend=dict(yanchor='bottom', y=0.01),
       legend=dict(orientation='h'),
+      showlegend=True,
       hovermode='x',
     ))
 
@@ -281,8 +344,8 @@ class Plotter(object):
       showgrid=False,
       showticklabels=False,
       range=[
-        self.df[self.x_series_name].min(),
-        self.df[self.x_series_name].max(),
+        self.df[self.x_stream_label].min(),
+        self.df[self.x_stream_label].max(),
       ]
     ))
     fig.update_yaxes(dict(
@@ -293,17 +356,30 @@ class Plotter(object):
 
     self.figs[fig_name] = fig
 
-  def set_x_series_name(self, series_name):
-    if series_name not in self.df.columns:
+  def set_x_stream_label(self, stream_label):
+
+    if isinstance(stream_label, str):
+      matching_cols = self.df.columns.act.field(stream_label)
+      
+      # Just pick the first matching stream then.
+      stream_label = matching_cols[0]
+
+    elif stream_label not in self.df.columns:
       raise KeyError
 
-    self.x_series_name = series_name
+    self.x_stream_label = stream_label
 
-  def add_trace(self, fig_name, series_name, **kwargs):
+  def add_trace(self, fig_name, stream_label, **kwargs):
+    if isinstance(stream_label, str):
+      matching_cols = self.df.columns.act.field(stream_label)
+      
+      # Just pick the first matching stream then.
+      stream_label = matching_cols[0]
+
     trace = dict(
-      x=self.df[self.x_series_name],
-      y=self.df[series_name],
-      name=series_name,
+      x=self.df[self.x_stream_label],
+      y=self.df[stream_label],
+      name=str(stream_label),
       visible='legendonly',
     )
     
