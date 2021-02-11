@@ -38,7 +38,9 @@ interface. To that end, I've created a class to be used as column labels in
 `pandas.DataFrame`. `StreamLabel` keeps track of both the field name and the
 source of data streams. This facilitates a common, recognizable labeling
 system for data streams stored in `DataFrame` columns. I've created custom 
-accessors for pandas.DataFrame and pandas.Index work with `StreamLabel`.
+accessors for `pandas.DataFrame` and `pandas.Index` to work with `StreamLabel`.
+
+See the [Examples](#examples) section below to see how everything works.
 
 ---
 
