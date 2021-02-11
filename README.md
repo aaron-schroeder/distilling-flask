@@ -79,6 +79,7 @@ import application
 app = application.create_app()
 app.run()
 ```
+![List of activities](https://github.com/aaron-schroeder/strava_flask_dashboard/blob/master/activity_list_screenshot.jpg?raw=true)
 
 ### Run the Dash app with local data
 
