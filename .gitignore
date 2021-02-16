@@ -10,7 +10,6 @@ application/mapmatching.py
 application/osmp.py
 application/power.py
 application/power/
-application/converters.py
 application/stravatalk_next.py
 application/routes_next.py
 application/labels_next.py
