@@ -8,14 +8,6 @@ import pandas as pd
 import plotly.graph_objs as go
 
 import application.labels
-  
-
-def init_layout():
-  return html.Div(
-    children=[],
-    id='dash-container',
-    #className='container',
-  )
 
 
 class Plotter(object):
@@ -30,8 +22,9 @@ class Plotter(object):
     self.df = df
     # self.df = self._validate(df)
 
-    self.layout = init_layout()
-    
+    # This list can be used as the children of a html.Div element.
+    self.rows = []   
+
     self._fig_yaxes = {}
 
     # Memoize for use with @property.
@@ -63,7 +56,7 @@ class Plotter(object):
 
   def get_fig_by_id(self, id_search):
     # Traverse the layout, which is made up of html.Div rows.
-    for row in self.layout.children:
+    for row in self.rows:
       # Each row contains 0 or more children:
       # (either dcc.Graph cols or html.Div dummies).
       for child in row.children:
@@ -104,7 +97,7 @@ class Plotter(object):
 
     # Create a row for the map to have to itself.
     # Add the row at the end of the layout children list/rows.
-    self.layout.children.append(html.Div(
+    self.rows.append(html.Div(
       className='row',  # up for debate
       children=[
         # map
@@ -141,8 +134,6 @@ class Plotter(object):
     map_fig.add_trace(go.Scattermapbox(
       lon=lon,
       lat=lat,
-      # lon=df.act.loc('lon', source_name),
-      # lat=df.act.loc('lat', source_name),
       customdata=self.x_stream,
       name=source_name,
       hovertemplate='%{customdata} sec<extra></extra>',
@@ -202,20 +193,15 @@ class Plotter(object):
     )
 
     # row_num starts at 1, not 0.
-    if new_row or len(self.layout.children) == 0:
+    if new_row or len(self.rows) == 0:
       # Create a new row, and place the new graph/fig in it.
-      # self.layout.children.append(html.Div(
-      #   className='row',
-      #   children=[new_graph],
-      # ))
-      self.layout.children.append(html.Div(
+      self.rows.append(html.Div(
         className='row',
         children=[new_graph, new_dummy_div],
       ))
     else:
       # Append the new graph/fig to the end of the last row.
-      # self.layout.children[-1].children.append(new_graph)
-      self.layout.children[-1].children.extend([new_graph, new_dummy_div])
+      self.rows[-1].children.extend([new_graph, new_dummy_div])
   
     # Keep track of this figure's yaxes (none yet).
     self._fig_yaxes[fig_name] = []
@@ -254,7 +240,6 @@ class Plotter(object):
       stream_label = matching_cols[0]
 
     trace = dict(
-      # x=self.df[self.x_stream_label] if self.x_stream_label else list(range(len(df))),
       x=self.x_stream,
       y=self.df[stream_label],
       name=str(stream_label),
@@ -268,8 +253,29 @@ class Plotter(object):
     self.get_fig_by_id(fig_name).add_trace(trace)
 
 
-def create_plotter_layout(df, x_stream_label=None):
-  plotter = Plotter(df)  # , x_stream_label='time')
+def create_plotter_rows(df, x_stream_label=None):
+  """Catch-all controller function for dashboard layout logic.
+
+  Creates a `html.Div.children` list based on streams available
+  in the DataFrame:
+    - map graph with go.Scattermapbox ('lat' + 'lon')
+    - elevation graph with go.Scatter ('elevation' / 'grade'),
+    - speed graph with go.Scatter ('speed' / 'cadence' / 'heartrate')
+
+  Args:
+    df (pd.DataFrame): A DataFrame with StreamLabels for column labels
+    x_stream_label (str or labels.StreamLabel): The desired stream to
+      use for the x-axis of the plots. If None, the x-axis will simply
+      be point numbers (record numbers). Default None.
+
+  Returns:
+    list(html.Div): rows to be used as children of a html.Div element.
+
+  TODO:
+    * Find a way to bring the callback creation into this function,
+    * or bring this function over to dashboard_activity.
+  """  
+  plotter = Plotter(df)
 
   if x_stream_label is not None:
     plotter.set_x_stream_label(x_stream_label)
@@ -351,7 +357,7 @@ def create_plotter_layout(df, x_stream_label=None):
     grade_labels = df.columns.act.field('grade')
     for lbl in grade_labels:
       plotter.add_trace('elevation', lbl, yaxis=grade_axis, visible=True)
-
+ 
   # *** r2f1alt (grade) ***
 
   # *** Row 2, figure 2: Speed ***
@@ -477,6 +483,8 @@ def create_plotter_layout(df, x_stream_label=None):
   # TODO: Make this into its own function, I think.
   
   if df.act.has_field('moving') and plotter.has_fig('speed'):
+    # Highlight stopped periods on the speed plot with rectangles.
+
     # Just pick the first one (hacked together, gross)
     moving_lbl = df.columns.act.field('moving')[0]
     time_lbl = df.columns.act.field('time').act.source(moving_lbl.source_name)[0]
@@ -527,4 +535,4 @@ def create_plotter_layout(df, x_stream_label=None):
 
   # *** END OF MOVING/STOPPED ***
 
-  return plotter.layout
+  return plotter.rows
