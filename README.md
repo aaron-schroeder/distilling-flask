@@ -98,14 +98,12 @@ From a `pandas.DataFrame`:
 import math
 time = range(600)
 df = pd.DataFrame.from_dict(dict(
-    # Required fields:
     time=time,
     lat=[40.0 + 0.00001 * t for t in time],
     lon=[-105.0 + 0.00001 * t for t in time],
     elevation=[1609.0 + 40 * math.cos(0.01 * t) for t in time],
-    speed=[3.0 + math.sin(0.1 * t) for t in time],
-    # Optional fields:
     grade=[-4 * math.sin(0.01 * t) for t in time],
+    speed=[3.0 + math.sin(0.1 * t) for t in time],
     heartrate=[140 + 15 * math.cos(0.1 * t) for t in time],
     cadence=[160 + 5 * math.sin(0.1 * t) for t in time],
 ))

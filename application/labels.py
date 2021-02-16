@@ -85,7 +85,8 @@ class StreamLabel(object):
       setattr(self, fld_type, src)
 
   def __repr__(self):
-    return f'{self.__class__.__name__}({self.field_name}, {self.source_name})'
+    return f'{self.__class__.__name__}' +  \
+           f'({self.field_name.__repr__()}, {self.source_name.__repr__()})'
 
   def __str__(self):
     return f'{self.field_name} ({self.source_name})'
@@ -130,11 +131,24 @@ class ActivityIndexAccessor:
     https://pandas.pydata.org/docs/reference/api/pandas.api.extensions.register_index_accessor.html#pandas.api.extensions.register_index_accessor
     """
     # Consider adding this check:
-    # raise AttributeError('Can only use .act accessor with Index, not MultiIndex')
+    # raise AttributeError('Can only use .act accessor with Index, '
+    #                      'not MultiIndex')
 
     if data.dtype != 'object':
-      raise AttributeError('Can only use .act accessor with string or StreamLabel values!')
+      raise AttributeError(
+        'Can only use .act accessor with dtype="object"!'
+      )
+        
+      # TODO: Once I find a way to convert `${field}_${src}` strings
+      # to StreamLabels:
+      #   raise AttributeError('Can only use .act accessor with string '
+      #                       'or StreamLabel values!')
 
+    if not data.map(lambda x: isinstance(x, StreamLabel)).all():
+      raise AttributeError(
+        'Can only use .act accessor with StreamLabel values!'
+      )
+      
   def field(self, field_name):
     """Return labels that match the given field name."""
     #series = self._obj.to_series().apply(lambda x: x.field_name == field_name)

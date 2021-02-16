@@ -17,12 +17,15 @@ from application.plotlydash import plots
 
 ACCESS_TOKEN = os.environ.get('ACCESS_TOKEN')
 
+
+LOCATION_ID = 'url'
+
+
+# TODO: Get rid of div ids once they are handled entirely by Plotter.
 MAP_ID = 'map'
 ELEVATION_ID = 'elevation'
 SPEED_ID = 'speed'
-DUMMY_MAP_TO_XY_ID = 'dummy'
-DUMMY_XY_TO_MAP_ID = 'dummy_alt'
-LOCATION_ID = 'url'
+DUMMY_MAP_TO_XY_ID = 'map_dummy'
 
 
 def add_dashboard_to_flask(server):
@@ -47,11 +50,7 @@ def add_dashboard_to_flask(server):
     #],
   )
 
-  # Custom HTML layout
-  #dash_app.index_string = html_layout
-
-  create_layout(dash_app)
-  #dash_app = create_layout(dash_app)
+  init_layout(dash_app)
 
   # Add a url component for callbacks based on strava activity num.
   dash_app.layout.children.append(
@@ -76,9 +75,8 @@ def create_dash_app_strava(fname_strava_json):
   # Load data into an appropriately formatted DataFrame
   # source-specific
   df = from_strava_streams(activity_json)
-  #df = df_ops.readers.from_strava_streams(activity_json)
+  #df = converters.from_strava_streams(activity_json)
 
-  #app = create_dash_app_df(df)
   app = create_dash_app_df(df, 'strava')
 
   return app
@@ -182,8 +180,7 @@ def create_dash_app_df(df, source_name):
   # here require knowledge of how the others operate. So it's like I
   # need to refactor to make these into individual pipelines. 
   # Integrate vertically while separating horizontally.
-  create_layout(app, df=df)
-  #app = create_layout(app, df)
+  create_layout(app, df)
   
   init_callback_map_to_xy(app)
   init_callback_xy_to_map(app)
@@ -191,7 +188,16 @@ def create_dash_app_df(df, source_name):
   return app
 
 
-def create_layout(dash_app, df=None):
+def init_layout(dash_app):
+  """Set up the bare bones of the Dash graphs to fill with data later.
+
+  I want this to work minimally, since the figures will be filled in
+  later, but I also want to follow DRY.
+  """
+  dash_app.layout = plots.init_layout()
+
+
+def create_layout(dash_app, df):
   """Catch-all controller function for populating the dashboard.
   
   This assumes we will be having a map (latlons), elevation graph
@@ -199,6 +205,17 @@ def create_layout(dash_app, df=None):
 
   I really think the individual graphs with their corresponding
   figures should be created together.
+
+  I am starting to think that a Multi-page Dash app might work better
+  than a Flask html page that links over to the Dash app which then uses
+  the URL to do its thing. Like, this works, but...the Dash app is running
+  in the background right? It has to be initialized with nothing, right?
+  Idk. I am still just not satisfied with the flow.
+
+  Args:
+    df (pd.DataFrame): A DataFrame with StreamLabels for column labels,
+      or None, in which case a graph with blank figures will be
+      returned.
   """
   
   # Thinking of splitting this into individual functions that handle
@@ -207,53 +224,9 @@ def create_layout(dash_app, df=None):
   # For now, I'm gonna try and make this function the point player for
   # everything. It will all flow through here.
   
-  if df is not None:
-    figs = plots.create_xy_plotter_figs(df)
+  dash_app.layout = plots.create_plotter_layout(df)  # , x_stream_label='time')
 
-    # Just go with the first source that has both fields.
-    lat_srcs = df.columns.act.field('lat').act.source_names
-    lon_srcs = df.columns.act.field('lon').act.source_names
-    latlon_srcs = list(set(lat_srcs) & set(lon_srcs))
-    if len(latlon_srcs) > 0:
-      latlon_src = latlon_srcs[0]
-
-  dash_app.layout = html.Div(
-    children=[
-      dcc.Graph(
-        id=MAP_ID,
-        figure=plots.create_map_fig(df, latlon_src) if df is not None else go.Figure(),
-        config={'doubleClick': False},
-      ),
-      html.Div(
-        className='row',
-        children=[
-          dcc.Graph(
-            id=ELEVATION_ID,
-            figure=figs[ELEVATION_ID] if df is not None else go.Figure(),
-            className='col-6',
-            clear_on_unhover=True
-          ),
-
-          dcc.Graph(
-            id=SPEED_ID,
-            figure=figs[SPEED_ID] if df is not None else go.Figure(),
-            className='col-6',
-            clear_on_unhover=True
-          ),
-          
-          # For map-to-XY hover callback
-          html.Div(id=DUMMY_MAP_TO_XY_ID),
-        ],
-      ),
-
-      # For athlete_callback_reverse
-      html.Div(id=DUMMY_XY_TO_MAP_ID),
-    ],
-    id='dash-container',
-    #className='container',
-  )
-
-  #return dash_app
+  # TODO: Bring callbacks into `plots.create_plotter_layout()`.
 
 
 def from_strava_streams(stream_list):
@@ -281,15 +254,10 @@ def from_strava_streams(stream_list):
 
 def init_callbacks(dash_app):
   @dash_app.callback(
-    [
-      Output(MAP_ID, 'figure'),
-      Output(ELEVATION_ID, 'figure'),
-      Output(SPEED_ID, 'figure'),
-    ],
+    Output('dash-container', 'children'),
     [Input(LOCATION_ID, 'pathname')]
   )
-  def update_figs(pathname):
-    """Where all the data-related magic happens."""
+  def update_layout(pathname):
 
     # Extract the activity id from the url, whatever it is.
     # eg `/whatever/whateverelse/activity_id/` -> `activity_id`
@@ -300,24 +268,16 @@ def init_callbacks(dash_app):
     df = from_strava_streams(stream_list)
 
     df.columns = [StreamLabel(col, 'strava') for col in df.columns]
+    layout = plots.create_plotter_layout(df)
 
-    map_fig = plots.create_map_fig(df, 'strava')
-    xy_figs = plots.create_xy_plotter_figs(df)
-
-    return(
-      map_fig,
-      xy_figs[ELEVATION_ID],
-      xy_figs[SPEED_ID],
-    )
+    return layout
 
   init_callback_map_to_xy(dash_app)
-
   init_callback_xy_to_map(dash_app)
 
 
 def init_callback_map_to_xy(dash_app):
   # Hover on map -> hover on xy graphs.
-
   script_template = """
     function(hoverData) {{
       var myPlot = document.getElementById('{0}')
@@ -330,12 +290,51 @@ def init_callback_map_to_xy(dash_app):
         if (hoverData.points[0].curveNumber > 1) {{
           return window.dash_clientside.no_update
         }}
-               
-        //var t = hoverData.points[0].pointIndex
-        var t = hoverData.points[0].customdata
-        //t = Math.round(t*10)/10
-        Plotly.Fx.hover('{0}_js', {{xval: t, yval:0}});
-        //Plotly.Fx.hover('{0}_js', [{{curveNumber:0, pointNumber: t}}], 'xy2');
+        
+        // TODO: Using pointIndex might create issues when there
+        // are missing values in ANY array. Customdata is a good
+        // fix, but I think we should inject something that has
+        // no ambiguity: record number (the row number in the DF).
+        // Time sometimes gets wonky (jumping forward or backward),
+        // and other fields are sometimes NaN.
+        //var ix = hoverData.points[0].pointIndex
+        var ix = hoverData.points[0].customdata
+        //ix = Math.round(ix * 10) / 10
+
+        // I think I can make this universal...
+        Plotly.Fx.hover('{0}_js', {{xval: ix, yval:0}});
+
+        // Forcing the mapbox hover event, for ref.
+        // Note: this doesn't work when curveNumber 0
+        // is hidden. Sticking with position-based hover.
+        // var evt = [
+        //   {{curveNumber:0, pointNumber: ix}}, 
+        //   //{{curveNumber:1, pointNumber: ix}}
+        // ];
+        // Plotly.Fx.hover(
+        //   '{0}_js',
+        //   evt,
+        //   // 'mapbox'
+        // )
+
+        // Note: Could this script become general by receiving 
+        // two inputs? 
+        // 1) id of the dcc.Graph (map, elevation, speed)
+        // 2) name of the subplot that needs to be hovered
+        //    (mapbox, xy, xy2, xy3, etc)
+        // Not sure, as the xy hovering works because of the
+        // shared hovering. To do curvenumber, I'd need to select
+        // each trace's point individually (using customdata=record).
+        // Hm. I think I will try this out AFTER this commit, when I
+        // Play around with multiple traces on the map.
+        // Could change the map's hovering to select
+        // all nearby points when one pointNumber is selected.
+        // Possible?
+        //
+        // Ok. Really last thought. I envision synchronizing all
+        // hovers not by pointnumber, but by customdata.
+
+
       }}
       return window.dash_clientside.no_update
     }}
@@ -357,9 +356,15 @@ def init_callback_map_to_xy(dash_app):
 
 
 def init_callback_xy_to_map(dash_app):
-  # Hover on xy graph -> hover on map
+  """Hover on xy graph -> hover on map
+
+  TODO:
+    * dummy divs for every xy plot = synchronize
+      hovering between xyplots too.
+  """
+
   script_text = """
-    function(hoverDataElev, hoverDataSpeed) {{
+    function(hoverData) {{
       var myPlot = document.getElementById('{0}')
 
       if (!myPlot.children[1]) {{
@@ -367,7 +372,6 @@ def init_callback_xy_to_map(dash_app):
       }}
       myPlot.children[1].id = '{0}_js'
 
-      hoverData = hoverDataElev || hoverDataSpeed;
       if (hoverData) {{
         // This should be of the form '?-mapbox'
         //var map_uid = document.getElementsByClassName('mapboxgl-map')[0].id;
@@ -376,6 +380,7 @@ def init_callback_xy_to_map(dash_app):
         var t = hoverData.points[0].pointIndex
         //t = Math.round(t*10)/10
         div = document.getElementById('{0}_js');
+
         var evt = [
           {{curveNumber:0, pointNumber: t}}, 
           //{{curveNumber:1, pointNumber: t}}
@@ -392,9 +397,12 @@ def init_callback_xy_to_map(dash_app):
 
   dash_app.clientside_callback(
     script_text,
-    Output(DUMMY_XY_TO_MAP_ID, 'data-hover'),
-    [
-      Input(ELEVATION_ID, 'hoverData'),
-      Input(SPEED_ID, 'hoverData'),
-    ]
+    Output(f'{ELEVATION_ID}_dummy', 'data-hover'),
+    [Input(ELEVATION_ID, 'hoverData')]
+  )
+
+  dash_app.clientside_callback(
+    script_text,
+    Output(f'{SPEED_ID}_dummy', 'data-hover'),
+    [Input(SPEED_ID, 'hoverData')]
   )

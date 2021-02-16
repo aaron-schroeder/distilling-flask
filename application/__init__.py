@@ -45,7 +45,5 @@ def create_app(test_config=None):
     #from application.plotlydash.dashboard_activity_new import add_dashboard_to_flask
     from application.plotlydash.dashboard_activity_basic import add_dashboard_to_flask
     app = add_dashboard_to_flask(app)
-    
-    #app = dashboard.add_dashboard_to_flask(app)
 
     return app

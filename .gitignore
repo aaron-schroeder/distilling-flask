@@ -9,6 +9,8 @@ application/dataframe_operations.py
 application/mapmatching.py
 application/osmp.py
 application/power.py
+application/power/
+application/converters.py
 application/stravatalk_next.py
 application/routes_next.py
 application/labels_next.py
@@ -22,10 +24,11 @@ application/plotlydash/plot.py
 application/plotlydash/assets/strava_log_rip.html
 application/plotlydash/assets/application-a6dca5129ff0d670197be3f1fd67f96c98ae27018525299caf35d314bd1ef4da
 run_app_dev.py
-run_simple_app_dev.py
-run_simple_basic_app_dev.py
-run_strava_json_dashboard.py
-run_tcx_dashboard.py
+run_dashboard_strava_json.py
+run_dashboard_tcx.py
+run_dashboard_df.py
+run_dashboard_fit.py
+run_dashboard_comparison.py
 out/strava_latest.json
 
 # Local compooper stuff
