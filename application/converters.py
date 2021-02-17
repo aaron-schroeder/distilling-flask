@@ -97,7 +97,7 @@ def from_fit(fname):
   df_rec['cadence'] = df_rec['cadence'] * 2
 
   # Drop BS cols if they are there
-  df_rec.drop(
+  df_rec = df_rec.drop(
     columns=[
         'enhanced_speed',
         'enhanced_altitude',
@@ -114,3 +114,7 @@ def from_fit(fname):
   df_rec = df_rec.dropna(axis=1, how='all')
 
   return df_rec
+
+
+def from_csv(fname):
+  raise NotImplementedError

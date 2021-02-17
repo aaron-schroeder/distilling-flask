@@ -1,15 +1,9 @@
 import os
-#import requests
-
-from flask import Flask, request, abort
+from flask import Flask
 from application import config
 from application.plotlydash.dashboard_activity_basic import create_dash_app_strava
-#from application.plotlydash.dashboard_activity_new import create_dash_app
 #from application.plotlydash.dashboard_activity_basic import create_dash_app
-
-#import application.plotlydash.dashboard_activity_new as dashboard
-#import application.plotlydash.dashboard_activity_new as dashboard
-#import application.plotlydash.dashboard_activity as dashboard
+#import application.plotlydash.dashboard_activity_basic as dashboard
 
 
 def create_app(test_config=None):
@@ -41,8 +35,6 @@ def create_app(test_config=None):
     # from application.plotlydash.dashboard import create_dashboard
     # app = create_dashboard(app)
 
-    #from application.plotlydash.dashboard_activity import add_dashboard_to_flask
-    #from application.plotlydash.dashboard_activity_new import add_dashboard_to_flask
     from application.plotlydash.dashboard_activity_basic import add_dashboard_to_flask
     app = add_dashboard_to_flask(app)
 

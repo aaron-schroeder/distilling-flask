@@ -134,13 +134,13 @@ df = pd.DataFrame.from_dict({
 
 Use the custom accessor to work with this specifically-formatted DataFrame.
 ```
->>> df.act.has_source('strava')
+>>> df.sl.has_source('strava')
 True
 
->>> df.act.has_source('device')
+>>> df.sl.has_source('device')
 False
 
->>> df.act.source('strava')
+>>> df.sl.source('strava')
 
    time (strava)  speed (strava)
 0              0             3.0
@@ -150,10 +150,10 @@ False
 4              4             3.8
 5              5             3.6
 
->>> df.act.has_fields('speed', 'time')
+>>> df.sl.has_fields('speed', 'time')
 True
 
->>> df.act.field('speed')
+>>> df.sl.field('speed')
 
    speed (strava)  speed (garmin)
 0             3.0             2.9
@@ -162,6 +162,9 @@ True
 3             3.6             3.5
 4             3.8             3.7
 5             3.6             3.8
+
+>>> StreamLabel.from_str('speed~new_src')
+speed (new_src)
 ```
 
 ---
