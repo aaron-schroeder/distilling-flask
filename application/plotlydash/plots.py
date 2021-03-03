@@ -2,23 +2,18 @@ import math
 import json
 import datetime
 
+import pandas as pd
+
+import dash_bootstrap_components as dbc
 import dash_core_components as dcc
 import dash_html_components as html
-import pandas as pd
 import plotly.graph_objs as go
-
-import application.labels
 
 
 class Plotter(object):
-  def __init__(self, df):  # , x_stream_label='time'):
-    """
-    Args:
-      x_stream_label (str or labels.StreamLabel): column label for the
-        desired x-axis series in the DataFrame. If a string, the first
-        column with a StreamLabel bearing the same field_name.
-    """
-    # Even if I don't clean the df here, I should validate it.
+  def __init__(self, df):
+
+    # Even if I don't clean the df here, I should maybe validate it.
     self.df = df
     # self.df = self._validate(df)
 
@@ -29,7 +24,6 @@ class Plotter(object):
 
     # Memoize for use with @property.
     self._x_stream_label = None
-    # self.set_x_stream_label(x_stream_label)
 
   @property
   def x_stream(self):
@@ -38,18 +32,30 @@ class Plotter(object):
     
     return self.df[self._x_stream_label]
 
+  @property
+  def x_stream_text(self):
+    if self._x_stream_label == 'time' or self._x_stream_label == 'distance':
+      return self.x_stream.apply(lambda x: f'{x} {self.unit_suffix}')
+
+    return self.x_stream
+
+  @property
+  def unit_suffix(self):
+    if self._x_stream_label == 'time':
+      return ' s'
+    elif self._x_stream_label == 'distance':
+      return ' m'
+    else:
+      return ''
+
   def set_x_stream_label(self, stream_label):
+    """Set the x data for all xy plots.
 
-    if isinstance(stream_label, str):
-      if not self.df.sl.has_field(stream_label):
-        raise KeyError(f'There is no field named `{stream_label}` in the DF.')
-        
-      matching_cols = self.df.columns.sl.field(stream_label)
-      
-      # Just pick the first matching stream then.
-      stream_label = matching_cols[0]
-
-    elif stream_label not in self.df.columns:
+    Args:
+      stream_label: column label in the DataFrame for the desired stream
+        to use as the x data in all plots.
+    """
+    if stream_label not in self.df.columns:
       raise KeyError(f'There is no stream `{stream_label}` in the DF.')
 
     self._x_stream_label = stream_label
@@ -60,11 +66,14 @@ class Plotter(object):
       # Each row contains 0 or more children:
       # (either dcc.Graph cols or html.Div dummies).
       for child in row.children:
-        if isinstance(child, dcc.Graph):
-          if child.id == id_search:
-            return child.figure
+        if isinstance(child, dbc.Col):
+          assert len(child.children) == 1
+          graph = child.children[0]
+          if graph.id == id_search:
+            return graph.figure
 
-    # Catch an exception here? Right now it returns 'None'.
+
+    # Throw an exception here? Right now it returns 'None'.
 
   def get_yaxis(self, fig_id, field_name):
     # Find the requested field name's position in the list of fields in
@@ -76,17 +85,17 @@ class Plotter(object):
     return 'y{}'.format(axis_index + 1)
 
   def add_graph_to_layout(self, new_graph, new_row=False):
+    new_graph_col = dbc.Col([new_graph], className='mb-4')
     new_dummy_div = html.Div(id=f'{new_graph.id}_dummy')
 
     if new_row or len(self.rows) == 0:
       # Create a new row, and place the new graph/fig in it.
-      self.rows.append(html.Div(
-        className='row',
-        children=[new_graph, new_dummy_div],
+      self.rows.append(dbc.Row(
+        children=[new_graph_col, new_dummy_div],
       ))
     else:
       # Append the new graph/fig to the end of the last row.
-      self.rows[-1].children.extend([new_graph, new_dummy_div])
+      self.rows[-1].children.extend([new_graph_col, new_dummy_div])
 
   def init_map_fig(self, fig_id, new_row=False, **kwargs_layout):
     """Initialize a figure that can accept plotly Scattermapbox traces.
@@ -99,6 +108,7 @@ class Plotter(object):
     layout_dict = dict(
       height=350,
       margin=dict(b=0,t=0,r=0,l=0),
+      # margin=dict(b=10,t=0,r=0,l=0),
     )
     layout_dict.update(kwargs_layout)
 
@@ -113,7 +123,6 @@ class Plotter(object):
 
     new_map_graph = dcc.Graph(
       id=fig_id,
-      className='col',  # up for debate
       figure=map_fig,  
       config={'doubleClick': False},  # for map_fig only (right?)
     )
@@ -126,13 +135,15 @@ class Plotter(object):
     
     layout_dict = dict(
       height=400,
+      # margin=dict(b=30,t=0,r=0,l=0),
       margin=dict(b=0,t=0,r=0,l=0),
       #paper_bgcolor='rgba(0,0,0,0)',
       #plot_bgcolor='rgba(0,0,0,0)',
       #legend=dict(yanchor='bottom', y=0.01),
-      legend=dict(orientation='h'),
+      legend=dict(orientation='h', yanchor='top'),
       showlegend=True,
       hovermode='x',
+      #hovermode='x unified',
     )
     layout_dict.update(kwargs_layout)
 
@@ -145,7 +156,9 @@ class Plotter(object):
       range=[
         self.x_stream.min(),
         self.x_stream.max()
-      ]
+      ],
+      hoverformat='.0f',
+      ticksuffix=self.unit_suffix,
     ))
     fig.update_yaxes(dict(
       zeroline=False,  # unless I need it somewhere
@@ -157,29 +170,19 @@ class Plotter(object):
     # div for hover events.
     new_graph = dcc.Graph(
       id=fig_id,
-      className='col',
       figure=fig,
       clear_on_unhover=True,
     )
 
     self.add_graph_to_layout(new_graph, new_row=new_row)
 
-  def add_map_trace(self, map_fig_id, source_name):
+  def add_map_trace(self, map_fig_id, lat_label, lon_label):
     """Create a map trace using plotly's Scattermapbox"""
 
     # Should I add kwargs? We will see.
 
-    # Get the columns of the DataFrame from the given source.
-    # Then convert the labels to field names.
-    df_src = self.df.sl.source(source_name)
-
-    # Should I make this into a DF accessor method? That way,
-    # the DF could possibly save its original source name as an attr.
-    # https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.attrs.html#pandas.DataFrame.attrs
-    df_src.columns = df_src.columns.sl.field_names
-
-    lon = df_src['lon']
-    lat = df_src['lat']
+    lat = self.df[lat_label]
+    lon = self.df[lon_label]
 
     map_fig = self.get_fig_by_id(map_fig_id)
 
@@ -187,8 +190,8 @@ class Plotter(object):
       lon=lon,
       lat=lat,
       customdata=self.x_stream,
-      name=source_name,
-      hovertemplate='%{customdata} sec<extra></extra>',
+      # name=source_name,
+      hovertemplate=f'%{{customdata:.0f}}{self.unit_suffix}<extra></extra>',
       mode='markers',
     ))
 
@@ -249,11 +252,3 @@ class Plotter(object):
     
     # self.figs[fig_name].add_trace(trace)
     self.get_fig_by_id(fig_id).add_trace(trace)
-
-  def add_all_traces(self, fig_id, field_name, **kwargs):
-    yaxis = self.get_yaxis(fig_id, field_name)
-    kwargs.update({'yaxis': yaxis})
-
-    col_labels = self.df.columns.sl.field(field_name)
-    for lbl in col_labels:
-      self.add_trace(fig_id, lbl, **kwargs)

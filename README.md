@@ -1,6 +1,6 @@
 # strava_flask_dashboard
 
->Strava personal data display and analysis app, powered by Flask/Dash/Python.
+>Strava personal data display and analysis app, powered by Flask/Dash/Pandas.
 
 [![License](http://img.shields.io/:license-mit-blue.svg)](http://badges.mit-license.org)
 
@@ -65,7 +65,7 @@ You should be able to run the app now. See [Examples](#examples) below for more 
 
 ## Examples
 
-### Run the Flask app locally
+### Run the Strava Flask app locally
 
 ```python
 import os
@@ -81,21 +81,31 @@ app.run()
 ```
 ![List of activities](https://github.com/aaron-schroeder/strava_flask_dashboard/blob/master/activity_list_screenshot.jpg?raw=true)
 
-### Run the Dash app with local data
+### Run the Dash app with an uploaded file
 
-From a saved strava json response from
-`https://www.strava.com/api/v3/activities/${id}/streams/${fields}`:
+Options:
+  - `json` file containing response from `https://www.strava.com/api/v3/activities/${athlete_id}/streams/${fields}`
+  - `fit` file (requires [`fitparse`](https://github.com/dtcooper/python-fitparse) and [`dateutil`](https://dateutil.readthedocs.io/en/stable/))
+  - `csv` file (requires expected column naming convention, see below)
+  - `tcx` file (requires [`activereader`](https://github.com/aaron-schroeder/py-activityreaders))
+  - `gpx` file (requires [`activereader`](https://github.com/aaron-schroeder/py-activityreaders))
+  <!--
+  - `csv` file from Wahoo Fitness (WIP) 
+  -->
 ```python
-from application import create_dash_app_strava
+from application.plotlydash.dashboard_upload import create_dash_app
 
-fname = 'strava_stream_response.json'
-
-app = create_dash_app_strava(fname)
+app = create_dash_app()
+app.run_server()
 ```
 
-From a `pandas.DataFrame`:
+From a `pandas.DataFrame` (use these exact column names):
 ```python
 import math
+import pandas as pd
+
+from application.plotlydash.dashboard_activity import create_dash_app
+
 time = range(600)
 df = pd.DataFrame.from_dict(dict(
     time=time,
@@ -108,10 +118,11 @@ df = pd.DataFrame.from_dict(dict(
     cadence=[160 + 5 * math.sin(0.1 * t) for t in time],
 ))
 
-# Drop any columns that lack data.
+# (if needed) Drop any columns that lack data.
 df = df.dropna(axis=1, how='all')
 
-app = create_dash_app_df(df, 'fake')
+app = create_dash_app(df)
+
 app.run_server()
 ```
 

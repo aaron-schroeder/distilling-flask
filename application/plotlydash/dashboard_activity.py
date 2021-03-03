@@ -12,9 +12,9 @@ import dash_table
 import pandas as pd
 import plotly.graph_objs as go
 
-from application.labels import StreamLabel
-from application import converters, stravatalk
+from application import converters, stravatalk, labels
 from application.plotlydash.plots import Plotter
+from application.plotlydash import layout
 
 
 ACCESS_TOKEN = os.environ.get('ACCESS_TOKEN')
@@ -26,6 +26,8 @@ def add_dashboard_to_flask(server):
   This is actually used to create a dashboard that piggybacks on a
   Flask app, using that app its server.
   """
+  # dash_app = init_dash_app(server)
+
   dash_app = Dash(
     __name__,
     server=server,
@@ -38,45 +40,55 @@ def add_dashboard_to_flask(server):
 
   # Initialize an empty layout to be populated with callback data.
   # TODO: Bring this part of layout in here? Plotter can fill it...
-  dash_app.layout = init_layout()
+  dash_app.layout = layout.LAYOUT
 
   # Use the url of the dash app to retrieve and display strava data.
+  # dash_app.layout.children.append(
   dash_app.layout.children.append(
     dcc.Location(id='url', refresh=False)
   )
-  @dash_app.callback(
-    Output('dash-container', 'children'),
-    [Input('url', 'pathname')]
-  )
-  def update_layout(pathname):
-    # Extract the activity id from the url, whatever it is.
-    # eg `/whatever/whateverelse/activity_id/` -> `activity_id`
-    activity_id = os.path.basename(os.path.normpath(pathname))
 
-    stream_list = stravatalk.get_activity_json(activity_id, ACCESS_TOKEN)
-
-    df = converters.from_strava_streams(stream_list)
-
-    df.columns = [StreamLabel(col, 'strava') for col in df.columns]
-    
-    return create_rows(df)
+  dash_app.callback(
+    Output('figures', 'children'),
+    Input('url', 'pathname'),
+    Input('x_stream', 'value'),
+  )(update_figures_from_strava)
 
   init_hover_callbacks(dash_app)
+  # if mode == 'basic':
+  #   init_hover_callbacks(MAP_ID, ELEVATION_ID, SPEED_ID)
+  # else:
+  #   init_hover_callbacks(MAP_ID, ELEVATION_ID, SPEED_ID, POWER_ID)
 
   return dash_app.server
 
 
-def create_dash_app(df):
-  """Construct single-page Dash app that does not talk to strava.
+def update_figures_from_strava(pathname, x_stream):
+  # Extract the activity id from the url, whatever it is.
+  # eg `/whatever/whateverelse/activity_id/` -> `activity_id`
+  activity_id = os.path.basename(os.path.normpath(pathname))
+
+  stream_list = stravatalk.get_activity_json(activity_id, ACCESS_TOKEN)
+
+  df = converters.from_strava_streams(stream_list)
   
-  This is distinct from `create_app` because it returns a Dash app,
-  rather than a Flask app with embedded Dash app.
+  if x_stream == 'record':
+    x_stream = None
+
+  return create_rows(df, x_stream_label=x_stream)
+
+
+def create_dash_app(df):
+  """Construct single-page Dash app for activity data display from DF.
+  
+  Args:
+    df (pandas.DataFrame): Activity data, with each row a record, and
+      each column a data stream.
   """
   app = Dash(
     __name__,
     external_stylesheets=[
       dbc.themes.BOOTSTRAP,
-      # '/static/css/styles.css',  # Not yet.
     ],
     
     # Script source: local download of the plotly mapbox distribution.
@@ -101,62 +113,23 @@ def create_dash_app(df):
     # ],
   )
 
-  app.layout = init_layout()
-  app.layout.children = create_rows(df)
-                              # , x_stream_label='time')
+  app.layout = layout.LAYOUT
 
-  # TODO: Consider bringing this into `create_rows()`.
-  init_hover_callbacks(app)
-
-  return app
-
-
-def create_dash_app_df(df, source_name):
-
-  # --- Converting the column labels to StreamLabels in order ---
-  # --- to track fields arising from different sources        ---
-  # Bring over to converters.py?
-  df.columns = [StreamLabel(col, source_name) for col in df.columns]
-  app = create_dash_app(df)
-
-  # --- Calculating fields from existing fields ---
-  # source-agnostic (pkgs)
-  # This is left up to the user - can be extended
-
-  # --- Adding flds from addl sources using other flds --- 
-  # agnostic (pkgs)
-
-  # --- Generating Dash graphs / plotly figures ---
-  # Tasks handled include:
-  # * creating the layout/divs/graphs in the Dash app (plots.py)
-  # * populating the graphs with plotly figures (plots.py)
-  # * adding any user-specified geojson/traces to the map fig,
-  #   if lat/lon is included (upcoming plots.py)
-  # * setting up desired callbacks between the graphs (this file)
-  
-  return app
-
-
-def create_dash_app_strava(fname_strava_json):
-  """Construct single-page Dash app that does not talk to strava."""
-
-  with open(fname_strava_json) as json_file:
-    activity_json = json.load(json_file)
-
-  # Load data into an appropriately formatted DataFrame.
-  df = converters.from_strava_streams(activity_json)
-
-  app = create_dash_app_df(df, 'strava')
-
-  return app
-
-
-def init_layout():
-  return html.Div(
-    children=[],
-    id='dash-container',
-    #className='container',
+  @app.callback(
+    Output('figures', 'children'),
+    Input('x_stream', 'value')
   )
+  def update_x_stream(x_stream):
+    if x_stream == 'record':
+      x_stream = None 
+
+    return create_rows(df, x_stream_label=x_stream)
+
+  init_hover_callbacks(app)
+  # TODO:
+  # init_hover_callbacks(app, MAP_ID, ELEVATION_ID, SPEED_ID)
+
+  return app
 
 
 MAP_ID = 'map'
@@ -167,16 +140,18 @@ SPEED_ID = 'speed'
 def create_rows(df, x_stream_label=None):
   """Catch-all controller function for dashboard layout logic.
 
-  Creates a `html.Div.children` list based on streams available
-  in the DataFrame:
+  Creates a list of elements for use as `html.Div.children` based on
+  streams available in the DataFrame:
     - map graph with go.Scattermapbox ('lat' + 'lon')
     - elevation graph with go.Scatter ('elevation' / 'grade'),
     - speed graph with go.Scatter ('speed' / 'cadence' / 'heartrate')
 
   Args:
-    df (pd.DataFrame): A DataFrame with StreamLabels for column labels
-    x_stream_label (str or labels.StreamLabel): The desired stream to
-      use for the x-axis of the plots. If None, the x-axis will simply
+    df (pd.DataFrame): A DataFrame representing a recorded activity.
+      Each row represents a record, and each column represents a stream
+      of data.
+    x_stream_label (str): column label in the DataFrame for the desired stream
+      to use as the x-data in all xy plots. If None, x-data will simply
       be point numbers (record numbers). Default None.
 
   Returns:
@@ -189,56 +164,38 @@ def create_rows(df, x_stream_label=None):
 
   # *** Row 1: Map ***
 
-  # Check if there are any sources that have both `lat` and `lon`
-  # streams, and add all of them to the map.
-  lat_srcs = df.columns.sl.field('lat').sl.source_names
-  lon_srcs = df.columns.sl.field('lon').sl.source_names
-  latlon_srcs = list(set(lat_srcs) & set(lon_srcs))
-  
-  if len(latlon_srcs) > 0:
+  # Check if there are both `lat` and `lon` streams, and create a map
+  # if so.
+  if df.fld.has('lat', 'lon'): 
     plotter.init_map_fig(MAP_ID)
   
-  for latlon_src in latlon_srcs:
-    # Start up a map fig, row 1, and don't worry about hovering for now.
-    plotter.add_map_trace(MAP_ID, latlon_src,
-      # map trace kwargs here.
+    plotter.add_map_trace(MAP_ID, lat_label='lat', lon_label='lon',
+      # map trace kwargs here, if desired.
     )
 
   # *** End of Row 1 (map) ***
 
   # *** Row 2 (elevation and speed graphs) ***
 
-  if df.sl.has_field('elevation'):
-
-    # if df.sl.has_field('time'):
-    #   plotter.set_x_stream_label('time')
-    # else:
-    #   plotter.set_x_stream_label('distance')
-    #   # TODO: if neither of these x-axes exist, just go by record num.
-    #   # I think this means re-writing the x-stream logic...
+  if df.fld.has('elevation'):
 
     plotter.init_xy_fig(ELEVATION_ID, new_row=True)
 
-    # Find the first label with this field.
-    elev_labels = df.columns.sl.field('elevation')
-    elev_lbl = elev_labels[0]
-
     plotter.add_yaxis(ELEVATION_ID, 'elevation',
-      range=[
-        math.floor(df[elev_lbl].min() / 200) * 200,
-        math.ceil(df[elev_lbl].max() / 200) * 200
-      ],
+      # range=[
+      #   math.floor(df['elevation'].min() / 200) * 200,
+      #   math.ceil(df['elevation'].max() / 200) * 200
+      # ],
       ticksuffix=' m',
       hoverformat='.2f',
     )
 
-    # Add matching traces to the `elevation` figure, on the default yaxis.
-    for lbl in elev_labels:
-      plotter.add_trace(ELEVATION_ID, lbl,
-        visible=True
-      )
+    # Add trace to the `elevation` figure, on the default yaxis.
+    plotter.add_trace(ELEVATION_ID, 'elevation',
+      visible=True,
+    )
   
-  if df.sl.has_field('grade'):
+  if df.fld.has('grade'):
 
     # Initialize the fig if it hasn't happened already.
     if not plotter.has_fig(ELEVATION_ID):
@@ -261,14 +218,12 @@ def create_rows(df, x_stream_label=None):
 
     # TODO: Consider kwargs to make this call less ambiguous.
     grade_axis = plotter.get_yaxis(ELEVATION_ID, 'grade')
-    grade_labels = df.columns.sl.field('grade')
-    for lbl in grade_labels:
-      plotter.add_trace(ELEVATION_ID, lbl,
-        yaxis=grade_axis,
-        visible=True
-      )
+    plotter.add_trace(ELEVATION_ID, 'grade',
+      yaxis=grade_axis,
+      visible=True
+    )
 
-  if df.sl.has_field('speed'):
+  if df.fld.has('speed'):
     # TODO: How to handle if there is no elevation plot? We wouldn't 
     # want to be in the same row as the map...I smell a revamp...
     # specify the row we want to live on? For now we can just hack it
@@ -283,42 +238,40 @@ def create_rows(df, x_stream_label=None):
 
       # Turn on the zeroline and make it visible
       zeroline=True,
-      zerolinewidth=1, 
+      zerolinewidth=1,
       zerolinecolor='black',
     )
 
-  # See min/mile (mm:ss) instead of m/s.
-  def speed_to_pace(speed_ms):
-    """Came over from `boulderhikes/utils.py`"""
-    if speed_ms is None or math.isnan(speed_ms):
-      return speed_ms
-    
-    if speed_ms <= 0.1:
-      return '24:00:00'
+    # See min/mile (mm:ss) instead of m/s.
+    def speed_to_pace(speed_ms):
+      """Came over from `boulderhikes/utils.py`"""
+      if speed_ms is None or math.isnan(speed_ms):
+        return speed_ms
+      
+      if speed_ms <= 0.1:
+        return '24:00:00'
 
-    pace_min_mile = 1609.34 / (speed_ms * 60.0)
-    hrs = math.floor(pace_min_mile/60.0), 
-    mins = math.floor(pace_min_mile % 60),
-    secs = math.floor(pace_min_mile*60.0 % 60)
-    mile_pace_time = datetime.time(
-      math.floor(pace_min_mile/60.0), 
-      math.floor(pace_min_mile % 60),
-      math.floor(pace_min_mile*60.0 % 60)
-    )
+      pace_min_mile = 1609.34 / (speed_ms * 60.0)
+      hrs = math.floor(pace_min_mile/60.0), 
+      mins = math.floor(pace_min_mile % 60),
+      secs = math.floor(pace_min_mile*60.0 % 60)
+      mile_pace_time = datetime.time(
+        math.floor(pace_min_mile/60.0), 
+        math.floor(pace_min_mile % 60),
+        math.floor(pace_min_mile*60.0 % 60)
+      )
 
-    if mile_pace_time.hour > 0:
-      return mile_pace_time.strftime('%H:%M:%S')
-    
-    return mile_pace_time.strftime('%-M:%S')
+      if mile_pace_time.hour > 0:
+        return mile_pace_time.strftime('%H:%M:%S')
+      
+      return mile_pace_time.strftime('%-M:%S')
 
-  speed_labels = df.columns.sl.field('speed')
-  for lbl in speed_labels:
-    speed_text = df[lbl].apply(speed_to_pace)
-    plotter.add_trace(SPEED_ID, lbl,
+    speed_text = df['speed'].apply(speed_to_pace)
+    plotter.add_trace(SPEED_ID, 'speed',
       yaxis='y1', text=speed_text, visible=True
     )
   
-  if df.sl.has_field('heartrate'):
+  if df.fld.has('heartrate'):
 
     # Initialize the fig if it hasn't happened already.
     if not plotter.has_fig(SPEED_ID):
@@ -343,14 +296,13 @@ def create_rows(df, x_stream_label=None):
 
     # TODO: Consider kwargs to make this call less ambiguous.
     hr_axis = plotter.get_yaxis(SPEED_ID, 'heartrate')
-    hr_labels = df.columns.sl.field('heartrate')
-    for lbl in hr_labels:
-      plotter.add_trace(SPEED_ID, lbl,
-        yaxis=hr_axis, 
-        line=dict(color='#d62728')
-      )
+    plotter.add_trace(SPEED_ID, 'heartrate',
+      yaxis=hr_axis,
+      line=dict(color='#d62728'),
+      visible=True,
+    )
 
-  if df.sl.has_field('cadence'):
+  if df.fld.has('cadence'):
 
     # Initialize the fig if it hasn't happened already.
     if not plotter.has_fig(SPEED_ID):
@@ -373,74 +325,60 @@ def create_rows(df, x_stream_label=None):
 
     # TODO: Consider kwargs to make this call less ambiguous.
     cad_axis = plotter.get_yaxis(SPEED_ID, 'cadence')
-    cad_labels = df.columns.sl.field('cadence')
-    for lbl in cad_labels:
-      # TODO: Specify trace colors, typ, or it'll be up to order of plotting.
-      plotter.add_trace(SPEED_ID, lbl,
-        yaxis=cad_axis,
-        mode='markers',
-        marker=dict(size=2)
-      )
 
+    # TODO: Specify trace colors, typ, or it'll be up to order of plotting.
+    plotter.add_trace(SPEED_ID, 'cadence',
+      yaxis=cad_axis,
+      mode='markers',
+      marker=dict(size=2),
+      visible=True,
+    )
 
   # Draw rectangles on the speed figure for strava stopped periods.
   # TODO: Make this into its own function, I think.
   
-  if df.sl.has_field('moving') and plotter.has_fig(SPEED_ID):
+  if df.fld.has('moving') and plotter.has_fig(SPEED_ID):
     # Highlight stopped periods on the speed plot with rectangles.
-
-    # Just pick the first one (hacked together, gross)
-    moving_lbl = df.columns.sl.field('moving')[0]
-    time_lbl = df.columns.sl.field('time').sl.source(moving_lbl.source_name)[0]
-
-    times_stopped = df[time_lbl].groupby(by=(df[moving_lbl]))
 
     # Find all the timestamps when strava switches the user from stopped
     # to moving, or from moving to stopped.
-    switch_times = df[time_lbl][
-      df[moving_lbl].shift(1) != df[moving_lbl]
-    ].to_list()
+    stopped_ixs = df.index[~df['moving']]
+    stopped_periods_start_ixs = stopped_ixs[
+      stopped_ixs.to_series().diff() != 1]
+    stopped_periods_end_ixs = stopped_ixs[
+      stopped_ixs.to_series().diff(-1) != -1]
 
-    rect_bounds_all = [
-      (
-        switch_times[i], 
-        switch_times[i+1] - 1
-      )
-      for i in range(0, len(switch_times) - 1)
-    ]
+    fig_with_stops = plotter.get_fig_by_id(SPEED_ID)
 
-    rect_bounds_all.append((switch_times[-1], df[time_lbl].iloc[-1]))
-    
-    if df[moving_lbl][0]:
-      # We start off MOVING.
-      rect_bounds_off = rect_bounds_all[1::2]
-    else:
-      # We start off STOPPED.
-      rect_bounds_off = rect_bounds_all[::2]
+    for i in range(len(stopped_periods_start_ixs)):
+      start_ix = stopped_periods_start_ixs[i]
+      end_ix = stopped_periods_end_ixs[i]
 
-    shapes = [
-      dict(
-        type='rect',
-        #layer='below',
-        line={'width': 0}, 
-        #fillcolor='LightSalmon',
-        fillcolor='red',
-        opacity=0.5,
-        xref='x',
-        x0=x[0],
-        x1=x[1],
-        yref='paper',
-        y0=0,
-        y1=1,)
-      for x in rect_bounds_off
-    ]
+      if start_ix == end_ix:
+        # A single point - use a line, not a rectangle.
+        fig_with_stops.add_vline(
+          # x=df['time'][start_ix],
+          x=plotter.x_stream[start_ix],
+          line_color='red',
+          opacity=0.5,
+        )
+      else:
+        fig_with_stops.add_vrect(
+          # x0=df['time'][start_ix],
+          # x1=df['time'][end_ix],
+          x0=plotter.x_stream[start_ix],
+          x1=plotter.x_stream[end_ix],
+          #layer='below',
+          #line={'width': 0}, 
+          line_color='red',
+          #fillcolor='LightSalmon',
+          fillcolor='red',
+          opacity=0.5,
+        )
 
-    plotter.get_fig_by_id(SPEED_ID).update_layout(dict(shapes=shapes,))
-
-  # *** Row 2 (elevation and speed) ***
+  # *** End of row 2 (elevation and speed) ***
 
   return plotter.rows
-
 
 
 FORCE_XY_HOVER_SCRIPT_TEMPLATE = """
@@ -547,6 +485,10 @@ def init_callback_force_hover(
 
 def init_hover_callbacks(dash_app):
 
+  # TODO: What if this just received the map_id, and a list of xy
+  # figure ids? This function would know what to do.
+  # init_hover_callbacks(dash_app, map_id, **xy_ids)
+
   # We don't know how many curves will need to be hovered, but since
   # it is just the xy plot, we can hover as many curves as we want.
   # (The map, on the other hand, might have some funky traces with
@@ -560,3 +502,11 @@ def init_hover_callbacks(dash_app):
   # There should be only one valid curve on the map for now.
   init_callback_force_hover(dash_app, ELEVATION_ID, MAP_ID, subplot_name='mapbox')
   init_callback_force_hover(dash_app, SPEED_ID, MAP_ID, subplot_name='mapbox')
+
+
+# Turn on to enable enhanced schtuff.
+# from application.plotlydash.dashboard_next import (
+#   create_rows,
+#   init_hover_callbacks,
+#   update_figures_from_strava
+# )

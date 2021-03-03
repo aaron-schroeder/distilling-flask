@@ -10,38 +10,27 @@ import sys
 import pandas as pd
 
 
-def convert_stream_label(stream_label):
-  """Attempt to convert string to StreamLabel.
-
-  Args:
-    stream_label (str): field name to be converted to StreamLabel class.
-  Returns:
-    A StreamLabel instance corresponding to the input object.
-
-  """
-  if stream_label is None or isinstance(stream_label, StreamLabel):
-    # No need to convert.
-    return stream_label
-
-  # This will return a TypeError if passed other than a string.
-  # (I previously was working with the exception within this method)
-  return StreamLabel(field=stream_label, source='unknown')
-
-
 class StreamLabel(object):
 
   def __init__(self, field=None, source=None, **kwargs):
-    """
+    """Initialize a StreamLabel for use as a pd.DataFrame column label.
+    
     Args:
-      source_name (str): name of the source.
-      method (str): the method that was used to produce the data
-       from any number of other sources. Default `name`.
-      units (str): (optional) string representing units of the data.
-        Defaults to DEFAULT_UNITS, defined by subclasses.
-      **kwargs: the remaining kwargs list functions as a dict of other
-        sources used to produce data corresponding to this source. 
-        This functionality is implemented in subclasses.
+      field (str): name of the field represented by the data stream
+        in the column.
+      source (str): source of the data stream in the column.
+
     """
+    if field is None:
+      raise(ValueError(
+        f'`field` is a required kwarg'
+      ))
+
+    if source is None:
+      raise(ValueError(
+        f'`source` is a required kwarg'
+      ))
+
     if not isinstance(field, str):
       raise(TypeError(
         f'`field` kwarg should be str, not '
@@ -54,35 +43,8 @@ class StreamLabel(object):
         f'{type(source).__name__}'
       ))
 
-    if field is None:
-      raise(ValueError(
-        f'`field` is a required kwarg'
-      ))
-
-    if source is None:
-      raise(ValueError(
-        f'`source` is a required kwarg'
-      ))
-
     self.source_name = source.lower()
     self.field_name = field.lower()
-
-    # Define units. 
-    self.units = kwargs.pop('units', None)
-    if isinstance(self.units, str):
-      self.units = self.units.lower()
-
-    # Set attributes dynamically based on kwargs.
-    # eg `self.latlon = StreamLabel('src')
-    # TODO: Figure out the new way I handle this. Wine.
-    for fld_type, src in kwargs.items():
-      if isinstance(src, str):
-        src = StreamLabel(src)
-
-      if not isinstance(src, StreamLabel):
-        raise TypeError('All kwargs should be str or StreamLabel')
-      
-      setattr(self, fld_type, src)
 
   @classmethod
   def from_str(cls, field_src_str, delim='~'):
@@ -111,6 +73,7 @@ class StreamLabel(object):
 
   def __lt__(self, other):
     # Might be useful to re-evaluate (+gt) for sorting.
+    # eg alphabetize by field, then by source.
     return self.__repr__() < other.__repr__()
 
   def __gt__(self, other):
@@ -118,10 +81,6 @@ class StreamLabel(object):
 
   def __hash__(self):
     return hash(self.__repr__())
-
-  def get_source_kwargs(self):
-    return {key: self.__dict__[key] for key in sorted(self.__dict__)
-            if key not in ['units', 'source_name', 'field_name']}
 
 
 @pd.api.extensions.register_index_accessor('sl')
@@ -151,10 +110,10 @@ class StreamIndexAccessor:
         'Can only use .sl accessor with dtype="object"!'
       )
         
-      # TODO: Once I find a way to convert `${field}_${src}` strings
+      # TODO: Once (if) I find a way to convert `${field}_${src}` strings
       # to StreamLabels:
       #   raise AttributeError('Can only use .sl accessor with string '
-      #                       'or StreamLabel values!')
+      #                        'or StreamLabel values!')
 
     if not data.map(lambda x: isinstance(x, StreamLabel)).all():
       raise AttributeError(
@@ -184,7 +143,7 @@ class StreamIndexAccessor:
 
 @pd.api.extensions.register_dataframe_accessor('sl')
 class StreamDataFrameAccessor:
-  """Experimental class that piggybacks on the index accessor."""
+  """Mainly piggybacks on the corresponding Index accessor."""
   
   def __init__(self, pandas_obj):   
     self._obj = pandas_obj
@@ -203,40 +162,14 @@ class StreamDataFrameAccessor:
 
   def has_fields(self, *args):
     return all(self.has_field(field_name) for field_name in args)
+
+
+@pd.api.extensions.register_dataframe_accessor('fld')
+class FieldDataFrameAccessor:
+  """Convenience accessor to check for column labels in a DataFrame."""
   
-  def set(self, field_source_str, series):
-    self._obj[StreamLabel.from_str(field_source_str)] = series
+  def __init__(self, pandas_obj):   
+    self._obj = pandas_obj
 
-  def get(self, *args):
-    if len(args) == 1:
-      return self._obj[StreamLabel.from_str(args)]
-    else:
-      return (self._obj[StreamLabel.from_str(arg)] for arg in args)
-
-  # def loc(self, field_name, source_name):
-  #   return self._obj[StreamLabel(field=field_name, source=source_name)]
-
-  # @property
-  # def oc(self):  #, field_source_str):
-  #   """Idea: return the `.loc` indexer object, indexed w/ StreamLabel.
-
-  #   Cheeky take on `df.loc` -> `df.sl.oc` ...get it??
-    
-  #   Tried to make setting work. It does not work right. Abandoned.
-
-  #   This needs to return an object capable of getting and setting, not
-  #   the result of that getting and setting.
-
-  #   https://stackoverflow.com/questions/53268739/how-to-use-the-loc-method-from-pandas-on-a-custom-class-object
-  #   https://github.com/pandas-dev/pandas/blob/d01561fb7b9ad337611fa38a3cfb7e8c2faec608/pandas/core/indexing.py#L264-L522
-  #   https://github.com/pandas-dev/pandas/blob/d01561fb7b9ad337611fa38a3cfb7e8c2faec608/pandas/core/indexing.py#L951
-    
-  #   """
-  #   # _obj_copy = self._obj.copy()
-  #   # _obj_copy.columns = [col.to_str() if isinstance(col, StreamLabel) else col for col in _obj_copy.columns]
-  #   # return pd.core.indexing._LocIndexer('oc', _obj_copy)(axis=1)
-
-  #   self._obj.columns = [col.to_str() if isinstance(col, StreamLabel) else col for col in self._obj.columns]
-  #   indexer = pd.core.indexing._LocIndexer('oc', self._obj)(axis=1)
-
-  #   return indexer
+  def has(self, *field_names):
+    return all(field_name in self._obj.columns for field_name in field_names)
