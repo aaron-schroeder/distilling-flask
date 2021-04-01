@@ -1,5 +1,6 @@
 """Core Flask app routes."""
 import os
+import datetime
 import json
 
 from flask import (Blueprint, flash, g, make_response, redirect,
@@ -9,10 +10,10 @@ import pandas
 import requests
 
 from application import stravatalk
+from application.models import db, Activity
 
 
-# Store the ngrok url we are forwarding to.
-# TODO: Pull this out of the app so I can put it on GH.
+# (Vestigial) Store the ngrok url we are forwarding to.
 # URL_PUBLIC = os.environ.get('URL_PUBLIC')
 
 
@@ -24,26 +25,29 @@ ACCESS_TOKEN = os.environ.get('ACCESS_TOKEN')
 
 @app.route('/')
 def start_dashapp():
-  """Route for the landing page of the Flask app.
+  """Route for the landing page of the Flask app."""
 
-  TODO:
-    * Rename to something appropriate for what it does.
-    * Host `display_activity_list` here in lieu of redirecting.
-    * Docstring
-  """
-
-  #return redirect('/dashapp/test')
-  return redirect(url_for('.display_activity_list'))
+  return render_template('landing_page.html')
 
 
 @app.route('/activities')
 def display_activity_list():
   """Display list of strava activities to view in Dashboard."""
   #activity_json = stravatalk.get_activities_json(session.get('access_token'))
-  activity_json = stravatalk.get_activities_json(ACCESS_TOKEN)
-  
-  # TODO: Formalize this if I want to use it.
-  # with open('activity_list.json', 'w') as outfile:
-  #   json.dump(activity_json, outfile)
+  activity_json = stravatalk.get_activities_json(
+    ACCESS_TOKEN,
+    page=request.args.get('page')
+  )
 
   return render_template('activity_list.html', resp_json=activity_json)
+
+
+@app.route('/view-saved-activities')
+def view_activities():
+  """A simple html list for debugging."""
+
+  return render_template(
+    'activities_saved.html',
+    activities=Activity.query.all(),
+    # title='Show Activities'
+  )

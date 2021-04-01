@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+
+{% block header %}
+  <h2>{% block title %}Welcome{% endblock %}</h2>
+{% endblock %}
+
+{% block content %}
+  <a href="/activities">Strava activities</a>
+  <br>
+  <a href="/dash-log">Training log dashboard</a>
+  <br>
+  {# <a href="/dash-upload">File Upload Dashboard (WIP)</a> #}
+  {# <br> #}
+  {# <a href="/view-saved-activities">List of saved activities</a> #}
+{% endblock %}

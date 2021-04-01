@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+  
+{% block header %}
+  <h1>{% block title %}Saved activities{% endblock %}</h1>
+{% endblock %}
+
+{% block content %}
+  {% for act in activities %}
+    <p>
+      <a href="/dash-saved-activity/{{ act.id }}">{{ act.title}}</a>: Created {{ act.created }} (UTC)
+      {{ act.distance_m }} m; {{ act.elapsed_time_s }} sec total; {{ act.moving_time_s }} sec moving; 
+      {{ act.elevation_m }} m elevation gain; TSS = {{ act.tss }} ({{ act.intensity_factor }})
+    </p>
+  {% endfor %}
+{% endblock %}

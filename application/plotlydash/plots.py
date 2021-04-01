@@ -172,6 +172,10 @@ class Plotter(object):
       id=fig_id,
       figure=fig,
       clear_on_unhover=True,
+      config=dict(
+        clickmode='event+select',
+        modebarButtonsToRemove=['hoverClosestCartesian'],
+      )
     )
 
     self.add_graph_to_layout(new_graph, new_row=new_row)

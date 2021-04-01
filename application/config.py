@@ -1,6 +1,6 @@
 import os
 
-#from dotenv import load_dotenv
+# from dotenv import load_dotenv
 
 
 # BASEDIR = os.path.abspath(os.path.dirname(__file__))
@@ -34,7 +34,17 @@ class Config:
   # Strava token - load from environment variable.
   ACCESS_TOKEN = os.environ.get('ACCESS_TOKEN')
 
-  # Database
-  #SQLALCHEMY_DATABASE_URI = os.environ.get('SQLALCHEMY_DATABASE_URI')
-  #SQLALCHEMY_ECHO = True
-  #SQLALCHEMY_TRACK_MODIFICATIONS = False
+  # --- Database settings ---
+  # https://hackersandslackers.com/flask-sqlalchemy-database-models/
+  
+  # Define URI in dotenv:
+  # SQLALCHEMY_DATABASE_URI = os.environ.get('SQLALCHEMY_DATABASE_URI')
+
+  # Define URI here:
+  path = os.path.dirname( os.path.realpath(__file__) )
+  database_path = os.path.join(path, 'mydb.sqlite')
+  SQLALCHEMY_DATABASE_URI = 'sqlite:///' + database_path
+
+  SQLALCHEMY_ECHO = True
+  SQLALCHEMY_TRACK_MODIFICATIONS = False
+  # --- End of database settings ---

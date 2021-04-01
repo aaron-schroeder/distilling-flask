@@ -4,6 +4,7 @@ tokens*
 _wsgi.py
 data/
 tests/
+application/activity_files/
 application/dataframe_operations.py
 application/mapmatching.py
 application/osmp.py
@@ -12,7 +13,9 @@ application/power/
 requirements_extra.txt
 application/templates/activity_detail.html
 application/templates/get_started.html
-application/plotlydash/assets/strava_log_rip.html
+application/templates/strava_log_rip.html
+application/templates/strava.js
+application/plotlydash/dashboard_upload_hr.py
 application/plotlydash/assets/application-a6dca5129ff0d670197be3f1fd67f96c98ae27018525299caf35d314bd1ef4da
 run_app*.py
 run_dash*.py
@@ -28,24 +31,12 @@ blog/templates/blog/blog_tag_index_page.html
 
 # Started from https://www.toptal.com/developers/gitignore?templates=django
 
-### Django ###
-*.log
-*.pot
+# Databases
+*.sqlite
+*.sqlite3
+*.db
+
 *.pyc
-__pycache__/
-local_settings.py
-db.sqlite3
-db.sqlite3-journal
-media
-
-# If your build process includes running collectstatic, then you probably don't need or want to include staticfiles/
-# in your Git repository. Update and uncomment the following line accordingly.
-# <django-project-name>/staticfiles/
-
-### Django.Python Stack ###
-# Byte-compiled / optimized / DLL files
-*.py[cod]
-*$py.class
 
 # C extensions
 *.so

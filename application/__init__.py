@@ -1,10 +1,16 @@
 import os
 from flask import Flask
+from flask_sqlalchemy import SQLAlchemy
+
+
 from application import config
 
 
+db = SQLAlchemy()
+
+
 def create_app(test_config=None):
-  """Construct core Flask application with embedded Dash app.
+  """Construct core Flask application with embedded Dash apps.
 
   The application factory function. Flask auto-detects `create_app`
   and `make_app`.
@@ -24,15 +30,26 @@ def create_app(test_config=None):
   except OSError:
     pass
 
+  # SQLAlchemy
+  db.init_app(app)
+
   with app.app_context():
     from application import routes
 
-    # Not currently using a dashboard to display all activities
-    # (This is handled entirely by the flask app in a simple way)
-    # from application.plotlydash.dashboard import create_dashboard
-    # app = create_dashboard(app)
+    # Add various dashboards using this Flask app as a server.
+    from application.plotlydash import (
+      dashboard_strava,
+      # dashboard_upload, 
+      dashboard_log,
+      dashboard_db
+    )
+    app = dashboard_strava.add_dashboard_to_flask(app)
+    # app = dashboard_upload.add_dashboard_to_flask(app)
+    app = dashboard_log.add_dashboard_to_flask(app)
+    app = dashboard_db.add_dashboard_to_flask(app)
 
-    from application.plotlydash.dashboard_activity import add_dashboard_to_flask
-    app = add_dashboard_to_flask(app)
+    # SQLAlchemy
+    from application import models
+    db.create_all()  # Create sql tables for our data models
 
     return app
