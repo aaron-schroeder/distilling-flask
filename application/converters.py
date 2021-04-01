@@ -142,6 +142,17 @@ def from_fit(file_obj):
   fit = FitFile(file_obj)
   df_rec = pd.DataFrame.from_records([msg_rec.get_values() for msg_rec in fit.get_messages('record')])
 
+  if not df_rec['timestamp'].is_monotonic_increasing or df_rec['timestamp'].duplicated().any():
+    print('Something funky is going on with timestamps.')
+
+  df_evt = pd.DataFrame.from_records([msg_evt.get_values() for msg_evt in fit.get_messages('event')])
+  if (df_evt['event_type'] == 'start').sum() > 1:
+    print('Pauses are present in this file')
+  # pause_times = df_evt['timestamp'][df_evt['event'] == 'timer' and df_evt['event_type'] == 'stop_all']
+  # print(pause_times)
+  # start_times = df_evt['timestamp'][df_evt['event'] == 'timer' and df_evt['event_type'] == 'start']
+  # print(start_times)
+
   # Calculate some things just bc I want to.
   start_time_rec = df_rec['timestamp'].iloc[0]
 
