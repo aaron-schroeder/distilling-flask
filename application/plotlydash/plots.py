@@ -144,6 +144,7 @@ class Plotter(object):
       showlegend=True,
       hovermode='x',
       #hovermode='x unified',
+      clickmode='event+select',
     )
     layout_dict.update(kwargs_layout)
 
@@ -173,8 +174,7 @@ class Plotter(object):
       figure=fig,
       clear_on_unhover=True,
       config=dict(
-        clickmode='event+select',
-        modebarButtonsToRemove=['hoverClosestCartesian'],
+        modeBarButtonsToRemove=['hoverClosestCartesian'],
       )
     )
 

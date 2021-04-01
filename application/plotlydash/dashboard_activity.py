@@ -67,17 +67,14 @@ def create_dash_app(df):
 
   app.layout = layout.init_layout()
 
-  @app.callback(
-    Output('figures', 'children'),
-    Input('x_stream', 'value')
-  )
-  def update_x_stream(x_stream):
-    if x_stream == 'record':
-      x_stream = None 
+  calc_power(df)
 
-    return create_rows(df, x_stream_label=x_stream)
+  data_store = app.layout.children[3]
+  assert data_store.id == 'activity-data'
+  data_store.data = df.to_dict('records')
 
-  # init_hover_callbacks(app)
+  init_figure_callbacks(app)
+  init_stats_callbacks(app)
 
   return app
 
@@ -92,7 +89,7 @@ def calc_power(df):
     # from application import power
     from application.power import adjusted_pace
 
-    if df.fld.has('grade'):
+    if df.fld.has(GRADE):
       # df['power_inst'] = power.o2_power_ss(df['speed'], df['grade'] / 100.0)
       # # My power series is intended to mimic O2 consumption - assuming
       # # the athlete stays in the moderate domain.
@@ -365,52 +362,53 @@ def create_moving_table_cols(cols):
   #   bordered=True
   # )
 
-# def create_power_table(df):
-#   if df.fld.has('power'):
-#     from application.power import util as putil
+def create_power_table(df):
+  pass
+  # if df.fld.has('power'):
+  #   from application.power import util as putil
 
-#     # Calculate Normalized Power using the EWMA-averaged time series.
-#     np = putil.lactate_norm(df['power'])
+  #   # Calculate Normalized Power using the EWMA-averaged time series.
+  #   np = putil.lactate_norm(df['power'])
 
-#     # Compare effect of throwing out values that occurred before a
-#     # steady-state O2 consumption was likely obtained (parallel to
-#     # TrainingPeaks Normalized Power calculation below).
-#     np_ss = putil.lactate_norm(df['power'][df['time'] > 29])
+  #   # Compare effect of throwing out values that occurred before a
+  #   # steady-state O2 consumption was likely obtained (parallel to
+  #   # TrainingPeaks Normalized Power calculation below).
+  #   np_ss = putil.lactate_norm(df['power'][df['time'] > 29])
 
-#     # TrainingPeaks Normalized Power uses a 30-second moving average.
-#     window = 30  # seconds
-#     power_tp = putil.sma(
-#       df['power_inst'], 
-#       window,
-#       time_series=df['time']
-#     )
-#     # TP throws out the first 30 seconds of data, before the moving
-#     # average reaches full strength.
-#     np_tp = putil.lactate_norm(power_tp[df['time'] > window - 1])
+  #   # TrainingPeaks Normalized Power uses a 30-second moving average.
+  #   window = 30  # seconds
+  #   power_tp = putil.sma(
+  #     df['power_inst'], 
+  #     window,
+  #     time_series=df['time']
+  #   )
+  #   # TP throws out the first 30 seconds of data, before the moving
+  #   # average reaches full strength.
+  #   np_tp = putil.lactate_norm(power_tp[df['time'] > window - 1])
 
-#     # Mean power for comparison to all averaging techniques.
-#     mean_power = df['power_inst'].mean()
+  #   # Mean power for comparison to all averaging techniques.
+  #   mean_power = df['power_inst'].mean()
     
-#     table_header = html.Thead(html.Tr([
-#       # html.Th(),
-#       # Make a NP row, colspan=3
-#       html.Th('NP (SMA S-S)'),
-#       html.Th('NP (EWMA S-S)'),
-#       html.Th('NP (EWMA)'),
-#       html.Th('Mean Power')
-#     ]))
+  #   table_header = html.Thead(html.Tr([
+  #     # html.Th(),
+  #     # Make a NP row, colspan=3
+  #     html.Th('NP (SMA S-S)'),
+  #     html.Th('NP (EWMA S-S)'),
+  #     html.Th('NP (EWMA)'),
+  #     html.Th('Mean Power')
+  #   ]))
 
-#     table_body = html.Tbody([
-#       html.Tr([
-#         # html.Td('Power'),
-#         html.Td(f'{np_tp:.2f}'),
-#         html.Td(f'{np_ss:.2f}'),
-#         html.Td(f'{np:.2f}'),
-#         html.Td(f'{mean_power:.2f}'),
-#       ])
-#     ])
+  #   table_body = html.Tbody([
+  #     html.Tr([
+  #       # html.Td('Power'),
+  #       html.Td(f'{np_tp:.2f}'),
+  #       html.Td(f'{np_ss:.2f}'),
+  #       html.Td(f'{np:.2f}'),
+  #       html.Td(f'{mean_power:.2f}'),
+  #     ])
+  #   ])
 
-#     return dbc.Table([table_header, table_body], bordered=True)
+  #   return dbc.Table([table_header, table_body], bordered=True)
 
 
 def init_figure_callbacks(app):
