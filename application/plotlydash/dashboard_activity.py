@@ -86,8 +86,7 @@ def calc_power(df):
 
   """
   if df.fld.has('speed'):
-    # from application import power
-    from application.power import adjusted_pace
+    from power import adjusted_pace
 
     if df.fld.has(GRADE):
       # df['power_inst'] = power.o2_power_ss(df['speed'], df['grade'] / 100.0)
@@ -136,7 +135,8 @@ def init_stats_callbacks(app):
       ngp_1sec = interp_fn([i for i in range(df['time'].max())])
 
       # Apply a 30-sec rolling average.
-      from application.power import util as putil
+      from power import util as putil
+      
       window = 30
       ngp_rolling = pd.Series(ngp_1sec).rolling(window).mean()
       

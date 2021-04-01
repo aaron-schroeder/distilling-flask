@@ -9,7 +9,6 @@ application/dataframe_operations.py
 application/mapmatching.py
 application/osmp.py
 application/extracalc.py
-application/power/
 requirements_extra.txt
 application/templates/activity_detail.html
 application/templates/get_started.html
@@ -23,6 +22,7 @@ run_app*.py
 run_dash*.py
 *_next.py
 out/
+plot_power.py
 
 # Local compooper stuff
 .vscode/
