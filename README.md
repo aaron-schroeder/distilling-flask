@@ -27,18 +27,13 @@ and I wanted to work with the raw feeds. There is power in looking at the
 reality of things.
 
 Over time, I generalized the Dash app to accept `pandas.DataFrame` as input. 
-This meansyou can view any activity data you want, as long as it is formatted
-correctly, using the `create_dashboard_df` function. This function has become 
-the heart of the app, and it powers visualization of Strava data once the Flask
-app converts it from json into a `pandas.DataFrame`.
+This means you can view any activity data you want, as long as it is formatted
+correctly, using the `create_dash_app` function.
 
-Coming up, I'd like to set up pipelines that take running activity data from
-a variety of sources and filetypes, and displays the time series in a common
-interface. To that end, I've created a class to be used as column labels in
-`pandas.DataFrame`. `StreamLabel` keeps track of both the field name and the
-source of data streams. This facilitates a common, recognizable labeling
-system for data streams stored in `DataFrame` columns. I've created custom 
-accessors for `pandas.DataFrame` and `pandas.Index` to work with `StreamLabel`.
+If you have a valid Strava access token, you can view any of your Strava
+runs in a dashboard powered by Plotly Dash. From there, you can save each
+run to a local database, and view the long-term effects of training in a
+training log dashboard.
 
 See the [Examples](#examples) section below to see how everything works.
 
@@ -65,7 +60,7 @@ You should be able to run the app now. See [Examples](#examples) below for more 
 
 ## Examples
 
-### Run the Strava Flask app locally
+### Run the Flask app locally with a Strava access token
 
 ```python
 import os
@@ -79,7 +74,9 @@ import application
 app = application.create_app()
 app.run()
 ```
-![List of activities](https://github.com/aaron-schroeder/strava_flask_dashboard/blob/master/activity_list_screenshot.jpg?raw=true)
+![List of activities](https://github.com/aaron-schroeder/strava_flask_dashboard/blob/master/images/activity_list_screenshot.jpg?raw=true)
+
+![Saved activities in training log dashboard](https://github.com/aaron-schroeder/strava_flask_dashboard/blob/master/images/training_log_screenshot.jpg?raw=true)
 
 ### Run the Dash app with an uploaded file
 
@@ -114,6 +111,7 @@ df = pd.DataFrame.from_dict(dict(
     elevation=[1609.0 + 40 * math.cos(0.01 * t) for t in time],
     grade=[-4 * math.sin(0.01 * t) for t in time],
     speed=[3.0 + math.sin(0.1 * t) for t in time],
+    distance=[3.0 * t + 10 * math.cos(0.1 * t) for t in time],
     heartrate=[140 + 15 * math.cos(0.1 * t) for t in time],
     cadence=[160 + 5 * math.sin(0.1 * t) for t in time],
 ))
@@ -126,7 +124,7 @@ app = create_dash_app(df)
 app.run_server()
 ```
 
-![The dashboard in action](https://github.com/aaron-schroeder/strava_flask_dashboard/blob/master/db_screenshot.jpg?raw=true)
+![The dashboard in action](https://github.com/aaron-schroeder/strava_flask_dashboard/blob/master/images/db_screenshot.jpg?raw=true)
 
 ### `StreamLabel` and custom accessors for `pandas` objects
 
@@ -182,11 +180,22 @@ speed (new_src)
 
 ## Project Status
 
-### Complete
-
 ### Current Activities
 
+The Flask app is becoming a full-fledged training log. Strava activities
+can be viewed in a dashboard and saved to a database, and soon uploaded
+files will be saveable too. The long-term effects of training can be 
+visualized in a training log dashboard, which is still evolving.
+
 ### Future Work
+
+Coming up, I'd like to set up pipelines that take running activity data from
+a variety of sources and filetypes, and displays the time series in a common
+interface. To that end, I've created a class to be used as column labels in
+`pandas.DataFrame`. `StreamLabel` keeps track of both the field name and the
+source of data streams. This facilitates a common, recognizable labeling
+system for data streams stored in `DataFrame` columns. I've created custom 
+accessors for `pandas.DataFrame` and `pandas.Index` to work with `StreamLabel`.
 
 ---
 
