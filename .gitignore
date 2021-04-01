@@ -16,19 +16,17 @@ application/templates/get_started.html
 application/templates/strava_log_rip.html
 application/templates/strava_log_rip_new.mht
 application/templates/strava.js
+application/plotlydash/assets_old/
 application/plotlydash/dashboard_upload_hr.py
 application/plotlydash/assets/application-a6dca5129ff0d670197be3f1fd67f96c98ae27018525299caf35d314bd1ef4da
 run_app*.py
 run_dash*.py
 *_next.py
-out/strava_latest.json
+out/
 
 # Local compooper stuff
 .vscode/
 .DS_STORE
-
-# Specific to this site (not ready for primetime)
-blog/templates/blog/blog_tag_index_page.html
 
 # Started from https://www.toptal.com/developers/gitignore?templates=django
 
