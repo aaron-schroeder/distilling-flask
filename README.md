@@ -1,6 +1,6 @@
-# strava_flask_dashboard
+# distilling-flask
 
->Strava personal data display and analysis app, powered by Flask/Dash/Pandas.
+>Personal running data display and analysis app, powered by Flask/Dash/Pandas.
 
 [![License](http://img.shields.io/:license-mit-blue.svg)](http://badges.mit-license.org)
 
@@ -45,7 +45,7 @@ Flask, Dash, Dash Bootstrap Components, pandas, and requests are required.
 
 Clone the repo:
 ```
-git clone https://github.com/aaron-schroeder/strava_flask_dashboard.git
+git clone https://github.com/aaron-schroeder/distilling-flask.git
 ```
 
 Change into the new directory and start a virtual environment. Then, install
@@ -74,9 +74,9 @@ import application
 app = application.create_app()
 app.run()
 ```
-![List of activities](https://github.com/aaron-schroeder/strava_flask_dashboard/blob/master/images/activity_list_screenshot.jpg?raw=true)
+![List of activities](https://github.com/aaron-schroeder/distilling-flask/blob/master/images/activity_list_screenshot.jpg?raw=true)
 
-![Saved activities in training log dashboard](https://github.com/aaron-schroeder/strava_flask_dashboard/blob/master/images/training_log_screenshot.jpg?raw=true)
+![Saved activities in training log dashboard](https://github.com/aaron-schroeder/distilling-flask/blob/master/images/training_log_screenshot.jpg?raw=true)
 
 ### Run the Dash app with an uploaded file
 
@@ -84,8 +84,8 @@ Options:
   - `json` file containing response from `https://www.strava.com/api/v3/activities/${athlete_id}/streams/${fields}`
   - `fit` file (requires [`fitparse`](https://github.com/dtcooper/python-fitparse) and [`dateutil`](https://dateutil.readthedocs.io/en/stable/))
   - `csv` file (requires expected column naming convention, see below)
-  - `tcx` file (requires [`activereader`](https://github.com/aaron-schroeder/py-activityreaders))
-  - `gpx` file (requires [`activereader`](https://github.com/aaron-schroeder/py-activityreaders))
+  - `tcx` file (requires [`activereader`](https://github.com/aaron-schroeder/activereader))
+  - `gpx` file (requires [`activereader`](https://github.com/aaron-schroeder/activereader))
   <!--
   - `csv` file from Wahoo Fitness (WIP) 
   -->
@@ -124,7 +124,7 @@ app = create_dash_app(df)
 app.run_server()
 ```
 
-![The dashboard in action](https://github.com/aaron-schroeder/strava_flask_dashboard/blob/master/images/db_screenshot.jpg?raw=true)
+![The dashboard in action](https://github.com/aaron-schroeder/distilling-flask/blob/master/images/db_screenshot.jpg?raw=true)
 
 ### `StreamLabel` and custom accessors for `pandas` objects
 
@@ -216,5 +216,5 @@ You can get in touch with me at one of the following places:
 [![License](http://img.shields.io/:license-mit-blue.svg)](http://badges.mit-license.org)
 
 This project is licensed under the MIT License. See
-[LICENSE](https://github.com/aaron-schroeder/strava_flask_dashboard/blob/master/LICENSE)
+[LICENSE](https://github.com/aaron-schroeder/distilling-flask/blob/master/LICENSE)
 file for details.
