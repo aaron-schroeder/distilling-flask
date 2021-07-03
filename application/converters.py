@@ -38,12 +38,14 @@ def from_strava_streams(stream_list):
     grade_smooth=GRADE
   ))
 
-  df[LAT] = df['latlng'].apply(lambda x: x[0])
-  df[LON] = df['latlng'].apply(lambda x: x[1])
-  df = df.drop('latlng', axis=1)
+  if 'latlng' in df.columns:
+    df[LAT] = df['latlng'].apply(lambda x: x[0])
+    df[LON] = df['latlng'].apply(lambda x: x[1])
+    df = df.drop('latlng', axis=1)
 
   # Convert RPM to SPM since we are talking about running, not cycling.
-  df[CADENCE] = df[CADENCE] * 2
+  if CADENCE in df.columns:
+    df[CADENCE] = df[CADENCE] * 2
 
   return df
 
