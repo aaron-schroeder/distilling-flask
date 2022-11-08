@@ -3,13 +3,9 @@ import json
 import math
 import os
 
-from dash import Dash
+from dash import Dash, dash_table, dcc, html, Input, Output, State
 import dash_bootstrap_components as dbc
-import dash_core_components as dcc
-from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
-import dash_html_components as html
-import dash_table
 import dateutil
 import numpy as np
 import pandas as pd
@@ -173,7 +169,7 @@ def init_stats_callbacks(app):
       dbc.Row([
         dbc.Col(
           [
-            dbc.FormGroup([
+            dbc.Row([
               dbc.Label('CP:'),
               dbc.InputGroup([
                 dbc.Input(
@@ -183,7 +179,7 @@ def init_stats_callbacks(app):
                   placeholder='MM',
                   value=6,
                 ),
-                dbc.InputGroupAddon(':'),
+                dbc.InputGroupText(':'),
                 dbc.Input(
                   type='number', 
                   id='cp-sec',
@@ -198,7 +194,7 @@ def init_stats_callbacks(app):
         ),
         dbc.Col(
             [
-            dbc.FormGroup([
+            dbc.Row([
               dbc.Label('NGP:'),
               dbc.InputGroup([
                 dbc.Input(
@@ -208,7 +204,7 @@ def init_stats_callbacks(app):
                   placeholder='HH',
                   value=hours,
                 ),
-                dbc.InputGroupAddon(':'),
+                dbc.InputGroupText(':'),
                 dbc.Input(
                   type='number', 
                   id='ngp-min',
@@ -216,7 +212,7 @@ def init_stats_callbacks(app):
                   placeholder='MM',
                   value=mins,
                 ),
-                dbc.InputGroupAddon(':'),
+                dbc.InputGroupText(':'),
                 dbc.Input(
                   type='number', 
                   id='ngp-sec',
@@ -231,7 +227,7 @@ def init_stats_callbacks(app):
         ),
         dbc.Col(
           [
-            dbc.FormGroup([
+            dbc.Row([
               dbc.Label('IF:'),
               dbc.Input(
                 type='number', 
@@ -246,7 +242,7 @@ def init_stats_callbacks(app):
         ),
         dbc.Col(
           [
-            dbc.FormGroup([
+            dbc.Row([
               dbc.Label('TSS:'),
               dbc.Input(
                 type='number', 

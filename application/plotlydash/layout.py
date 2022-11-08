@@ -1,6 +1,5 @@
+from dash import dcc, html
 import dash_bootstrap_components as dbc
-import dash_core_components as dcc
-import dash_html_components as html
 
 
 MAP_ID = 'map'
@@ -12,7 +11,7 @@ POWER_ID = 'power'
 def create_x_stream_radiogroup(opts, value=None):
   value = value or opts[0]
 
-  return dbc.FormGroup([
+  return dbc.Row([
     dbc.Label('Select x-axis stream:'),
     dbc.RadioItems(
       options=[{'label': x, 'value': x} for x in opts],
@@ -26,7 +25,7 @@ def create_x_stream_radiogroup(opts, value=None):
 def create_plot_checkgroup(opts, values=None):
   values = values or opts
 
-  return dbc.FormGroup([
+  return dbc.Row([
     dbc.Label('Select visible plots:'),
     dbc.Checklist(
       options=[{'label': x, 'value': x} for x in opts],

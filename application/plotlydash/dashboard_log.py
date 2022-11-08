@@ -3,13 +3,9 @@ import json
 import math
 import os
 
-from dash import Dash
+from dash import Dash, dash_table, dcc, html, Input, Output, State, ALL
 import dash_bootstrap_components as dbc
-import dash_core_components as dcc
-from dash.dependencies import Input, Output, State, ALL
 from dash.exceptions import PreventUpdate
-import dash_html_components as html
-import dash_table
 from dateutil import tz
 import numpy as np
 import pandas as pd
@@ -73,7 +69,7 @@ def add_dashboard_to_flask(server):
               ],
               # justify='around',
               # justify='center',
-              no_gutters=True,
+              className='g-0',
             ),
             align='center',
             width=10,
