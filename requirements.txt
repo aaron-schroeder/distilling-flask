@@ -3,3 +3,5 @@ dash-bootstrap-components==0.11.2
 Flask==1.1.2
 pandas==1.2.1
 requests==2.25.1
+SQLAlchemy>=1.4.22
+flask-sqlalchemy>=2.5.1
