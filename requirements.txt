@@ -5,3 +5,4 @@ pandas==1.2.1
 requests==2.25.1
 SQLAlchemy>=1.4.22
 flask-sqlalchemy>=2.5.1
+scipy
