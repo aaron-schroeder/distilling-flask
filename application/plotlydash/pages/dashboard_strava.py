@@ -12,7 +12,7 @@ import pandas as pd
 import plotly.graph_objs as go
 
 from application import converters, stravatalk, util
-from application.plotlydash.pages import dashboard_activity
+from application.plotlydash import dashboard_activity
 # calc_power, create_rows, init_hover_callbacks
 from application.plotlydash import layout
 
