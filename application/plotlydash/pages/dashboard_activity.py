@@ -3,7 +3,8 @@ import json
 import math
 import os
 
-from dash import Dash, dash_table, dcc, html, Input, Output, State
+from dash import (Dash, dash_table, dcc, html, 
+  callback, clientside_callback, Input, Output, State)
 import dash_bootstrap_components as dbc
 from dash.exceptions import PreventUpdate
 import dateutil
@@ -69,8 +70,8 @@ def create_dash_app(df):
   assert data_store.id == 'activity-data'
   data_store.data = df.to_dict('records')
 
-  init_figure_callbacks(app)
-  init_stats_callbacks(app)
+  init_figure_callbacks()
+  init_stats_callbacks()
 
   return app
 
@@ -81,6 +82,12 @@ def calc_power(df):
   Note: Honestly need to figure out how I handle calcs in general.
 
   """
+  # TEMP HACK
+  df['equiv_speed'] = df['speed']
+  df['NGP'] = df['speed']
+  df['GAP'] = df['speed']
+  return
+
   if df.fld.has('speed'):
     from power import adjusted_pace
 
@@ -110,158 +117,150 @@ def calc_power(df):
     #   )
 
 
-def init_stats_callbacks(app):
-  @app.callback(
-    Output('stats', 'children'),
-    # Output('calc-stats', 'data'),
-    Input('activity-data', 'data'),
-  )
-  def update_stats(record_data):
-    if record_data is None:
-      raise PreventUpdate
+def create_stats_div(df):
+  if 'grade' in df.columns:
+    # Resample the NGP stream at 1 sec intervals
+    # TODO: Figure out how/where to make this repeatable.
+    # 1sec even samples make the math so much easier.
+    from scipy.interpolate import interp1d
+    interp_fn = interp1d(df['time'], df['NGP'], kind='linear')
+    ngp_1sec = interp_fn([i for i in range(df['time'].max())])
 
-    df = pd.DataFrame.from_records(record_data)
+    # Apply a 30-sec rolling average.
+    from power import util as putil
+    
+    window = 30
+    ngp_rolling = pd.Series(ngp_1sec).rolling(window).mean()
+    
+    # ngp_sma = putil.sma(
+    #   df['NGP'], 
+    #   window,
+    #   time_series=df['time']
+    # )
 
-    if 'grade' in df.columns:
-      # Resample the NGP stream at 1 sec intervals
-      # TODO: Figure out how/where to make this repeatable.
-      # 1sec even samples make the math so much easier.
-      from scipy.interpolate import interp1d
-      interp_fn = interp1d(df['time'], df['NGP'], kind='linear')
-      ngp_1sec = interp_fn([i for i in range(df['time'].max())])
+    ngp_val = putil.lactate_norm(ngp_rolling[29:])
+    # ngp_val = putil.lactate_norm(ngp_sma[df['time'] > 29])
+    # intensity_factor = ngp_val / util.pace_to_speed('6:30')
+    # tss = (110.0 / 3600) * df['time'].iloc[-1] * intensity_factor ** 2
 
-      # Apply a 30-sec rolling average.
-      from power import util as putil
-      
-      window = 30
-      ngp_rolling = pd.Series(ngp_1sec).rolling(window).mean()
-      
-      # ngp_sma = putil.sma(
-      #   df['NGP'], 
-      #   window,
-      #   time_series=df['time']
-      # )
+    # ngp_string = util.speed_to_pace(ngp_val)
+    # ngp_text = (
+    #   f'NGP = {ngp_string}, IF = {intensity_factor:.2f}, '
+    #   f'TSS = {tss:.1f}'
+    # )
+    ngp_td = util.speed_to_timedelta(ngp_val)
+    total_secs = ngp_td.total_seconds()
+    hours = math.floor(total_secs / 3600.0)
+    mins = math.floor(total_secs / 60)
+    secs = round(total_secs - mins * 60)
+    # secs = math.floor(total_secs * 60.0 % 60))
 
-      ngp_val = putil.lactate_norm(ngp_rolling[29:])
-      # ngp_val = putil.lactate_norm(ngp_sma[df['time'] > 29])
-      # intensity_factor = ngp_val / util.pace_to_speed('6:30')
-      # tss = (110.0 / 3600) * df['time'].iloc[-1] * intensity_factor ** 2
+  else:
+    hours, mins, secs = 23, 59, 59
 
-      # ngp_string = util.speed_to_pace(ngp_val)
-      # ngp_text = (
-      #   f'NGP = {ngp_string}, IF = {intensity_factor:.2f}, '
-      #   f'TSS = {tss:.1f}'
-      # )
-      ngp_td = util.speed_to_timedelta(ngp_val)
-      total_secs = ngp_td.total_seconds()
-      hours = math.floor(total_secs / 3600.0)
-      mins = math.floor(total_secs / 60)
-      secs = round(total_secs - mins * 60)
-      # secs = math.floor(total_secs * 60.0 % 60))
+  df_stats = calc_stats_df(df)
 
-    else:
-      hours, mins, secs = 23, 59, 59
-
-    df_stats = calc_stats_df(df)
-
-    stats_div = html.Div([
-      html.Div(create_moving_table(df_stats)),
-      dbc.Row([
-        dbc.Col(
-          [
-            dbc.Row([
-              dbc.Label('CP:'),
-              dbc.InputGroup([
-                dbc.Input(
-                  type='number', 
-                  id='cp-min',
-                  min=0, max=59,
-                  placeholder='MM',
-                  value=6,
-                ),
-                dbc.InputGroupText(':'),
-                dbc.Input(
-                  type='number', 
-                  id='cp-sec',
-                  min=0, max=59,
-                  placeholder='SS',
-                  value=30,
-                ),
-              ]),
-            ]),
-          ],
-          width=3,
-        ),
-        dbc.Col(
-            [
-            dbc.Row([
-              dbc.Label('NGP:'),
-              dbc.InputGroup([
-                dbc.Input(
-                  type='number', 
-                  id='ngp-hr',
-                  min=0, max=23,
-                  placeholder='HH',
-                  value=hours,
-                ),
-                dbc.InputGroupText(':'),
-                dbc.Input(
-                  type='number', 
-                  id='ngp-min',
-                  min=0, max=59,
-                  placeholder='MM',
-                  value=mins,
-                ),
-                dbc.InputGroupText(':'),
-                dbc.Input(
-                  type='number', 
-                  id='ngp-sec',
-                  min=0, max=59,
-                  placeholder='SS',
-                  value=secs,
-                ),
-              ]),
-            ]),
-          ],
-          width=4,
-        ),
-        dbc.Col(
-          [
-            dbc.Row([
-              dbc.Label('IF:'),
+  stats_div = html.Div([
+    html.Div(create_moving_table(df_stats)),
+    dbc.Row([
+      dbc.Col(
+        [
+          dbc.Row([
+            dbc.Label('CP:'),
+            dbc.InputGroup([
               dbc.Input(
                 type='number', 
-                id='intensity-factor',
-                min=0, max=2, step=0.001,
-                placeholder='IF',
-                # value=round(intensity_factor, 3),
-              )
-            ]),
-          ],
-          width=2,
-        ),
-        dbc.Col(
-          [
-            dbc.Row([
-              dbc.Label('TSS:'),
+                id='cp-min',
+                min=0, max=59,
+                placeholder='MM',
+                value=6,
+              ),
+              dbc.InputGroupText(':'),
               dbc.Input(
                 type='number', 
-                id='tss',
-                min=0, max=1000, step=0.1,
-                placeholder='TSS',
-                # value=round(tss, 1),
-              )
+                id='cp-sec',
+                min=0, max=59,
+                placeholder='SS',
+                value=30,
+              ),
             ]),
-          ],
-          width=2,
-        ),
-      ]),
-      html.Hr(),
-    ])
+          ]),
+        ],
+        width=3,
+      ),
+      dbc.Col(
+          [
+          dbc.Row([
+            dbc.Label('NGP:'),
+            dbc.InputGroup([
+              dbc.Input(
+                type='number', 
+                id='ngp-hr',
+                min=0, max=23,
+                placeholder='HH',
+                value=hours,
+              ),
+              dbc.InputGroupText(':'),
+              dbc.Input(
+                type='number', 
+                id='ngp-min',
+                min=0, max=59,
+                placeholder='MM',
+                value=mins,
+              ),
+              dbc.InputGroupText(':'),
+              dbc.Input(
+                type='number', 
+                id='ngp-sec',
+                min=0, max=59,
+                placeholder='SS',
+                value=secs,
+              ),
+            ]),
+          ]),
+        ],
+        width=4,
+      ),
+      dbc.Col(
+        [
+          dbc.Row([
+            dbc.Label('IF:'),
+            dbc.Input(
+              type='number', 
+              id='intensity-factor',
+              min=0, max=2, step=0.001,
+              placeholder='IF',
+              # value=round(intensity_factor, 3),
+            )
+          ]),
+        ],
+        width=2,
+      ),
+      dbc.Col(
+        [
+          dbc.Row([
+            dbc.Label('TSS:'),
+            dbc.Input(
+              type='number', 
+              id='tss',
+              min=0, max=1000, step=0.1,
+              placeholder='TSS',
+              # value=round(tss, 1),
+            )
+          ]),
+        ],
+        width=2,
+      ),
+    ]),
+    html.Hr(),
+  ])
 
-    return stats_div
+  return stats_div
 
-  @app.callback(
+
+def init_stats_callbacks():
+
+  @callback(
     Output('intensity-factor', 'value'),
     Input('ngp-hr', 'value'),
     Input('ngp-min', 'value'),
@@ -284,7 +283,7 @@ def init_stats_callbacks(app):
     
     return round(intensity_factor, 3)
 
-  @app.callback(
+  @callback(
     Output('tss', 'value'),
     Input('intensity-factor', 'value'),
     State('moving-table', 'data'),
@@ -407,51 +406,44 @@ def create_power_table(df):
   #   return dbc.Table([table_header, table_body], bordered=True)
 
 
-def init_figure_callbacks(app):
+def create_plot_opts(df):
 
-  @app.callback(
-    Output('plot-options', 'children'),
-    Input('activity-data', 'data'),
-  )
-  def create_plot_opts(record_data):
-    if record_data is None:
-      raise PreventUpdate
+  # Provide a list of x-axis options, with records included by default.
+  x_stream_opts = ['record']
+  for x in ['time', 'distance']:
+    if x in df.columns:
+      x_stream_opts.append(x)
 
-    df = pd.DataFrame.from_records(record_data)
+  available_figs = []
+  # Determine which figures are available based on DataFrame columns. 
+  # 'map', 'elevation', 'speed' (, 'power')
+  if df.fld.has(LAT, LON):
+    available_figs.append(MAP_ID)
+  if df.fld.has(ELEVATION) or df.fld.has(GRADE):
+    available_figs.append(ELEVATION_ID)
+  if df.fld.has(SPEED) or df.fld.has(HEARTRATE) or df.fld.has(POWER):
+    available_figs.append(SPEED_ID)
 
-    # Provide a list of x-axis options, with records included by default.
-    x_stream_opts = ['record']
-    for x in ['time', 'distance']:
-      if x in df.columns:
-        x_stream_opts.append(x)
+  # TODO: Now we know which figures are available - feed them into a
+  # new function that initializes all the hovers based on available
+  # figs. (Not working to define callback-in-a-callback rn)
+  # https://community.plotly.com/t/dynamic-controls-and-dynamic-output-components/5519
+  # init_hover_callbacks_smart(app, available_figs)
 
-    available_figs = []
-    # Determine which figures are available based on DataFrame columns. 
-    # 'map', 'elevation', 'speed' (, 'power')
-    if df.fld.has(LAT, LON):
-      available_figs.append(MAP_ID)
-    if df.fld.has(ELEVATION) or df.fld.has(GRADE):
-      available_figs.append(ELEVATION_ID)
-    if df.fld.has(SPEED) or df.fld.has(HEARTRATE) or df.fld.has(POWER):
-      available_figs.append(SPEED_ID)
+  return [
+    dbc.Col(
+      layout.create_x_stream_radiogroup(x_stream_opts),
+    ),
+    dbc.Col(
+      layout.create_plot_checkgroup(available_figs)
+      # layout.create_plot_checkgroup([MAP_ID, ELEVATION_ID, SPEED_ID])
+    ),
+  ]
 
-    # TODO: Now we know which figures are available - feed them into a
-    # new function that initializes all the hovers based on available
-    # figs. (Not working to define callback-in-a-callback rn)
-    # https://community.plotly.com/t/dynamic-controls-and-dynamic-output-components/5519
-    # init_hover_callbacks_smart(app, available_figs)
 
-    return [
-      dbc.Col(
-        layout.create_x_stream_radiogroup(x_stream_opts),
-      ),
-      dbc.Col(
-        layout.create_plot_checkgroup(available_figs)
-        # layout.create_plot_checkgroup([MAP_ID, ELEVATION_ID, SPEED_ID])
-      ),
-    ]
+def init_figure_callbacks():
 
-  @app.callback(
+  @callback(
     Output('figures', 'children'),
     Input('x-selector', 'value'),
     # Input('plot-checklist', 'values'),
@@ -469,7 +461,7 @@ def init_figure_callbacks(app):
     return create_rows(df, x_stream_label=x_stream)
 
   # TODO: Define these callbacks dynamically dammit!
-  init_hover_callbacks_smart(app, [MAP_ID, ELEVATION_ID, SPEED_ID])
+  init_hover_callbacks_smart([MAP_ID, ELEVATION_ID, SPEED_ID])
 
 
 def create_rows(df, x_stream_label=None):
@@ -667,25 +659,24 @@ def create_rows(df, x_stream_label=None):
   return plotter.rows
 
 
-def init_hover_callbacks_smart(app, available_figs):
+def init_hover_callbacks_smart(available_figs):
   for fig_id_from in available_figs:
     for fig_id_to in available_figs:
       if fig_id_to == MAP_ID:
         # Mapbox traces appear on a non-default subplot.
         # There should be only one valid curve on the map for now.
-        init_callback_force_hover(app, fig_id_from, fig_id_to, subplot_name='mapbox')
+        init_callback_force_hover(fig_id_from, fig_id_to, subplot_name='mapbox')
       else:
         # We don't know how many curves will need to be hovered, but since
         # it is just the xy plot, we can hover as many curves as we want.
         # (The map, on the other hand, might have some funky traces with
         # a different number of points.)
-        init_callback_force_hover(app, fig_id_from, fig_id_to, num_curves=10)
+        init_callback_force_hover(fig_id_from, fig_id_to, num_curves=10)
 
 
 def init_callback_force_hover(
-  app,
   from_id, 
-  to_id, 
+  to_id,
   num_curves=1,
   subplot_name='xy'
 ):
@@ -704,8 +695,6 @@ def init_callback_force_hover(
   specifying an appropriate `num_curves` value.
 
   Args:
-    app (dash.Dash): The app whose layout elements will receive
-     synchronized hovering.
     from_id (str): The id of the element in the layout that is
       triggering a hover event in another element.
     to_id (str): The id of the element in the layout that is being
@@ -773,7 +762,7 @@ def init_callback_force_hover(
     }}
   """
 
-  app.clientside_callback(
+  clientside_callback(
     force_hover_script_template.format(to_id, num_curves, subplot_name),
     # Can use any 'data-*' wildcard property, and they
     # must be unique for each graph to hover.
