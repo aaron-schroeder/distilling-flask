@@ -1,6 +1,5 @@
 import datetime
 import json
-import math
 import os
 
 import dash
@@ -9,17 +8,16 @@ from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
 import dateutil
 import pandas as pd
-import plotly.graph_objs as go
 
 from application import converters, stravatalk, util
 from application.plotlydash import dashboard_activity
-# calc_power, create_rows, init_hover_callbacks
-from application.plotlydash import layout
+from application.plotlydash.aio_components import FigureDivAIO, StatsDivAIO
 
 
 ACCESS_TOKEN = os.environ.get('ACCESS_TOKEN')
 
-dash.register_page(__name__, path_template='/strava/<activity_id>')
+dash.register_page(__name__, path_template='/strava/<activity_id>',
+  title='Strava Activity Dashboard', name='Strava Activity Dashboard')
 
 
 def layout(activity_id=None):
@@ -38,12 +36,10 @@ def layout(activity_id=None):
   out = dbc.Container(
     [
       html.Div(id='strava-stats'),
-      dashboard_activity.create_stats_div(df),
-      html.Div(dashboard_activity.create_plot_opts(df)),
-      html.Div(id='figures'),
-      dcc.Store(id='activity-data', data=df.to_dict('records')), # dataframe
-      dcc.Store(id='activity-stats', data=activity_json), # could be strava response etc
-      dcc.Store(id='activity-streams', data=stream_json)
+      StatsDivAIO(df=df, aio_id='strava'),
+      FigureDivAIO(df=df, aio_id='strava'),
+      dcc.Store(id='strava-summary-response', data=activity_json),
+      dcc.Store(id='strava-stream-response', data=stream_json)
     ],
     id='dash-container',
     fluid=True,
@@ -55,16 +51,16 @@ def layout(activity_id=None):
 @callback(
   Output('save-result', 'children'),
   Input('save-activity', 'n_clicks'),
-  State('activity-data', 'data'),
-  State('activity-streams', 'data'),
-  State('activity-stats', 'data'),
-  State('intensity-factor', 'value'),
-  State('tss', 'value'),
+  State(FigureDivAIO.ids.store('strava'), 'data'),
+  State('strava-stream-response', 'data'),
+  State('strava-summary-response', 'data'),
+  State(StatsDivAIO.ids.intensity('strava'), 'value'),
+  State(StatsDivAIO.ids.tss('strava'), 'value'),
   prevent_initial_call=True
 )
 def save_activity(
-  n_clicks,
-  record_data,
+  n_clicks, 
+  record_data, 
   stream_list, 
   activity_data, 
   intensity_factor,
@@ -127,14 +123,14 @@ def save_activity(
 
 @callback(
   Output('strava-stats', 'children'),
-  Input('activity-stats', 'data'),
+  Input('strava-summary-response', 'data'),
 )
 def update_stats(activity_data):
-  """Fill the `stats` div with Strava summary data."""
+  """Fill the `strava-stats` div with Strava's summary data."""
   if activity_data is None:
     raise PreventUpdate
 
-  children = [
+  return [
     html.H2(f"{activity_data['name']} ({activity_data['start_date_local']})"),
     dbc.Row([
       # dbc.Col(f"{activity_data['distance'] / 1609.34:.2f} mi"),
@@ -161,18 +157,12 @@ def update_stats(activity_data):
   #     'calories', 'device_name', 'gear', 'segment_efforts',
   #     'splits_metric', 'splits_standard', 'laps', 'best_efforts'
 
-  return children
-
-
-dashboard_activity.init_figure_callbacks()
-dashboard_activity.init_stats_callbacks()
-
 
 @callback(
-  Output('moving-table', 'data'),
-  Output('moving-table', 'columns'),
-  Input('activity-stats', 'data'),
-  State('moving-table', 'data'),
+  Output(StatsDivAIO.ids.table('strava'), 'data'),
+  Output(StatsDivAIO.ids.table('strava'), 'columns'),
+  Input('strava-summary-response', 'data'),
+  State(StatsDivAIO.ids.table('strava'), 'data'),
 )
 def add_strava_stats_to_table(activity_data, table_records):
   df_stats = pd.DataFrame.from_records(table_records)
@@ -191,6 +181,5 @@ def add_strava_stats_to_table(activity_data, table_records):
 
   return (
     df_stats.to_dict('records'),
-    dashboard_activity.create_moving_table_cols(df_stats.columns)
+    StatsDivAIO._create_moving_table_cols(df_stats.columns)
   )
-

@@ -14,11 +14,11 @@ def add_dashboard_to_flask(server):
     server=server,
     routes_pathname_prefix='/dash/',
     external_stylesheets=[
-      # dbc.themes.BOOTSTRAP,
+      dbc.themes.BOOTSTRAP,
       # '/static/css/styles.css',  # Not yet.
       # Match the stylesheet used for Flask-generated pages.
       # TODO: Update to latest version.
-      'https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css',
+      # 'https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css',
     ],
     suppress_callback_exceptions=True,
     use_pages=True
@@ -26,15 +26,25 @@ def add_dashboard_to_flask(server):
 
   dash_app.layout = html.Div([
     html.Nav(
-      html.A('The Training Zealot Analysis Platform', href='/', className='navbar-brand'),
+      dbc.Container(
+        html.A('The Training Zealot Analysis Platform', href='/', className='navbar-brand'),
+        fluid=True
+      ),
       className='navbar navbar-light bg-light'),
 
     dbc.Container(
       [
         html.Div(dcc.Link(
-          f'{page["name"]} - {page["path"]}', href=page['relative_path']
+          'Strava activities', href='/activities'
+        )),
+        html.Div(dcc.Link(
+          'Training log dashboard',
+          href=dash.page_registry['pages.dashboard_log']['relative_path']
+        )),
+        html.Div(dcc.Link(
+          'Analyze an activity file (.gpx, .fit, .tcx, .csv)',
+          href=dash.page_registry['pages.dashboard_upload']['relative_path']
         ))
-        for page in dash.page_registry.values()
       ],
       fluid=True,
     ),
