@@ -37,17 +37,9 @@ def create_app(test_config=None):
     from application import routes
 
     # Add various dashboards using this Flask app as a server.
-    from application.plotlydash import (
-      dashboard_strava,
-      # dashboard_upload, 
-      dashboard_log,
-      dashboard_db
-    )
-    app = dashboard_strava.add_dashboard_to_flask(app)
-    # app = dashboard_upload.add_dashboard_to_flask(app)
-    app = dashboard_log.add_dashboard_to_flask(app)
-    app = dashboard_db.add_dashboard_to_flask(app)
-
+    from application.plotlydash.app import add_dashboard_to_flask
+    add_dashboard_to_flask(app)
+    
     # SQLAlchemy
     from application import models
     db.create_all()  # Create sql tables for our data models

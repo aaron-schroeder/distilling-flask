@@ -3,7 +3,8 @@ import json
 import math
 import os
 
-from dash import Dash, dash_table, dcc, html, Input, Output, State, ALL
+import dash
+from dash import dcc, html, callback, Input, Output, State, ALL
 import dash_bootstrap_components as dbc
 from dash.exceptions import PreventUpdate
 from dateutil import tz
@@ -15,31 +16,35 @@ from application import util
 from application.models import db, Activity
 
 
-def add_dashboard_to_flask(server):
-  """Create a Plotly Dash dashboard with the specified server.
+dash.register_page(__name__, path_template='/log',
+  title='Training Log Dashboard', name='Training Log Dashboard')
 
-  This is actually used to create a dashboard that piggybacks on a
-  Flask app, using that app its server.
-  
-  """
-  dash_app = Dash(
-    __name__,
-    server=server,
-    routes_pathname_prefix='/dash-log/',    
-    external_stylesheets=[
-      dbc.themes.BOOTSTRAP,
-      # '/static/css/styles.css',  # Not yet.
-    ],
+
+def layout():
+  # Load dates and TSS from db in to DF.
+  activities=Activity.query.all()
+  fields = ['recorded', 'tss', 'title', 'elapsed_time_s']
+  df = pd.DataFrame(
+    [[getattr(a, field) for field in fields] for a in activities], 
+    columns=fields
   )
-  
-  dash_app.layout = dbc.Container(
+
+  df = df.sort_values(by='recorded', axis=0)
+
+  # For now, convert to my tz - suggests setting TZ by user,
+  # not by activity.
+  df['recorded'] = df['recorded'].dt.tz_localize(tz.tzutc()).dt.tz_convert(tz.gettz('America/Denver'))
+
+  calc_ctl_atl(df)
+
+  return dbc.Container(
     [
       html.H1('Activity Summary (Training Log)'),
       html.Hr(),
       html.H2('Training Stress'),
       dcc.Graph(
         id='tss-graph',
-        figure=go.Figure(),
+        figure=go.Figure(create_tss_fig(df)),
       ),
       html.Hr(),
       html.H2('Weekly Log'),
@@ -95,112 +100,87 @@ def add_dashboard_to_flask(server):
     fluid=True,
   )
 
-  @dash_app.callback(
-    Output('tss-graph', 'figure'),
-    Input('url', 'pathname')
-  )
-  def update_figure(path):
-    # Load dates and TSS from db in to DF.
-    activities=Activity.query.all()
-    fields = ['recorded', 'tss', 'title', 'elapsed_time_s']
-    df = pd.DataFrame(
-      [[getattr(a, field) for field in fields] for a in activities], 
-      columns=fields
-    )
-    
-    df = df.sort_values(by='recorded', axis=0)
 
-    # For now, convert to my tz - suggests setting TZ by user,
-    # not by activity.
-    df['recorded'] = df['recorded'].dt.tz_localize(tz.tzutc()).dt.tz_convert(tz.gettz('America/Denver'))
-
-    calc_ctl_atl(df)
-
-    return create_tss_fig(df)
-
-  @dash_app.callback(
-    Output('calendar-rows', 'children'),
-    # Input('url', 'pathname'),
-    Input('add-weeks', 'n_clicks'),
-    # Input('bubble-dropdown', 'value'),
-    State('calendar-rows', 'children'),
-  )
-  def update_calendar(n_clicks, children):
-    
-    n_clicks = n_clicks or 0
-
-    # Load dates and TSS from db in to DF.
-    # TODO: Consider querying the database for dates, rather than
-    # loading them all into a DataFrame.
-    activities=Activity.query.all()
-    
-    fields = ['id', 'recorded', 'tss', 'title', 'description',
-              'elapsed_time_s', 'moving_time_s', 'distance_m', 'elevation_m']
-    df = pd.DataFrame(
-      [[getattr(a, field) for field in fields] for a in activities], 
-      columns=fields
-    )
-    df = df.sort_values(by='recorded', axis=0)
-
-    # For now, convert to my tz - suggests setting TZ by user,
-    # not by activity.
-    df['recorded'] = df['recorded'].dt.tz_localize(tz.tzutc()).dt.tz_convert(tz.gettz('America/Denver'))
-    df['weekday'] = df['recorded'].dt.weekday
-
-    # ** Coming soon: Special calendar view for current week **
-
-    children = children or []
-    today = datetime.datetime.today().date()
-    idx = today.weekday() # MON = 0, SUN = 6
-    # idx = (today.weekday() + 1) % 7 # MON = 0, SUN = 6 -> SUN = 0 .. SAT = 6
-    for i in range(3 * n_clicks, 3 * (n_clicks + 1)):
-      ix = idx + 7 * (i - 1)
-      mon_latest = today - datetime.timedelta(ix) # 0-6 days ago
-      mon_last = today - datetime.timedelta(ix+7) # 1+ weeks ago
-
-      df_week = df[
-        (df['recorded'].dt.date < mon_latest)
-        & (df['recorded'].dt.date >= mon_last)
-      ]
-
-      children.append(dbc.Row([
-        dbc.Col(
-          children=create_week_sum(df_week, mon_last),
-          id=f'week-summary-{i}',
-          width=2,
-        ),
-        dbc.Col(
-          # Eventually this will be just one part of one row.
-          dcc.Graph(
-            # id=f'week-cal-{i}',
-            id={'type': 'week-cal', 'index': i},
-            figure=create_week_cal(df_week),
-            config=dict(displayModeBar=False),
-          ),
-          width=10,
-        )
-      ]))
-
-    return children
+@callback(
+  Output('calendar-rows', 'children'),
+  # Input('url', 'pathname'),
+  Input('add-weeks', 'n_clicks'),
+  # Input('bubble-dropdown', 'value'),
+  State('calendar-rows', 'children'),
+)
+def update_calendar(n_clicks, children):
   
-  @dash_app.callback(
-    Output({'type': 'week-cal', 'index': ALL}, 'figure'),
-    # Input('url', 'pathname'),
-    Input('bubble-dropdown', 'value'),
-    # Input('bubble-dropdown', 'value'),
-    State({'type': 'week-cal', 'index': ALL}, 'figure'),
-    # if I do this, adding rows does not work right if not using distance:
-    # prevent_initial_call=True,
+  n_clicks = n_clicks or 0
+
+  # Load dates and TSS from db in to DF.
+  # TODO: Consider querying the database for dates, rather than
+  # loading them all into a DataFrame.
+  activities=Activity.query.all()
+  
+  fields = ['id', 'recorded', 'tss', 'title', 'description',
+            'elapsed_time_s', 'moving_time_s', 'distance_m', 'elevation_m']
+  df = pd.DataFrame(
+    [[getattr(a, field) for field in fields] for a in activities], 
+    columns=fields
   )
-  def update_calendar(bubble_type, figures):
+  df = df.sort_values(by='recorded', axis=0)
 
-    figures = [update_week_cal(figure, bubble_type) for figure in figures]
+  # For now, convert to my tz - suggests setting TZ by user,
+  # not by activity.
+  df['recorded'] = df['recorded'].dt.tz_localize(tz.tzutc()).dt.tz_convert(tz.gettz('America/Denver'))
+  df['weekday'] = df['recorded'].dt.weekday
 
-    return figures
+  # ** Coming soon: Special calendar view for current week **
 
-  # init_callbacks(dash_app)
+  children = children or []
+  today = datetime.datetime.today().date()
+  idx = today.weekday() # MON = 0, SUN = 6
+  # idx = (today.weekday() + 1) % 7 # MON = 0, SUN = 6 -> SUN = 0 .. SAT = 6
+  for i in range(3 * n_clicks, 3 * (n_clicks + 1)):
+    ix = idx + 7 * (i - 1)
+    mon_latest = today - datetime.timedelta(ix) # 0-6 days ago
+    mon_last = today - datetime.timedelta(ix+7) # 1+ weeks ago
 
-  return dash_app.server
+    df_week = df[
+      (df['recorded'].dt.date < mon_latest)
+      & (df['recorded'].dt.date >= mon_last)
+    ]
+
+    children.append(dbc.Row([
+      dbc.Col(
+        children=create_week_sum(df_week, mon_last),
+        id=f'week-summary-{i}',
+        width=2,
+      ),
+      dbc.Col(
+        # Eventually this will be just one part of one row.
+        dcc.Graph(
+          # id=f'week-cal-{i}',
+          id={'type': 'week-cal', 'index': i},
+          figure=create_week_cal(df_week),
+          config=dict(displayModeBar=False),
+        ),
+        width=10,
+      )
+    ]))
+
+  return children
+
+
+@callback(
+  Output({'type': 'week-cal', 'index': ALL}, 'figure'),
+  # Input('url', 'pathname'),
+  Input('bubble-dropdown', 'value'),
+  # Input('bubble-dropdown', 'value'),
+  State({'type': 'week-cal', 'index': ALL}, 'figure'),
+  # if I do this, adding rows does not work right if not using distance:
+  # prevent_initial_call=True,
+)
+def update_calendar(bubble_type, figures):
+
+  figures = [update_week_cal(figure, bubble_type) for figure in figures]
+
+  return figures
 
 
 def calc_ctl_atl(df):
@@ -424,7 +404,7 @@ def create_week_cal(df_week):
   fig.add_trace(dict(
     x=df_week['weekday'],
     y=[2 for d in df_week['weekday']],
-    text=[f'<a href="/dash-saved-activity/{id}">{d / util.M_PER_MI:.1f}</a>' for id, d in zip(df_week['id'], df_week['distance_m'])],
+    text=[f'<a href="/dash/saved/{id}">{d / util.M_PER_MI:.1f}</a>' for id, d in zip(df_week['id'], df_week['distance_m'])],
     name='easy', # they are all easy right now
     mode='markers+text',
     marker=dict(
