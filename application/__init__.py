@@ -30,6 +30,8 @@ def create_app(test_config=None):
   except OSError:
     pass
 
+  # config[config_name].init_app(app)
+
   # SQLAlchemy
   db.init_app(app)
 
