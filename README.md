@@ -180,6 +180,9 @@ speed (new_src)
 ---
 
 ## Testing
+
+### Functional testing
+
 ```sh
 pip install -r requirements_dev.txt
 flask --app application run
@@ -189,6 +192,10 @@ In another shell:
 
 ```sh
 python application/tests/functional_tests.py
+```
+### Unit testing
+```sh
+python -m unittest application.tests.tests
 ```
 
 ## Project Status
