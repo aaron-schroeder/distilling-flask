@@ -2,6 +2,7 @@
 Refs:
   https://www.obeythetestinggoat.com/book/chapter_01.html
   https://stackoverflow.com/questions/64717302/deprecationwarning-executable-path-has-been-deprecated-selenium-python
+  https://www.obeythetestinggoat.com/book/chapter_02_unittest.html
 """
 import unittest
 
