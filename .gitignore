@@ -3,7 +3,6 @@ tokens*
 *.ipynb
 _wsgi.py
 data/
-tests/
 application/activity_files/original/*?.*
 application/activity_files/csv/*?.*
 application/dataframe_operations.py

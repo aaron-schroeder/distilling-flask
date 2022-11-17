@@ -10,6 +10,7 @@
 - [Introduction](#introduction)
 - [Dependencies and Installation](#dependencies-and-installation)
 - [Examples](#example)<!-- - [Project Status](#project-status) -->
+- [Testing](#testing)
 - [Contact](#contact)
 - [License](#license)
 
@@ -177,6 +178,18 @@ speed (new_src)
 ```
 
 ---
+
+## Testing
+```sh
+pip install -r requirements_dev.txt
+flask --app application run
+```
+
+In another shell:
+
+```sh
+python application/tests/functional_tests.py
+```
 
 ## Project Status
 
