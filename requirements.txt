@@ -6,3 +6,9 @@ requests==2.25.1
 SQLAlchemy>=1.4.22
 flask-sqlalchemy>=2.5.1
 scipy
+heartandsole>=0.0.23
+# heartandsole[fit, xml]>=0.0.25
+fitparse>=1.2.0
+activereader>=0.0.2
+pandas-xyz>=0.0.5
+# pandas-xyz @ git+https://github.com/aaron-schroeder/pandas-xyz@f350df2335fcf90b519c3ab97748c9f81f46e4b2

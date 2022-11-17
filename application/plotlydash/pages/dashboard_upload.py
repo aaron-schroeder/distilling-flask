@@ -16,13 +16,12 @@ import base64
 import datetime
 import io
 import json
-import os
 
 import dash
 from dash import dcc, html, callback, Input, Output, State
 from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
-
+import heartandsole
 import pandas as pd
 
 from application import converters
@@ -186,15 +185,37 @@ def parse_contents(contents, filename):
     return converters.from_strava_streams(data_json)
 
   elif filename.lower().endswith('fit'):
-    return converters.from_fit(decoded)
+    act = heartandsole.Activity.from_fit(decoded)
+    return act.records
   
   elif filename.lower().endswith('csv'):
     return pd.read_csv(io.StringIO(decoded.decode('utf-8')))
 
   elif filename.lower().endswith('tcx'):
-    from application.converters import from_tcx
-    return converters.from_tcx(io.BytesIO(decoded))
+    # from application.converters import from_tcx
+    # return converters.from_tcx(io.BytesIO(decoded))
+    act = heartandsole.Activity.from_tcx(decoded)
+    return act.records
 
-  elif filename.lower().endswith('gpx'):
-    from application.converters import from_gpx
-    return converters.from_gpx(io.BytesIO(decoded))
+  elif filename.lower().endswith('gpx') or filename.lower().endswith('xml'):
+    # TODO: Add another case for unidentified .xml file, which infers
+    #       the file type (.gpx, .tcx, etc) from the .xml file structure itself
+
+    act = heartandsole.Activity.from_gpx(decoded)
+
+    if not act.has_streams('distance'):
+      act.distance.records_from_position(inplace=True)
+
+    if act.has_streams('elevation'):
+      import numpy as np  # to perform a central diff method, not simple differences between pts.
+      
+      #df[S('grade', 'smooth')] = 100.0 * df[S('elevation', 'smooth')].diff() / df[S('distance', src)].diff()
+      act.records['grade'] = 100.0 * act.records.xyz.z_smooth_distance().diff() / act.records['distance'].diff()
+      # act.records['grade'] = 100.0 * np.gradient(act.records.xyz.z_smooth_distance(), act.records['distance'])
+
+      # act.records['grade'] = 100.0 * np.gradient(act.records['elevation'], act.records['distance'])
+
+    # TEMPORARY: Save DF as a CSV file for use in pandas_xyz
+    # act.records.to_csv('horsetooth.csv')
+
+    return act.records
