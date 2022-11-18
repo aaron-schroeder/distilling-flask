@@ -78,6 +78,26 @@ class NewVisitorTest(unittest.TestCase):
 
     # Satisfied, she goes back to sleep
 
+  def test_can_save_activity(self):
+    # From the landing page, the user navigates to their list of
+    # Strava activities.
+
+    # They click the link for the first activity presented.
+
+    # On the activity dashboard, there is an option to save the
+    # Strava activity into the database. The user clicks this
+    # without editing any of the inputs on the page.
+
+    # The activity is saved successfully, and they are redirected to
+    # its "Saved Activity" page.
+
+    # They check out the activity log to see if it updated.
+
+    # They find the saved activity in the calendar view,
+    # with summary stats and a link back to the saved activity view.
+
+    self.fail('Finish the test!')
+
 
 if __name__ == '__main__':
   unittest.main()
