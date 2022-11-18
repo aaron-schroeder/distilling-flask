@@ -44,10 +44,6 @@ class HomePageTest(unittest.TestCase):
     cls.app_context.pop()
     cls.request_context.pop()
 
-  def test_root_url_resolves_to_home_page_view(self):
-    result = url_for('start_dashapp')
-    self.assertEqual(result, '/')
-
   def test_home_page_returns_correct_html(self):
     response = self.client.get('/')
 
