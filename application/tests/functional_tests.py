@@ -5,11 +5,15 @@ Refs:
   https://www.obeythetestinggoat.com/book/chapter_02_unittest.html
 """
 import unittest
+from urllib.parse import urljoin
 
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from webdriver_manager.chrome import ChromeDriverManager
+
+
+BASE_URL = 'http://localhost:5000'
 
 
 class NewVisitorTest(unittest.TestCase):
@@ -37,18 +41,21 @@ class NewVisitorTest(unittest.TestCase):
 
     # Edith has heard about a cool new online to-do app. She goes
     # to check out its homepage.
-    self.browser.get('http://localhost:5000')
+    self.browser.get(BASE_URL)
 
     # She notices the page title and header welcomes her to
     # the app and tells her its name.
     self.assertIn('Welcome - Training Zealot', self.browser.title)
     header_text = self.browser.find_element(By.TAG_NAME, 'h2').text
     self.assertIn('Welcome', header_text)
-    navbar_text = self.browser.find_element(
-      By.XPATH, 
+    
+    # She sees a navigation bar that takes her back to the app's home page.
+    navbar = self.browser.find_element(
+      By.XPATH,
       '//nav[contains(@class, "navbar")]/a[contains(@class, "navbar-brand")]'
-    ).text
-    self.assertIn('The Training Zealot Analysis Platform', navbar_text)
+    )
+    self.assertIn('The Training Zealot Analysis Platform', navbar.text)
+    self.assertEqual(navbar.get_attribute('href'), urljoin(BASE_URL, '/'))
 
     # She sees links inviting her to visit a list of her Strava activities...
     self.assertIsNotNone(
