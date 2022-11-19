@@ -191,7 +191,7 @@ ACCESS_TOKEN=$access_token flask --app application run
 In another shell:
 
 ```sh
-python application/tests/functional_tests.py
+python application/functional_tests/tests.py
 ```
 ### Unit testing
 ```sh
