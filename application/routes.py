@@ -1,16 +1,13 @@
 """Core Flask app routes."""
 import os
-import datetime
-import json
 
-from flask import (Blueprint, flash, g, make_response, redirect,
-                   render_template, request, session, url_for)
-from flask import current_app as app
-import pandas
-import requests
+from flask import Blueprint, render_template, request
 
 from application import stravatalk
-from application.models import db, Activity
+from application.models import Activity
+
+
+route_blueprint = Blueprint('route_blueprint', __name__)
 
 
 # (Vestigial) Store the ngrok url we are forwarding to.
@@ -23,14 +20,14 @@ from application.models import db, Activity
 ACCESS_TOKEN = os.environ.get('ACCESS_TOKEN')
 
 
-@app.route('/')
+@route_blueprint.route('/')
 def start_dashapp():
   """Route for the landing page of the Flask app."""
 
   return render_template('landing_page.html')
 
 
-@app.route('/activities')
+@route_blueprint.route('/activities')
 def display_activity_list():
   """Display list of strava activities to view in Dashboard."""
   #activity_json = stravatalk.get_activities_json(session.get('access_token'))
@@ -42,7 +39,7 @@ def display_activity_list():
   return render_template('activity_list.html', resp_json=activity_json)
 
 
-@app.route('/view-saved-activities')
+@route_blueprint.route('/view-saved-activities')
 def view_activities():
   """A simple html list for debugging."""
 
