@@ -93,3 +93,39 @@ class ActivityModelTest(FlaskTestCase):
     second_saved_item = saved_items[1]
     self.assertEqual(first_saved_item.title, 'The first (ever) Activity item')
     self.assertEqual(second_saved_item.title, 'Activity the second')
+
+
+class ListPageTest(FlaskTestCase):
+  def test_displays_all_list_items(self):
+    first_act = Activity(
+      title='itemey 1',
+      description='description',
+      created=datetime.datetime.utcnow(),
+      recorded=datetime.datetime.utcnow(),
+      tz_local='UTC',
+      moving_time_s=3600,
+      elapsed_time_s=3660,
+      filepath_orig='activity_1.tcx',
+      filepath_csv='activity_1.tcx',
+    )
+    db.session.add(first_act)
+    db.session.commit()
+
+    second_act = Activity(
+      title='itemey 2',
+      description='description',
+      created=datetime.datetime.utcnow(),
+      recorded=datetime.datetime.utcnow(),
+      tz_local='UTC',
+      moving_time_s=3600,
+      elapsed_time_s=3660,
+      filepath_orig='activity_2.tcx',
+      filepath_csv='activity_2.tcx',
+    )
+    db.session.add(second_act)
+    db.session.commit()
+
+    response = self.client.get('/view-saved-activities')
+
+    self.assertIn('itemey 1', response.get_data(as_text=True))
+    self.assertIn('itemey 2', response.get_data(as_text=True))
