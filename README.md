@@ -185,7 +185,7 @@ speed (new_src)
 
 ```sh
 pip install -r requirements_dev.txt
-flask --app application run
+ACCESS_TOKEN=$access_token flask --app application run
 ```
 
 In another shell:

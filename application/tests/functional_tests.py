@@ -4,6 +4,7 @@ Refs:
   https://stackoverflow.com/questions/64717302/deprecationwarning-executable-path-has-been-deprecated-selenium-python
   https://www.obeythetestinggoat.com/book/chapter_02_unittest.html
 """
+import time
 import unittest
 from urllib.parse import urljoin
 
@@ -81,22 +82,38 @@ class NewVisitorTest(unittest.TestCase):
   def test_can_save_activity(self):
     # From the landing page, the user navigates to their list of
     # Strava activities.
+    self.browser.get(BASE_URL)
+    self.browser.find_element(By.LINK_TEXT, 'Strava activities').click()
 
+    # TODO: A detour: they must approve the app's use of their strava data.
+    # They do.
+
+    # They are redirected to their list of strava activities.
     # They click the link for the first activity presented.
+    section = self.browser.find_element(By.CLASS_NAME, 'content')
+    links = section.find_elements(By.TAG_NAME, 'a')
+    print(links[0].text)
+    links[0].click()
+
+    # Wait a million years (ok, one minute) for the dashboard to load
+    # and populate with data.
+    time.sleep(60)
 
     # On the activity dashboard, there is an option to save the
     # Strava activity into the database. The user clicks this
     # without editing any of the inputs on the page.
+    btn = self.browser.find_element(By.ID, 'save-activity')
+    self.assertEqual(btn.text, 'Save activity to DB')
+    btn.click()
 
     # The activity is saved successfully, and they are redirected to
     # its "Saved Activity" page.
+    self.fail('Finish the test!')
 
     # They check out the activity log to see if it updated.
 
     # They find the saved activity in the calendar view,
     # with summary stats and a link back to the saved activity view.
-
-    self.fail('Finish the test!')
 
 
 if __name__ == '__main__':
