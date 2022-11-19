@@ -38,6 +38,27 @@ class FlaskTestCase(unittest.TestCase):
     db.drop_all()
     self.app_context.pop()
 
+  def create_activity(self, title='title'):
+    act = Activity(
+      title=title,
+      description='description',
+      created=datetime.datetime.utcnow(),
+      recorded=datetime.datetime.utcnow(),
+      tz_local='UTC',
+      moving_time_s=3600,
+      elapsed_time_s=3660,
+      filepath_orig=f'activity_{title}.tcx',
+      filepath_csv=f'activity_{title}.csv',
+      # Fields below here not required
+      # strava_id=activity_data['id'],
+      # distance_m=activity_data['distance'],
+      # elevation_m=activity_data['total_elevation_gain'],
+      # intensity_factor=intensity_factor,
+      # tss=tss,
+    )
+    db.session.add(act)
+    db.session.commit()
+
 
 class HomePageTest(FlaskTestCase):
 
@@ -52,39 +73,8 @@ class HomePageTest(FlaskTestCase):
 class ActivityModelTest(FlaskTestCase):
 
   def test_saving_and_retrieving_items(self):
-    first_act = Activity(
-      title='The first (ever) Activity item',
-      description='description',
-      created=datetime.datetime.utcnow(),
-      recorded=datetime.datetime.utcnow(),
-      tz_local='UTC',
-      moving_time_s=3600,
-      elapsed_time_s=3660,
-      filepath_orig='activity_1.tcx',
-      filepath_csv='activity_1.tcx',
-      # Fields below here not required
-      # strava_id=activity_data['id'],
-      # distance_m=activity_data['distance'],
-      # elevation_m=activity_data['total_elevation_gain'],
-      # intensity_factor=intensity_factor,
-      # tss=tss,
-    )
-    db.session.add(first_act)
-    db.session.commit()
-
-    second_act = Activity(
-      title='Activity the second',
-      description='description',
-      created=datetime.datetime.utcnow(),
-      recorded=datetime.datetime.utcnow(),
-      tz_local='UTC',
-      moving_time_s=3600,
-      elapsed_time_s=3660,
-      filepath_orig='activity_2.tcx',
-      filepath_csv='activity_2.tcx',
-    )
-    db.session.add(second_act)
-    db.session.commit()
+    self.create_activity(title='The first (ever) Activity item')
+    self.create_activity(title='Activity the second')
 
     saved_items = Activity.query.all()
     self.assertEqual(len(saved_items), 2)
@@ -97,33 +87,8 @@ class ActivityModelTest(FlaskTestCase):
 
 class ListPageTest(FlaskTestCase):
   def test_displays_all_list_items(self):
-    first_act = Activity(
-      title='itemey 1',
-      description='description',
-      created=datetime.datetime.utcnow(),
-      recorded=datetime.datetime.utcnow(),
-      tz_local='UTC',
-      moving_time_s=3600,
-      elapsed_time_s=3660,
-      filepath_orig='activity_1.tcx',
-      filepath_csv='activity_1.tcx',
-    )
-    db.session.add(first_act)
-    db.session.commit()
-
-    second_act = Activity(
-      title='itemey 2',
-      description='description',
-      created=datetime.datetime.utcnow(),
-      recorded=datetime.datetime.utcnow(),
-      tz_local='UTC',
-      moving_time_s=3600,
-      elapsed_time_s=3660,
-      filepath_orig='activity_2.tcx',
-      filepath_csv='activity_2.tcx',
-    )
-    db.session.add(second_act)
-    db.session.commit()
+    self.create_activity(title='itemey 1')
+    self.create_activity(title='itemey 2')
 
     response = self.client.get('/view-saved-activities')
 
