@@ -35,9 +35,10 @@ def create_app(test_config=None):
   # SQLAlchemy
   db.init_app(app)
 
-  with app.app_context():
-    from application import routes
+  from application.routes import route_blueprint
+  app.register_blueprint(route_blueprint)
 
+  with app.app_context():
     # Add various dashboards using this Flask app as a server.
     from application.plotlydash.app import add_dashboard_to_flask
     add_dashboard_to_flask(app)

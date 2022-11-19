@@ -6,8 +6,6 @@ import datetime
 import os
 import unittest
 
-from flask import url_for
-
 from application import create_app, db
 from application.models import Activity
 
@@ -44,7 +42,6 @@ class FlaskTestCase(unittest.TestCase):
 class HomePageTest(FlaskTestCase):
 
   def test_home_page_returns_correct_html(self):
-    print(self.app.url_map)
     response = self.client.get('/')
 
     html = response.get_data(as_text=True)
