@@ -95,9 +95,9 @@ class NewVisitorTest(unittest.TestCase):
     print(links[0].text)
     links[0].click()
 
-    # Wait a million years (ok, one minute) for the dashboard to load
+    # Wait a million years for the dashboard to load
     # and populate with data.
-    time.sleep(60)
+    time.sleep(90)
 
     # On the activity dashboard, there is an option to save the
     # Strava activity into the database. The user clicks this
@@ -106,14 +106,33 @@ class NewVisitorTest(unittest.TestCase):
     self.assertEqual(btn.text, 'Save activity to DB')
     btn.click()
 
+    time.sleep(5)
+
+    # The activity is saved successfully, and the user sees a message
+    # indicating success.
+    result = self.browser.find_element(By.ID, 'save-result').text
+    self.assertEqual(result, 'Activity saved successfully!')
+
     # The activity is saved successfully, and they are redirected to
     # its "Saved Activity" page.
     self.fail('Finish the test!')
+
+    # self.client.post('/', data={'item_text': 'A new list item'})
+    # self.assertEqual(Item.objects.count(), 1)
+    # new_item = Item.objects.first()
+    # self.assertEqual(new_item.text, 'A new list item')
 
     # They check out the activity log to see if it updated.
 
     # They find the saved activity in the calendar view,
     # with summary stats and a link back to the saved activity view.
+
+    # The user has sudden memory loss and goes back to the strava activity page
+
+    # They click `save activity` again
+
+    # They receive an alert that this activity already exists in their
+    # database.
 
 
 if __name__ == '__main__':
