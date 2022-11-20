@@ -315,3 +315,26 @@ class NewVisitorTest(LiveServerTestCase):
 
     # They receive an alert that this activity already exists in their
     # database.
+
+  def test_can_upload_activity(self):
+    # From the landing page, the user navigates to the file upload dashboard.
+    self.browser.get(self.get_server_url())
+    self.browser.find_element(
+      By.PARTIAL_LINK_TEXT, 
+      'Analyze an activity file'
+    ).click()
+
+    # They use the upload widget to select an activity file to analyze.
+    start_time = time.time()
+    while True:
+      try:
+        input = self.browser.find_element(By.XPATH, '//*[@id="upload-data"]/div/input')
+        break
+      except WebDriverException as e:
+        if time.time() - start_time > MAX_WAIT:
+          raise e
+        time.sleep(0.5)
+    input.send_keys('./testdata.gpx')
+
+    # The page updates into a full activity analysis dashboard.
+    self.fail('Finish the test!')
