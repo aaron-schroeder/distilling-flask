@@ -6,3 +6,5 @@ requests==2.25.1
 SQLAlchemy>=1.4.22
 flask-sqlalchemy>=2.5.1
 scipy
+fitparse>=1.2.0
+activereader>=0.0.1

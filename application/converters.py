@@ -57,14 +57,14 @@ def from_tcx(file_obj):
       by `lxml.ElementTree.parse`
       https://lxml.de/tutorial.html#the-parse-function
   """
-  from activereader import TcxFileReader
+  from activereader import Tcx
   
-  reader = TcxFileReader(file_obj)
+  reader = Tcx.from_file(file_obj)
 
   # Build a DataFrame using only trackpoints (as records).
   # Make sure to name the fields appropriately, so the plotter function
   # will find them.
-  initial_time = reader.activity_start_time
+  initial_time = reader.activities[0].start_time or reader.trackpoints[0].time
   records = [
     {
       TIME: int((tp.time - initial_time).total_seconds()),
@@ -76,7 +76,7 @@ def from_tcx(file_obj):
       SPEED: tp.speed_ms,
       #'cadence': 2.0 * tp.cadence_rpm,
       CADENCE: tp.cadence_rpm,
-    } for tp in reader.get_trackpoints()
+    } for tp in reader.trackpoints
   ]
 
   df = pd.DataFrame.from_records(records)
@@ -98,14 +98,14 @@ def from_gpx(file_obj):
       by `lxml.ElementTree.parse`
       https://lxml.de/tutorial.html#the-parse-function
   """
-  from activereader import GpxFileReader
+  from activereader import Gpx
   
-  reader = GpxFileReader(file_obj)
+  reader = Gpx.from_file(file_obj)
 
   # Build a DataFrame using only trackpoints (as records).
   # Make sure to name the fields appropriately, so the plotter function
   # will find them.
-  initial_time = reader.start_time or reader.get_trackpoints()[0].time
+  initial_time = reader.start_time or reader.trackpoints[0].time
   records = [
     {
       TIME: int((tp.time - initial_time).total_seconds()),
@@ -116,7 +116,7 @@ def from_gpx(file_obj):
       HEARTRATE: tp.hr,
       # SPEED: tp.speed_ms,  # not available in gpx
       CADENCE: tp.cadence_rpm,
-    } for tp in reader.get_trackpoints()
+    } for tp in reader.trackpoints
   ]
 
   df = pd.DataFrame.from_records(records)
