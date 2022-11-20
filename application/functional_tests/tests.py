@@ -14,11 +14,15 @@ import unittest
 from urllib.parse import urlparse, urljoin
 
 from selenium import webdriver
+from selenium.common.exceptions import WebDriverException
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from webdriver_manager.chrome import ChromeDriverManager
 
 from application import db, create_app, stravatalk
+
+
+MAX_WAIT = 90
 
 
 class LiveServerTestCase(unittest.TestCase):
@@ -264,27 +268,33 @@ class NewVisitorTest(LiveServerTestCase):
     # They click the link for the first activity presented.
     section = self.browser.find_element(By.CLASS_NAME, 'content')
     links = section.find_elements(By.TAG_NAME, 'a')
-    print(links[0].text)
     links[0].click()
 
-    # Wait a million years for the dashboard to load
-    # and populate with data.
-    time.sleep(90)
+    # They wait a million years for the appearance of a button that
+    # allows them to save the activity to the database.
+    start_time = time.time()
+    while True:
+      try:
+        btn = self.browser.find_element(By.ID, 'save-activity')
+        self.assertIn('Save activity', btn.text)
+        break
+      except (AssertionError, WebDriverException) as e:
+        if time.time() - start_time > MAX_WAIT:
+          raise e
+        time.sleep(0.5)
 
-    # On the activity dashboard, there is an option to save the
-    # Strava activity into the database. The user clicks this
-    # without editing any of the inputs on the page.
-    btn = self.browser.find_element(By.ID, 'save-activity')
-    self.assertEqual(btn.text, 'Save activity to DB')
+    # Without editing any of the inputs on the page, they click it.
     btn.click()
 
     time.sleep(5)
 
+    # Current (passing) path:
     # The activity is saved successfully, and the user sees a message
     # indicating success.
     result = self.browser.find_element(By.ID, 'save-result').text
     self.assertIn('Activity saved successfully!', result)
 
+    # Desired path:
     # The activity is saved successfully, and they are redirected to
     # its "Saved Activity" page.
     self.fail('Finish the test!')
