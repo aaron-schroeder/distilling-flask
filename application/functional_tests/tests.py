@@ -211,6 +211,16 @@ class NewVisitorTest(LiveServerTestCase):
     db.drop_all()
     db.session.remove()
 
+  def wait_for_element(self, by, value):
+    start_time = time.time()
+    while True:
+      try:
+        return self.browser.find_element(by, value)
+      except WebDriverException as e:
+        if time.time() - start_time > MAX_WAIT:
+          raise e
+        time.sleep(0.5)
+
   def check_for_link_text(self, link_text):
     self.assertIsNotNone(
       self.browser.find_element(By.LINK_TEXT, link_text))
@@ -272,16 +282,8 @@ class NewVisitorTest(LiveServerTestCase):
 
     # They wait a million years for the appearance of a button that
     # allows them to save the activity to the database.
-    start_time = time.time()
-    while True:
-      try:
-        btn = self.browser.find_element(By.ID, 'save-activity')
-        self.assertIn('Save activity', btn.text)
-        break
-      except (AssertionError, WebDriverException) as e:
-        if time.time() - start_time > MAX_WAIT:
-          raise e
-        time.sleep(0.5)
+    btn = self.wait_for_element(By.ID, 'save-activity')
+    self.assertIn('Save activity', btn.text)
 
     # Without editing any of the inputs on the page, they click it.
     btn.click()
@@ -325,15 +327,7 @@ class NewVisitorTest(LiveServerTestCase):
     ).click()
 
     # They use the upload widget to select an activity file to analyze.
-    start_time = time.time()
-    while True:
-      try:
-        input = self.browser.find_element(By.XPATH, '//*[@id="upload-data"]/div/input')
-        break
-      except WebDriverException as e:
-        if time.time() - start_time > MAX_WAIT:
-          raise e
-        time.sleep(0.5)
+    input = self.wait_for_element(By.XPATH, '//*[@id="upload-data"]/div/input')
     input.send_keys('./testdata.gpx')
 
     # The page updates into a full activity analysis dashboard.
