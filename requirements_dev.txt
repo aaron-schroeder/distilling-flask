@@ -1,3 +1,6 @@
 pytest
 selenium>=4
 webdriver_manager
+coverage
+# werkzeug>=2.3.0  # not yet released
+git+https://github.com/pallets/werkzeug
