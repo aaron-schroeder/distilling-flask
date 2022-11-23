@@ -119,6 +119,7 @@ def save_activity(
   df.to_csv(fname_csv)
 
   return f'Activity saved successfully! Internal ID = {new_act.id}'
+  # return dcc.Location(id=new_act.id, pathname=f'/dash/saved-activity/{new_act.id}')
 
 
 @callback(
@@ -168,7 +169,7 @@ def add_strava_stats_to_table(activity_data, table_records):
   df_stats = pd.DataFrame.from_records(table_records)
   # df_stats.index = df_stats['']
 
-  strava_row = pd.Series([])
+  strava_row = pd.Series([], dtype='object')
   strava_row[''] = 'Strava'
   strava_row['Distance (m)'] = activity_data['distance']
   strava_row['Time (s)'] = activity_data['moving_time']
