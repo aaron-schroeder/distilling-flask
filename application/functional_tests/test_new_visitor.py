@@ -101,12 +101,6 @@ class NewVisitorTest(FunctionalTest):
     # They find the saved activity in the calendar view,
     # with summary stats and a link back to the saved activity view.
 
-    # The user has sudden memory loss and goes back to the strava activity page
-
-    # They click `save activity` again
-
-    # They receive an alert that this activity already exists in their
-    # database.
 
   def test_can_upload_activity(self):
     # From the landing page, the user navigates to the file upload dashboard.
