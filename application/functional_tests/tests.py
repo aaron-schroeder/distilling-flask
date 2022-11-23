@@ -8,11 +8,11 @@ import json
 import multiprocessing
 import os
 import socket
-import socketserver
 import time
 import unittest
-from urllib.parse import urlparse, urljoin
+from urllib.parse import urljoin
 
+import dash
 from selenium import webdriver
 from selenium.common.exceptions import WebDriverException
 from selenium.webdriver.chrome.service import Service
@@ -48,12 +48,25 @@ class LiveServerTestCase(unittest.TestCase):
     Does the required setup, doing it here means you don't have to
     call super.setUp in subclasses.
     """
-
-    # Get the app
+    # Get the app, making sure that the global callback list doesn't
+    # grow each time a LiveServerTestCase is called.
+    # This issue arises because I create the app in the main thread 
+    # (which populates GLOBAL_CALLBACK_LIST with my app's callbacks),
+    # but run the app in another thread (where GLOBAL_CALLBACK_LIST is
+    # transferred to an attribute of the app object and emptied.)
+    # Since globals are copied from the thread that spawned them,
+    # the dash app can't unset the global variable from its thread.
+    # See: https://github.com/plotly/dash/issues/1933
+    dash_callback_list_pre = dash._callback.GLOBAL_CALLBACK_LIST.copy()
     self.app = self.create_app()
+    if (
+      len(dash_callback_list_pre) > 0 
+      and len(dash._callback.GLOBAL_CALLBACK_LIST) > len(dash_callback_list_pre)
+    ):
+      dash._callback.GLOBAL_CALLBACK_LIST = dash_callback_list_pre
 
-    self._configured_port = self.app.config.get('LIVESERVER_PORT', 5000)
-    self._port_value = multiprocessing.Value('i', self._configured_port)
+    # self._configured_port = self.app.config.get('LIVESERVER_PORT', 5000)
+    self._configured_port = 5000
 
     # We need to create a context in order for extensions to catch up
     self._ctx = self.app.test_request_context()
@@ -66,67 +79,39 @@ class LiveServerTestCase(unittest.TestCase):
       self._post_teardown()
       self._terminate_live_server()
 
-  def get_server_url(self):
+  @property
+  def server_url(self):
     """
     Return the url of the test server
     """
-    return 'http://localhost:%s' % self._port_value.value
+    return f'http://localhost:{self._configured_port}'
 
   def _spawn_live_server(self):
-    self._process = None
-    port_value = self._port_value
-
-    def worker(app, port):
-      # Based on solution: http://stackoverflow.com/a/27598916
-      # Monkey-patch the server_bind so we can determine the port bound by Flask.
-      # This handles the case where the port specified is `0`, which means that
-      # the OS chooses the port. This is the only known way (currently) of getting
-      # the port out of Flask once we call `run`.
-      original_socket_bind = socketserver.TCPServer.server_bind
-      def socket_bind_wrapper(self):
-        ret = original_socket_bind(self)
-
-        # Get the port and save it into the port_value, so the parent process
-        # can read it.
-        (_, port) = self.socket.getsockname()
-        port_value.value = port
-        socketserver.TCPServer.server_bind = original_socket_bind
-        return ret
-
-      socketserver.TCPServer.server_bind = socket_bind_wrapper
-      app.run(port=port, use_reloader=False)
-
     self._process = multiprocessing.Process(
-        target=worker, args=(self.app, self._configured_port)
+        target=lambda app, port: app.run(port=port, use_reloader=False),
+        args=(self.app, self._configured_port)
     )
 
     self._process.start()
 
     # We must wait for the server to start listening, but give up
     # after a specified maximum timeout
-    timeout = self.app.config.get('LIVESERVER_TIMEOUT', 5)
+    timeout = int(self.app.config.get('LIVESERVER_TIMEOUT', 5))
     start_time = time.time()
 
     while True:
       elapsed_time = (time.time() - start_time)
       if elapsed_time > timeout:
         raise RuntimeError(
-          'Failed to start the server after %d seconds. ' % timeout
+          f'Failed to start the server after {timeout:d} seconds. '
         )
-
       if self._can_ping_server():
         break
 
   def _can_ping_server(self):
-    host, port = self._get_server_address()
-    if port == 0:
-      # Port specified by the user was 0, and the OS has not yet assigned
-      # the proper port.
-      return False
-
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
-      sock.connect((host, port))
+      sock.connect(('localhost', self._configured_port))
     except socket.error as e:
       success = False
     else:
@@ -135,29 +120,6 @@ class LiveServerTestCase(unittest.TestCase):
       sock.close()
 
     return success
-
-  def _get_server_address(self):
-    """
-    Gets the server address used to test the connection with a socket.
-    Respects both the LIVESERVER_PORT config value and overriding
-    get_server_url()
-    """
-    parts = urlparse(self.get_server_url())
-
-    host = parts.hostname
-    port = parts.port
-
-    if port is None:
-      if parts.scheme == 'http':
-        port = 80
-      elif parts.scheme == 'https':
-        port = 443
-      else:
-        raise RuntimeError(
-          'Unsupported server url scheme: %s' % parts.scheme
-        )
-
-    return host, port
 
   def _post_teardown(self):
     if getattr(self, '_ctx', None) is not None:
@@ -172,21 +134,18 @@ class LiveServerTestCase(unittest.TestCase):
 class NewVisitorTest(LiveServerTestCase):
   def create_app(self):
 
+    # Refresh strava access token if necessary, 
+    # then set its value as an environment variable for the flask app.
     with open('client_secrets.json', 'r') as f:
       client_secrets = json.load(f)
     client_id = client_secrets['installed']['client_id']
     client_secret = client_secrets['installed']['client_secret']
-
     access_token = stravatalk.refresh_access_token('tokens.json', client_id, client_secret)
-
     os.environ['ACCESS_TOKEN'] = access_token
 
     return create_app(test_config={
       'TESTING': True,
-      'SQLALCHEMY_DATABASE_URI': os.environ.get(
-        'TEST_DATABASE_URL',
-        'sqlite://'  # in-memory db
-      )
+      'SQLALCHEMY_DATABASE_URI': 'sqlite:///mydb.sqlite'  # in-memory db
     })
 
   def setUp(self):
@@ -218,6 +177,8 @@ class NewVisitorTest(LiveServerTestCase):
         return self.browser.find_element(by, value)
       except WebDriverException as e:
         if time.time() - start_time > MAX_WAIT:
+          with open('out.html', 'w') as f:
+            f.write(self.browser.page_source)
           raise e
         time.sleep(0.5)
 
@@ -229,7 +190,7 @@ class NewVisitorTest(LiveServerTestCase):
 
     # Edith has heard about a cool new online to-do app. She goes
     # to check out its homepage.
-    self.browser.get(self.get_server_url())
+    self.browser.get(self.server_url)
 
     # She notices the page title and header welcomes her to
     # the app and tells her its name.
@@ -245,7 +206,7 @@ class NewVisitorTest(LiveServerTestCase):
     self.assertIn('The Training Zealot Analysis Platform', navbar.text)
     self.assertEqual(
       navbar.get_attribute('href'),
-      urljoin(self.get_server_url(), '/')
+      urljoin(self.server_url, '/')
     )
 
     # She sees links inviting her to visit a list of her Strava activities...
@@ -268,7 +229,7 @@ class NewVisitorTest(LiveServerTestCase):
   def test_can_save_activity(self):
     # From the landing page, the user navigates to their list of
     # Strava activities.
-    self.browser.get(self.get_server_url())
+    self.browser.get(self.server_url)
     self.browser.find_element(By.LINK_TEXT, 'Strava activities').click()
 
     # TODO: A detour: they must approve the app's use of their strava data.
@@ -320,9 +281,9 @@ class NewVisitorTest(LiveServerTestCase):
 
   def test_can_upload_activity(self):
     # From the landing page, the user navigates to the file upload dashboard.
-    self.browser.get(self.get_server_url())
+    self.browser.get(self.server_url)
     self.browser.find_element(
-      By.PARTIAL_LINK_TEXT, 
+      By.PARTIAL_LINK_TEXT,
       'Analyze an activity file'
     ).click()
 
