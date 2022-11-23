@@ -183,16 +183,13 @@ speed (new_src)
 
 ### Functional testing
 
+This requires user-supplied files: `client_secrets.json` and `tokens.json`.
+
 ```sh
 pip install -r requirements_dev.txt
-ACCESS_TOKEN=$access_token flask --app application run
+python -m unittest discover -p test_*.py application.functional_tests
 ```
 
-In another shell:
-
-```sh
-python -m unittest application.functional_tests.tests
-```
 ### Unit testing
 ```sh
 python -m unittest application.tests.tests
