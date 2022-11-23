@@ -58,39 +58,3 @@ class FlaskTestCase(unittest.TestCase):
     )
     db.session.add(act)
     db.session.commit()
-
-
-class HomePageTest(FlaskTestCase):
-
-  def test_home_page_returns_correct_html(self):
-    response = self.client.get('/')
-
-    html = response.get_data(as_text=True)
-    self.assertTrue(html.startswith('<!doctype html>'))
-    self.assertIn('<title>Welcome - Training Zealot</title>', html)
-
-
-class ActivityModelTest(FlaskTestCase):
-
-  def test_saving_and_retrieving_items(self):
-    self.create_activity(title='The first (ever) Activity item')
-    self.create_activity(title='Activity the second')
-
-    saved_items = Activity.query.all()
-    self.assertEqual(len(saved_items), 2)
-
-    first_saved_item = saved_items[0]
-    second_saved_item = saved_items[1]
-    self.assertEqual(first_saved_item.title, 'The first (ever) Activity item')
-    self.assertEqual(second_saved_item.title, 'Activity the second')
-
-
-class ListPageTest(FlaskTestCase):
-  def test_displays_all_list_items(self):
-    self.create_activity(title='itemey 1')
-    self.create_activity(title='itemey 2')
-
-    response = self.client.get('/view-saved-activities')
-
-    self.assertIn('itemey 1', response.get_data(as_text=True))
-    self.assertIn('itemey 2', response.get_data(as_text=True))

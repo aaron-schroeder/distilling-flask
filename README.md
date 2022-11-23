@@ -192,7 +192,7 @@ python -m unittest discover -p test_*.py application.functional_tests
 
 ### Unit testing
 ```sh
-python -m unittest application.tests.tests
+python -m unittest discover -p test_*.py application.tests
 ```
 
 ## Project Status
