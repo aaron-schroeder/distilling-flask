@@ -1,5 +1,4 @@
 # TEMPORARY while I clean up my local repo
-tokens*
 *.ipynb
 _wsgi.py
 data/
@@ -23,6 +22,11 @@ run_dash*.py
 *_next.py
 out/
 plot_power.py
+
+# Secret
+tokens.json
+client_secrets.json
+strava_credentials.json
 
 # Local compooper stuff
 .vscode/
