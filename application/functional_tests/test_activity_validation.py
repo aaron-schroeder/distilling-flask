@@ -2,10 +2,11 @@ import time
 
 from selenium.webdriver.common.by import By
 
-from .base import FunctionalTest
+from .base import AuthenticatedUserFunctionalTest
 
 
-class ActivityValidationTest(FunctionalTest):
+class ActivityValidationTest(AuthenticatedUserFunctionalTest):
+
   def test_no_duplicate_strava_activities(self):
     self.browser.get(self.server_url)
     self.browser.find_element(By.LINK_TEXT, 'Strava activities').click()
@@ -24,6 +25,8 @@ class ActivityValidationTest(FunctionalTest):
 
     # The user has sudden memory loss and clicks `save activity` again
     btn.click()
+
+    time.sleep(5)
 
     # They receive an alert that this activity already exists in the
     # database.

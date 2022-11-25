@@ -4,15 +4,20 @@ import os
 import socket
 import time
 import unittest
+from urllib.parse import urljoin
 
 import dash
+from flask import url_for
 from selenium import webdriver
-from selenium.common.exceptions import WebDriverException
+from selenium.common.exceptions import (
+  WebDriverException, 
+  ElementClickInterceptedException
+)
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from webdriver_manager.chrome import ChromeDriverManager
 
-from application import db, create_app, stravatalk
+from application import db, create_app
 
 
 MAX_WAIT = 90
@@ -131,14 +136,13 @@ class FunctionalTest(LiveServerTestCase):
     # then set its value as an environment variable for the flask app.
     with open('client_secrets.json', 'r') as f:
       client_secrets = json.load(f)
-    client_id = client_secrets['installed']['client_id']
-    client_secret = client_secrets['installed']['client_secret']
-    access_token = stravatalk.refresh_access_token('tokens.json', client_id, client_secret)
-    os.environ['ACCESS_TOKEN'] = access_token
+    os.environ['STRAVA_CLIENT_ID'] = client_secrets['installed']['client_id']
+    os.environ['STRAVA_CLIENT_SECRET'] = client_secrets['installed']['client_secret']
 
     return create_app(test_config={
       'TESTING': True,
-      'SQLALCHEMY_DATABASE_URI': 'sqlite:///mydb.sqlite'  # in-memory db
+      'SQLALCHEMY_DATABASE_URI': 'sqlite:///mydb.sqlite',
+      'SECRET_KEY': 'super secret key'
     })
 
   def setUp(self):
@@ -178,3 +182,37 @@ class FunctionalTest(LiveServerTestCase):
   def check_for_link_text(self, link_text):
     self.assertIsNotNone(
       self.browser.find_element(By.LINK_TEXT, link_text))
+
+
+class AuthenticatedUserFunctionalTest(FunctionalTest):
+  def setUp(self):
+    super().setUp()
+    
+    path = os.path.dirname(os.path.realpath(__file__))
+    with open(os.path.join(path, 'strava_credentials.json'), 'r') as f:
+      credentials = json.load(f)
+
+    self.browser.get(urljoin(
+      self.server_url, 
+      url_for('strava_api.display_activity_list'))
+    )
+
+    un = self.wait_for_element(By.ID, 'email')
+    un.clear()
+    un.send_keys(credentials['USERNAME'])
+    pw = self.wait_for_element(By.ID, 'password')
+    pw.clear()
+    pw.send_keys(credentials['PASSWORD'])
+    self.browser.find_element(By.ID, 'login-button').click()
+
+    auth_btn = self.wait_for_element(By.ID, 'authorize')
+
+    # A cookie banner may be in the way
+    try:
+      auth_btn.click()
+    except ElementClickInterceptedException:
+      self.browser.find_element(
+        By.CLASS_NAME, 
+        'btn-accept-cookie-banner'
+      ).click()
+      auth_btn.click()

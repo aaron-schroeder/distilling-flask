@@ -12,6 +12,10 @@ import os
 import requests
 
 
+CLIENT_ID = os.environ.get('STRAVA_CLIENT_ID')
+CLIENT_SECRET = os.environ.get('STRAVA_CLIENT_SECRET')
+
+
 def get_access_token(
   code_from_redirect_url,
   client_id, 
@@ -20,10 +24,10 @@ def get_access_token(
 ):
   """Get an access token from a redirect code given by Strava.
 
-  When Strava's Oauth page is shown to the user (me), clicking to grant
+  When Strava's Oauth page is shown to the user, clicking to grant
   the permissions will cause a redirect to a localhost page. Although
-  the page won't show anything (cannot be displayed or whatever), the
-  redirected url will have a code as a parameter.
+  the page won't necessarily show anything, the redirected url will
+  have a code as a parameter.
 
   Args:
     code_from_redirect_url (str): The code that is appended to the 
@@ -39,8 +43,6 @@ def get_access_token(
     str: A fresh access token for use with Strava's API.
   
   """
-  # code_from_redirect_url = '52439604cab41d1b3462cde08a2fdee05ca42894'
-
   resp_token = requests.post(
     url='https://www.strava.com/oauth/token',
     data={
@@ -91,6 +93,31 @@ def refresh_access_token(fname, client_id, client_secret):
     )
   
     return handle_token_response(resp_token, fname)
+
+
+def refresh_token(token):
+  """Check if access_token is expired, and if so, refresh it."""
+  if datetime.datetime.utcnow() < datetime.datetime.utcfromtimestamp(token['expires_at']):
+    return token
+
+  print('Refreshing expired token')
+
+  resp_token = requests.post(
+    url='https://www.strava.com/oauth/token',
+    data={
+      'client_id': CLIENT_ID,
+      'client_secret': CLIENT_SECRET,
+      'refresh_token': token['refresh_token'],
+      'grant_type': 'refresh_token'
+    }
+  )
+
+  if resp_token.status_code != 200:
+    raise Exception
+
+  # TODO: test if there's a bad json response possible
+
+  return resp_token.json()
 
 
 def handle_token_response(resp_token, fname_out):

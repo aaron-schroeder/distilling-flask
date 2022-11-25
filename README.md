@@ -61,15 +61,16 @@ You should be able to run the app now. See [Examples](#examples) below for more 
 
 ## Examples
 
-### Run the Flask app locally with a Strava access token
+### Run the Flask app locally with a Strava app client id and client secret
 
 ```python
 import os
 
-# Get ahold of your strava access token
+# Get ahold of your the credentials for your Strava app
 # (sorry, you are on your own for now)
 # ...
-os.environ['ACCESS_TOKEN'] = access_token
+os.environ['CLIENT_ID'] = client_id
+os.environ['CLIENT_SECRET'] = client_secret
 
 import application
 app = application.create_app()
@@ -183,7 +184,7 @@ speed (new_src)
 
 ### Functional testing
 
-This requires user-supplied files: `client_secrets.json` and `tokens.json`.
+This requires user-supplied file `client_secrets.json`.
 
 ```sh
 pip install -r requirements_dev.txt
