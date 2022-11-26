@@ -1,6 +1,6 @@
 import os
 
-from flask import redirect, render_template, request, session, url_for
+from flask import redirect, render_template, request, Response, session, url_for
 import requests
 
 from . import strava_api
@@ -26,26 +26,40 @@ def handle_code():
   if request.args.get('error', None) is not None:
     # Handles user clicking "cancel" button, resulting in a response like:
     # http://localhost:5000/strava/redirect?state=&error=access_denied
-    raise Exception(f'Error from Strava API: {request.args.get("error")}')
-
-  code = request.args.get('code')
+    return Response(
+      'If you want to use Training Zealot to analyze your Strava data, '
+      'you must grant the app access to your Strava data.\n'
+      f'Error from Strava API: {request.args.get("error")}',
+      status=200,
+    )
 
   # Validate that the user accepted the necessary scope,
-  # and redirect them somewhere TBD if they didn't.
-  scope = request.args.get('scope')  # should be read,activity:read_all
-  # print(scope)
+  # and display a warning if not.
+  scope = request.args.get('scope')
+  if 'activity:read_all' not in scope.split(','):
+    return Response(
+      'If you want to use Training Zealot to analyze your Strava data, '
+      'you must accept all permissions',
+      status=200,
+    )
+    # return render_template(
+    #   'strava_errors.html',
+    #   scope=scope,
+    #   missing_scope='activity:read_all'
+    # )
 
   resp_token = requests.post(
     url='https://www.strava.com/oauth/token',
     data={
       'client_id': CLIENT_ID,
       'client_secret': CLIENT_SECRET,
-      'code': code,
+      'code': request.args.get('code'),
       'grant_type': 'authorization_code'
     }
   )
 
   # Now evaluate whether it came in successfully
+  # TODO: Test this! Or remove it!
   if resp_token.status_code != 200:
     raise Exception
 
