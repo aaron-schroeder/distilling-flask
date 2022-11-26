@@ -21,7 +21,7 @@ def authorize():
   )
 
 
-@strava_api.route('/redirect')
+@strava_api.route('/callback')
 def handle_code():
   if request.args.get('error', None) is not None:
     # Handles user clicking "cancel" button, resulting in a response like:
