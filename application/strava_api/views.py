@@ -1,7 +1,6 @@
 import os
 
 from flask import redirect, render_template, request, Response, session, url_for
-import requests
 
 from . import strava_api
 from application import stravatalk
