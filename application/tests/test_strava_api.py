@@ -32,25 +32,20 @@ class TestAuthorize(FlaskTestCase):
       rv = self.client.get(url_for('strava_api.authorize'))
     # response should be a redirect
     self.assertEqual(rv.status_code, 302)
-    # should redirect to facebook's authorization endpoint
+    # should redirect to strava's authorization endpoint
     self.assertEqual(
       rv.location.split('?')[0],
       'https://www.strava.com/oauth/authorize'
     )
+
     # TODO: figure out if more testing is called for
 
 
 class TestHandleCode(FlaskTestCase):
 
-  # TODO: Put the post request into a stravatalk function,
-  # then mock out that function like so:
-  # @patch('application.strava_api.stravatalk.post_func') 
-  @patch('application.strava_api.views.requests.post')
-  def test_strava_oauth_callback(self, mock_post):
-    mock_post.return_value = Mock(
-      status_code=200,
-      json=Mock(return_value=MOCK_TOKEN)
-    )
+  @patch('application.strava_api.views.stravatalk.get_token')
+  def test_strava_oauth_callback(self, mock_get_token):
+    mock_get_token.return_value = MOCK_TOKEN
 
     callback_url = '/strava/callback?code=some_code&scope=read,activity:read_all'
     rv = self.client.get(callback_url)

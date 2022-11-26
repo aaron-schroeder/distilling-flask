@@ -48,23 +48,11 @@ def handle_code():
     #   missing_scope='activity:read_all'
     # )
 
-  resp_token = requests.post(
-    url='https://www.strava.com/oauth/token',
-    data={
-      'client_id': CLIENT_ID,
-      'client_secret': CLIENT_SECRET,
-      'code': request.args.get('code'),
-      'grant_type': 'authorization_code'
-    }
+  session['token'] = stravatalk.get_token(
+    request.args.get('code'),
+    CLIENT_ID, 
+    CLIENT_SECRET
   )
-
-  # Now evaluate whether it came in successfully
-  # TODO: Test this! Or remove it!
-  if resp_token.status_code != 200:
-    raise Exception
-
-  # Now save it in the user's session
-  session['token'] = resp_token.json()
 
   # Redirect them to an activity list that uses the session data
   return redirect(url_for('strava_api.display_activity_list'))
