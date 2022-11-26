@@ -26,10 +26,12 @@ class FlaskTestCase(unittest.TestCase):
       'SQLALCHEMY_DATABASE_URI': os.environ.get(
         'TEST_DATABASE_URL',
         'sqlite:///' + os.path.join(BASEDIR, 'data-test.sqlite')
-      )
+      ),
+      'SECRET_KEY': 'super secret key'
     })
     self.app_context = self.app.app_context()
     self.app_context.push()
+    # self.client.
     # db.create_all()
     self.client = self.app.test_client(use_cookies=True)
 
