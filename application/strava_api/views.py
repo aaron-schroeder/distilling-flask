@@ -25,27 +25,30 @@ def handle_code():
   if request.args.get('error', None) is not None:
     # Handles user clicking "cancel" button, resulting in a response like:
     # http://localhost:5000/strava/redirect?state=&error=access_denied
-    return Response(
+    error = (
+      'It looks like you clicked "cancel" on the strava permission screen.\n'
       'If you want to use Training Zealot to analyze your Strava data, '
       'you must grant the app access to your Strava data.\n'
-      f'Error from Strava API: {request.args.get("error")}',
-      status=200,
+      f'Error from Strava API: {request.args.get("error")}'
+    )
+    return render_template(
+      'strava_api/callback.html',
+      error=error
     )
 
   # Validate that the user accepted the necessary scope,
   # and display a warning if not.
   scope = request.args.get('scope')
   if 'activity:read_all' not in scope.split(','):
-    return Response(
+    error = (
+      'You did not accept the required permission "activity:read_all"\n'
       'If you want to use Training Zealot to analyze your Strava data, '
-      'you must accept all permissions',
-      status=200,
+      'you must accept all permissions.'
     )
-    # return render_template(
-    #   'strava_errors.html',
-    #   scope=scope,
-    #   missing_scope='activity:read_all'
-    # )
+    return render_template(
+      'strava_api/callback.html',
+      error=error
+    )
 
   session['token'] = stravatalk.get_token(
     request.args.get('code'),
