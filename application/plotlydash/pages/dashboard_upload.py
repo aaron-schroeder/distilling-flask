@@ -192,9 +192,7 @@ def parse_contents(contents, filename):
     return pd.read_csv(io.StringIO(decoded.decode('utf-8')))
 
   elif filename.lower().endswith('tcx'):
-    from application.converters import from_tcx
-    return converters.from_tcx(io.BytesIO(decoded))
+    return converters.from_tcx(decoded)
 
   elif filename.lower().endswith('gpx'):
-    from application.converters import from_gpx
-    return converters.from_gpx(io.BytesIO(decoded))
+    return converters.from_gpx(decoded)
