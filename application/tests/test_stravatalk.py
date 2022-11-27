@@ -119,3 +119,30 @@ class TestGetActivity(unittest.TestCase):
 class TestGetActivityStreams(unittest.TestCase):
   # Such a simple function that it feels like testing a constant
   pass
+
+
+@unittest.skipIf(True, 'Skipping tests that hit the real strava API server')
+class TestResponseFormat(unittest.TestCase):
+  
+  def test_get_activities(self):
+    # Call the service to hit the actual API.
+    actual = stravatalk.get_activities_json()
+
+    # Call the service to hit the mocked API.
+    with patch(
+      'application.stravatalk.requests.get',
+      return_value=Mock(
+        json=Mock(return_value=['activity1', 'activity2'])
+      )
+    ) as mock_get:
+      mocked = stravatalk.get_activities_json()
+      
+    # An object from the actual API and an object from the mocked API should
+    # have the same data structure.
+    # TODO: Check that each element from the mocked structure is found in
+    # the expected place in the actual structure.
+    # Whether that's a custom function to compare structures (boo) or some
+    # sort of validation schema. 
+    # assert_list_equal(actual, mocked)
+
+    self.fail('finish the test')
