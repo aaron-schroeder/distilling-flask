@@ -41,7 +41,8 @@ def handle_code():
   scope = request.args.get('scope')
   if 'activity:read_all' not in scope.split(','):
     error = (
-      'You did not accept the required permission "activity:read_all"\n'
+      'You did not accept the required permission '
+      '"View data about your private activities"\n'
       'If you want to use Training Zealot to analyze your Strava data, '
       'you must accept all permissions.'
     )
