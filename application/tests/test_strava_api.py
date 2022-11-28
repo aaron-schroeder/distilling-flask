@@ -1,4 +1,4 @@
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 from flask import url_for
 
@@ -19,13 +19,6 @@ MOCK_TOKEN = {
 }
 
 
-class Test(FlaskTestCase):
-  
-  def test_user_revokes(self):
-    """The user revokes app access at https://www.strava.com/settings/apps"""
-    pass
-
-
 class TestAuthorize(FlaskTestCase):
   def test_strava_oauth_authorize(self):
     with self.app.test_request_context():
@@ -39,6 +32,13 @@ class TestAuthorize(FlaskTestCase):
     )
 
     # TODO: figure out if more testing is called for
+
+
+class TestRevoke(FlaskTestCase):
+  
+  def test_user_revokes(self):
+    """The user revokes app access at https://www.strava.com/settings/apps"""
+    pass
 
 
 class TestHandleCode(FlaskTestCase):
@@ -88,6 +88,7 @@ class TestHandleCode(FlaskTestCase):
     # display a message that tells them to accept the right permissions
     # so my app can function properly.
     self.assertEqual(rv.status_code, 200)
+    # self.assertTemplateUsed(rv, 'strava_api/callback.html')
     self.assertIn('permissions', rv.get_data(as_text=True))
 
   def test_handle_strava_error(self):
@@ -100,6 +101,7 @@ class TestHandleCode(FlaskTestCase):
     # about it being necessary to grant my app access to their strava
     # if they want to use it to analyze their strava data.
     self.assertEqual(rv.status_code, 200)
+    # self.assertTemplateUsed(rv, 'strava_api/callback.html')
     self.assertIn('access to', rv.get_data(as_text=True))
     self.assertIn('access_denied', rv.get_data(as_text=True))
 
