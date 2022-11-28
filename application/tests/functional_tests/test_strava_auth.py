@@ -1,13 +1,15 @@
 import json
 import os
+from unittest import skipIf
 
 from selenium.common import exceptions
 from selenium.webdriver.common.by import By
 
-from .base import FunctionalTest
+from .base import LiveStravaFunctionalTest
 
 
-class StravaAuthTest(FunctionalTest):
+@skipIf(True, 'Skipping tests that hit the real strava API server')
+class StravaAuthTest(LiveStravaFunctionalTest):
   def setUp(self):
     super().setUp()
     path = os.path.dirname(os.path.realpath(__file__))

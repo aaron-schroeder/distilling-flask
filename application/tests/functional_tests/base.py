@@ -8,16 +8,14 @@ from urllib.parse import urljoin
 
 import dash
 from flask import url_for
-from selenium import webdriver
 from selenium.common.exceptions import (
   WebDriverException, 
   ElementClickInterceptedException
 )
-from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
-from webdriver_manager.chrome import ChromeDriverManager
 
 from application import db, create_app
+from application.tests.util import get_chromedriver
 
 
 MAX_WAIT = 90
@@ -156,21 +154,7 @@ class FunctionalTest(LiveServerTestCase):
     })
 
   def setUp(self):
-    # Opt 1: Set up and use Firefox webdriver, like in Chapter 1.
-    # browser = webdriver.Firefox()
-
-    # Option 2: Use existing Chrome driver setup
-    # WSL (Linux) setup
-    s = Service(ChromeDriverManager().install())
-    chrome_options = webdriver.ChromeOptions()
-    # Note: the following 3 options are necessary to run in WSL.
-    chrome_options.add_argument('--headless')
-    chrome_options.add_argument('--no-sandbox')
-    chrome_options.add_argument('--disable-dev-shm-usage')
-    self.browser = webdriver.Chrome(
-      service=s,
-      options=chrome_options
-    )
+    self.browser = get_chromedriver()
 
   def tearDown(self):
     self.browser.quit()
@@ -194,8 +178,11 @@ class FunctionalTest(LiveServerTestCase):
       self.browser.find_element(By.LINK_TEXT, link_text))
 
 
-class AuthenticatedUserFunctionalTest(FunctionalTest):
+class LiveStravaFunctionalTest(FunctionalTest):
   LIVE_STRAVA_API = True
+
+
+class AuthenticatedUserFunctionalTest(LiveStravaFunctionalTest):
 
   def setUp(self):
     super().setUp()
