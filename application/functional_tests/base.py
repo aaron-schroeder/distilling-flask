@@ -33,6 +33,7 @@ class LiveServerTestCase(unittest.TestCase):
   .. _flask-testing: https://github.com/jarus/flask-testing/blob/v0.8.1/flask_testing/utils.py#L426
   .. _django: https://github.com/django/django/blob/stable/4.1.x/django/test/testcases.py#L1777
   """
+  LIVE_STRAVA_API = False
 
   def create_app(self):
     """
@@ -85,8 +86,17 @@ class LiveServerTestCase(unittest.TestCase):
     return f'http://localhost:{self._configured_port}'
 
   def _spawn_live_server(self):
+    if self.LIVE_STRAVA_API:
+      worker = lambda app, port: app.run(port=port, use_reloader=False)
+    else:
+      def worker(app, port):
+        from unittest.mock import patch
+        from application.tests import mock_stravatalk
+        with patch('application.stravatalk', mock_stravatalk):
+          app.run(port=port, use_reloader=False)
+    
     self._process = multiprocessing.Process(
-        target=lambda app, port: app.run(port=port, use_reloader=False),
+        target=worker,
         args=(self.app, self._configured_port)
     )
 
@@ -185,6 +195,8 @@ class FunctionalTest(LiveServerTestCase):
 
 
 class AuthenticatedUserFunctionalTest(FunctionalTest):
+  LIVE_STRAVA_API = True
+
   def setUp(self):
     super().setUp()
     
@@ -205,7 +217,13 @@ class AuthenticatedUserFunctionalTest(FunctionalTest):
     pw.send_keys(credentials['PASSWORD'])
     self.browser.find_element(By.ID, 'login-button').click()
 
-    auth_btn = self.wait_for_element(By.ID, 'authorize')
+    try:
+      auth_btn = self.browser.find_element(By.ID, 'authorize')
+    except:
+      try:
+        print(self.browser.find_element(By.CLASS_NAME, 'alert-message').text)
+      except:
+        print(self.browser.page_source)
 
     # A cookie banner may be in the way
     try:
