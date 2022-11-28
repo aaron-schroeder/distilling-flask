@@ -86,5 +86,3 @@ def display_activity_list():
 def logout():
   session.pop('token')
   return redirect(url_for('strava_api.authorize'))
-
-
