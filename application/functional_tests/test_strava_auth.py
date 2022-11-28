@@ -42,3 +42,12 @@ class StravaAuthTest(FunctionalTest):
       'Strava activities',
       self.browser.find_element(By.TAG_NAME, 'h2').text
     )
+
+  def test_logout(self):
+    # The user successfully authorizes the app to access strava
+
+    # After taking a look at the activity list, they decide the app sucks
+    # and choose to log out.
+    self.wait_for_element(By.ID, 'logout-strava').click()
+
+    self.fail('finish the test')

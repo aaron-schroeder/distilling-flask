@@ -5,7 +5,7 @@
 {% endblock %}
 
 {% block navbar_right %}
-  <div>Logged in as {{athlete.firstname}} {{athlete.lastname}}</div><a href="{{ url_for('strava_api.logout') }}">Logout</a>
+  <div>Logged in as {{athlete.firstname}} {{athlete.lastname}}</div><a id= "logout-strava" href="{{ url_for('strava_api.logout') }}">Logout</a>
 {% endblock navbar_right %}
 
 {% block content %}
