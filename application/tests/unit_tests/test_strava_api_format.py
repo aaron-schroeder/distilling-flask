@@ -2,21 +2,15 @@ import json
 import unittest
 from urllib.parse import urlparse, parse_qs
 
-from selenium.common.exceptions import ElementClickInterceptedException
-from selenium.webdriver.common.by import By
-
 from application import stravatalk
-from application.tests import mock_stravatalk
-from application.tests.util import get_chromedriver
+from application.tests import mock_stravatalk, settings
+from application.tests.util import get_chromedriver, strava_auth_flow
 
 
 with open('client_secrets.json', 'r') as f:
   client_secrets = json.load(f)
 CLIENT_ID = client_secrets['installed']['client_id']
 CLIENT_SECRET = client_secrets['installed']['client_secret']
-
-
-SKIP_REAL_API = True
 
 
 def compare_structure(mocked, actual):
@@ -38,58 +32,22 @@ def compare_structure(mocked, actual):
   
 
 @unittest.skipIf(
-  SKIP_REAL_API,
+  settings.SKIP_STRAVA_API,
   'Skipping tests that hit the real strava API server'
 )
+@unittest.skip('Not fully implemented yet')
 class TestResponseFormat(unittest.TestCase):
-  
+
   @classmethod
   def setUpClass(cls):
-    # TODO: Make or use a TestCase class that sets up a real self.token.
-    # Thinking I have to use selenium to accept permissions and get the
-    # redirect code.
-    # Could it also be like a test that runs first?
-    # Checking the format of the returned token?
-
     browser = get_chromedriver()
-
-    # path = os.path.dirname(os.path.realpath(__file__))
-    # with open(os.path.join(path, 'strava_credentials.json'), 'r') as f:
-    with open('application/functional_tests/strava_credentials.json', 'r') as f:
-      credentials = json.load(f)
 
     browser.get(
       f'https://www.strava.com/oauth/authorize?'  
-      f'client_id={CLIENT_ID}&redirect_uri=http://localhost/'
+      f'client_id={CLIENT_ID}&redirect_uri=http://localhost:5000'
       f'&approval_prompt=auto&response_type=code&scope=activity:read_all'
     )
-
-    # un = self.wait_for_element(By.ID, 'email')
-    un = browser.find_element(By.ID, 'email')
-    un.clear()
-    un.send_keys(credentials['USERNAME'])
-    pw = browser.find_element(By.ID, 'password')
-    pw.clear()
-    pw.send_keys(credentials['PASSWORD'])
-    browser.find_element(By.ID, 'login-button').click()
-
-    try:
-      auth_btn = browser.find_element(By.ID, 'authorize')
-    except:
-      try:
-        print(browser.find_element(By.CLASS_NAME, 'alert-message').text)
-      except:
-        print(browser.page_source)
-
-    # A cookie banner may be in the way
-    try:
-      auth_btn.click()
-    except ElementClickInterceptedException:
-      browser.find_element(
-        By.CLASS_NAME, 
-        'btn-accept-cookie-banner'
-      ).click()
-      auth_btn.click()
+    strava_auth_flow(browser)
 
     # Inspect the redirected url to get the strava auth code
     queries = parse_qs(urlparse(browser.current_url).query)

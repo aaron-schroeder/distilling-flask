@@ -8,14 +8,11 @@ from urllib.parse import urljoin
 
 import dash
 from flask import url_for
-from selenium.common.exceptions import (
-  WebDriverException, 
-  ElementClickInterceptedException
-)
+from selenium.common.exceptions import WebDriverException
 from selenium.webdriver.common.by import By
 
 from application import db, create_app
-from application.tests.util import get_chromedriver
+from application.tests.util import get_chromedriver, strava_auth_flow
 
 
 MAX_WAIT = 90
@@ -140,8 +137,6 @@ class LiveServerTestCase(unittest.TestCase):
 class FunctionalTest(LiveServerTestCase):
 
   def create_app(self):
-    # Refresh strava access token if necessary, 
-    # then set its value as an environment variable for the flask app.
     with open('client_secrets.json', 'r') as f:
       client_secrets = json.load(f)
     os.environ['STRAVA_CLIENT_ID'] = client_secrets['installed']['client_id']
@@ -186,38 +181,8 @@ class AuthenticatedUserFunctionalTest(LiveStravaFunctionalTest):
 
   def setUp(self):
     super().setUp()
-    
-    path = os.path.dirname(os.path.realpath(__file__))
-    with open(os.path.join(path, 'strava_credentials.json'), 'r') as f:
-      credentials = json.load(f)
-
     self.browser.get(urljoin(
-      self.server_url, 
-      url_for('strava_api.display_activity_list'))
-    )
-
-    un = self.wait_for_element(By.ID, 'email')
-    un.clear()
-    un.send_keys(credentials['USERNAME'])
-    pw = self.wait_for_element(By.ID, 'password')
-    pw.clear()
-    pw.send_keys(credentials['PASSWORD'])
-    self.browser.find_element(By.ID, 'login-button').click()
-
-    try:
-      auth_btn = self.browser.find_element(By.ID, 'authorize')
-    except:
-      try:
-        print(self.browser.find_element(By.CLASS_NAME, 'alert-message').text)
-      except:
-        print(self.browser.page_source)
-
-    # A cookie banner may be in the way
-    try:
-      auth_btn.click()
-    except ElementClickInterceptedException:
-      self.browser.find_element(
-        By.CLASS_NAME, 
-        'btn-accept-cookie-banner'
-      ).click()
-      auth_btn.click()
+      self.server_url,
+      url_for('strava_api.authorize')
+    ))
+    strava_auth_flow(self.browser)

@@ -3,19 +3,17 @@ from unittest import skipIf
 
 from selenium.webdriver.common.by import By
 
-from .base import (
-  AuthenticatedUserFunctionalTest as FunctionalTest
-  # FunctionalTest
-)
+from application.tests import settings
+from .base import AuthenticatedUserFunctionalTest as FunctionalTest
 
 
 @skipIf(
   FunctionalTest.__name__ == 'FunctionalTest',
-  'Test will fail with mocked stravatalk until User model implemented'
+  'Test will fail with mocked stravatalk because the app uses '
+  'session variables to store the token and I cannot mock them.'
 )
 @skipIf(
-  # project_settings.LOCKED_OUT_OF_ACCOUNT,
-  True,
+  settings.LOCKED_OUT_OF_ACCOUNT,
   'This test would pass were I not locked out of my Strava acct. Skipping.'
 )
 class TestStravaSave(FunctionalTest):
