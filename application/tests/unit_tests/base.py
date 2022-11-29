@@ -25,7 +25,8 @@ class FlaskTestCase(unittest.TestCase):
       'TESTING': True,
       'SQLALCHEMY_DATABASE_URI': os.environ.get(
         'TEST_DATABASE_URL',
-        'sqlite:///' + os.path.join(BASEDIR, 'data-test.sqlite')
+        # 'sqlite:///' + os.path.join(BASEDIR, 'data-test.sqlite')
+        'sqlite://'
       ),
       'SECRET_KEY': 'super secret key'
     })
