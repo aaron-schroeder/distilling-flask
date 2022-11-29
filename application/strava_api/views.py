@@ -68,7 +68,7 @@ def display_activity_list():
   if token is None:
     return redirect(url_for('strava_api.authorize'))
     # '?after="/strava/activities"'
-  token = stravatalk.refresh_token(token)
+  token = stravatalk.refresh_token(token, CLIENT_ID, CLIENT_SECRET)
   session['token'] = token
 
   activity_json = stravatalk.get_activities_json(
