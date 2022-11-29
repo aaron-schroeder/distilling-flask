@@ -31,8 +31,8 @@ def get_activities_json(access_token, limit=None, page=None):
       'id': 1, 
       'name': 'Activity 1', 
       'start_date_local' : '2018-02-20T10:02:13Z',
-      'distance': 10000,
-      'total_elevation_gain': 100,
+      'distance': 10000.0,
+      'total_elevation_gain': 100.0,
     },
     {
       'id': 2, 
@@ -45,12 +45,12 @@ def get_activities_json(access_token, limit=None, page=None):
 
 
 def get_activity_json(activity_id, access_token):
-  with open('application/tests/sample_data/get_activity.json') as f:
+  with open('application/tests/unit_tests/sample_data/get_activity.json', 'r') as f:
     data = json.load(f)
   return data
 
 
 def get_activity_streams_json(activity_id, access_token, types=None):
-  with open('application/tests/sample_data/get_activity_streams.json') as f:
+  with open('application/tests/unit_testssample_data/get_activity_streams.json', 'r') as f:
     data = json.load(f)
   return data

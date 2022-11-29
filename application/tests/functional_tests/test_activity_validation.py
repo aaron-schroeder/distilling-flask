@@ -13,7 +13,7 @@ from .base import AuthenticatedUserFunctionalTest as FunctionalTest
   'session variables to store the token and I cannot mock them.'
 )
 @skipIf(
-  settings.LOCKED_OUT_OF_ACCOUNT,
+  settings.SKIP_STRAVA_OAUTH,
   'This test would pass were I not locked out of my Strava acct. Skipping.'
 )
 class ActivityValidationTest(FunctionalTest):
