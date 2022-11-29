@@ -4,7 +4,6 @@ import unittest
 from unittest.mock import Mock, patch
 
 from application import stravatalk
-from application.tests import settings
 
 
 CLIENT_ID = os.environ.get('STRAVA_CLIENT_ID')
