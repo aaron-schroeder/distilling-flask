@@ -1,8 +1,10 @@
 dash>=2.5
 dash-bootstrap-components>=1.0.0
 Flask>=2.1.0
-pandas==1.2.1
-requests==2.25.1
+pandas>=1.2.1
+requests>=2.25.1
 SQLAlchemy>=1.4.22
 flask-sqlalchemy>=2.5.1
 scipy
+fitparse>=1.2.0
+activereader>=0.0.1

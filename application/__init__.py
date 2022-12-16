@@ -33,9 +33,13 @@ def create_app(test_config=None):
   # SQLAlchemy
   db.init_app(app)
 
-  with app.app_context():
-    from application import routes
+  from application.routes import route_blueprint
+  app.register_blueprint(route_blueprint)
 
+  from application.strava_api import strava_api as strava_api_blueprint
+  app.register_blueprint(strava_api_blueprint, url_prefix='/strava')
+
+  with app.app_context():
     # Add various dashboards using this Flask app as a server.
     from application.plotlydash.app import add_dashboard_to_flask
     add_dashboard_to_flask(app)
@@ -44,4 +48,4 @@ def create_app(test_config=None):
     from application import models
     db.create_all()  # Create sql tables for our data models
 
-    return app
+  return app

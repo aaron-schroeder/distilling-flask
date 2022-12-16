@@ -6,6 +6,7 @@ import dash
 from dash import dcc, html, callback, Input, Output, State
 from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
+from flask import session
 import dateutil
 import pandas as pd
 
@@ -13,8 +14,6 @@ from application import converters, stravatalk, util
 from application.plotlydash import dashboard_activity
 from application.plotlydash.aio_components import FigureDivAIO, StatsDivAIO
 
-
-ACCESS_TOKEN = os.environ.get('ACCESS_TOKEN')
 
 dash.register_page(__name__, path_template='/strava/<activity_id>',
   title='Strava Activity Dashboard', name='Strava Activity Dashboard')
@@ -24,9 +23,13 @@ def layout(activity_id=None):
   if activity_id is None:
     return html.Div([])
 
-  stream_json = stravatalk.get_activity_streams_json(activity_id, ACCESS_TOKEN)
+  token = session.get('token', None)
+  if token is None:
+    raise Exception
 
-  activity_json = stravatalk.get_activity_json(activity_id, ACCESS_TOKEN)
+  stream_json = stravatalk.get_activity_streams_json(activity_id, token['access_token'])
+
+  activity_json = stravatalk.get_activity_json(activity_id, token['access_token'])
 
   # Read the Strava json response into a DataFrame and perform
   # additional calculations on it.
@@ -119,6 +122,7 @@ def save_activity(
   df.to_csv(fname_csv)
 
   return f'Activity saved successfully! Internal ID = {new_act.id}'
+  # return dcc.Location(id=new_act.id, pathname=f'/dash/saved-activity/{new_act.id}')
 
 
 @callback(
@@ -168,7 +172,7 @@ def add_strava_stats_to_table(activity_data, table_records):
   df_stats = pd.DataFrame.from_records(table_records)
   # df_stats.index = df_stats['']
 
-  strava_row = pd.Series([])
+  strava_row = pd.Series([], dtype='object')
   strava_row[''] = 'Strava'
   strava_row['Distance (m)'] = activity_data['distance']
   strava_row['Time (s)'] = activity_data['moving_time']

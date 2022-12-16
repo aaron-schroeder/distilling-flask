@@ -1,0 +1,9 @@
+{% extends 'base.html' %}
+  
+{% block header %}
+  <h2>{% block title %}Error accepting Strava permissions{% endblock %}</h2>
+{% endblock %}
+
+{% block content %}
+  {{ error }}
+{% endblock %}

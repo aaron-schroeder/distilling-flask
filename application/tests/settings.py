@@ -1,0 +1,2 @@
+SKIP_STRAVA_API = False
+SKIP_STRAVA_OAUTH = False

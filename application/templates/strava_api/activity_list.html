@@ -4,6 +4,10 @@
   <h2>{% block title %}Your most recent Strava activities{% endblock %}</h2>
 {% endblock %}
 
+{% block navbar_right %}
+  <div>Logged in as {{athlete.firstname}} {{athlete.lastname}}</div><a id= "logout-strava" href="{{ url_for('strava_api.logout') }}">Logout</a>
+{% endblock navbar_right %}
+
 {% block content %}
   {% for act in resp_json %}
     <a href="/dash/strava/{{ act['id'] }}">{{ act['name'] }}</a> ({{ act['start_date_local'] }}) ({{ (act['distance'] / 1609.34) | round (1) }} mi, {{ (act.total_elevation_gain * 3.28084) | round(0) | int }} ft)

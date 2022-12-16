@@ -7,103 +7,77 @@ to issues.
 """
 import datetime
 import json
-import os
 
 import requests
 
 
-def get_access_token(
-  code_from_redirect_url,
+def get_token(
+  code,
   client_id, 
   client_secret,
-  fname_out='tokens.json'
 ):
   """Get an access token from a redirect code given by Strava.
 
-  When Strava's Oauth page is shown to the user (me), clicking to grant
+  When Strava's Oauth page is shown to the user, clicking to grant
   the permissions will cause a redirect to a localhost page. Although
-  the page won't show anything (cannot be displayed or whatever), the
-  redirected url will have a code as a parameter.
+  the page won't necessarily show anything, the redirected url will
+  have a code as a parameter.
 
   Args:
-    code_from_redirect_url (str): The code that is appended to the 
-      redirected url (after granting my app permissions) as a parameter.
+    code (str): The code that is appended to the redirected url as a param
+     (after granting my app permissions).
     client_id (int or str): The Strava client id of the athlete
       who granted permissions to my app. Generally will be me.
     client_secret (str): The Strava client secret of the athlete
       who granted permissions to my app. Generally will be me.
-    fname_out (str): Path to the json file that will be created to
-      locally store the token json response.
 
   Returns:
-    str: A fresh access token for use with Strava's API.
+    dict: A fresh token for use with Strava's API.
   
   """
-  # code_from_redirect_url = '52439604cab41d1b3462cde08a2fdee05ca42894'
+  resp_token = requests.post(
+    url='https://www.strava.com/oauth/token',
+    data={
+      'client_id': client_id,
+      'client_secret': client_secret,
+      'code': code,
+      'grant_type': 'authorization_code'
+    }
+  )
+
+  # Now evaluate whether it came in successfully
+  # TODO: Test this! Or remove it!
+  if resp_token.status_code != 200:
+    raise Exception
+
+  # TODO: test if there's a bad json response possible
+
+  return resp_token.json()
+
+
+def refresh_token(token, client_id, client_secret):
+  """Check if access_token is expired, and if so, refresh it."""
+  if datetime.datetime.utcnow() < datetime.datetime.utcfromtimestamp(token['expires_at']):
+    return token
+
+  print('Refreshing expired token')
 
   resp_token = requests.post(
     url='https://www.strava.com/oauth/token',
     data={
       'client_id': client_id,
       'client_secret': client_secret,
-      'code': code_from_redirect_url,
-      'grant_type': 'authorization_code'
+      'refresh_token': token['refresh_token'],
+      'grant_type': 'refresh_token'
     }
   )
 
-  return handle_token_response(resp_token, fname_out)
+  if resp_token.status_code != 200:
+    raise Exception
 
+  # TODO: test if there's a bad json response possible
 
-def refresh_access_token(fname, client_id, client_secret):
-  """Ensure a fresh access token for interaction with the Strava API.
-
-  Args:
-    fname (str): Name of json file where Strava's json response from
-      the last token refresh is stored. The json should contain
-      keys 'access_token', 'refresh_token', and 'expires_at'.
-    client_id (int or str): The Strava client id of the athlete
-      associated with the access token.
-    client_secret (str): The Strava client secret of the athlete
-      associated with the access token.
-  
-  Returns:
-    str: A fresh access token for use with the Strava API.
-  
-  """
-  with open(fname, 'r') as f:
-    tokens = json.load(f)
-  
-  # Check if access_token is expired, and if so, refresh it.
-  if datetime.datetime.utcnow() < datetime.datetime.utcfromtimestamp(tokens['expires_at']):
-    return tokens['access_token']
-
-  else:
-    print('Refreshing expired token')
-
-    resp_token = requests.post(
-      url='https://www.strava.com/oauth/token',
-      data={
-        'client_id': client_id,
-        'client_secret': client_secret,
-        'refresh_token': tokens['refresh_token'],
-        'grant_type': 'refresh_token'
-      }
-    )
-  
-    return handle_token_response(resp_token, fname)
-
-
-def handle_token_response(resp_token, fname_out):
-  if resp_token.status_code == 200:
-    # Write the new json to the file.
-    tokens = resp_token.json()
-    with open(fname_out, 'w') as f:
-      json.dump(tokens, f)
-
-    return tokens['access_token']
-
-  # TODO: Print the response when the code is not 200, then throw
-  # an exception.
+  return resp_token.json()
 
 
 def get_activities_json(access_token, limit=None, page=None):
@@ -126,10 +100,6 @@ def get_activities_json(access_token, limit=None, page=None):
 
   """
   # Get the most recent activities for the athlete.
-  # curl -X GET `https://www.strava.com/api/v3/athlete/activities`  \
-  #              (?before=&after=&page=&per_page=)
-  #      -H "Authorization: Bearer [[token]]"
-  # before, after, page, per_page
   data = dict()
   if limit is not None:
     data['per_page'] = limit
@@ -199,12 +169,106 @@ def get_activity_streams_json(activity_id, access_token, types=None):
              'grade_smooth']
   fields = ','.join(types)
 
-  # curl -X GET  \
-  # "https://www.strava.com/api/v3/activities/${id}/streams/${fields}"  \
-  #      -H "Authorization: Bearer ${access_token}"
   resp = requests.get(
     f'https://www.strava.com/api/v3/activities/{activity_id}/streams/{fields}',
     headers={'Authorization': f'Bearer {access_token}'}
   )
 
   return resp.json()
+
+
+# TODO: Deprecate functions below here,
+# or put a deprecation warning and do it when none of my legacy code
+# is still using them.
+
+
+def get_access_token(
+  code_from_redirect_url,
+  client_id, 
+  client_secret,
+  fname_out
+):
+  """Get an access token from a redirect code given by Strava.
+
+  When Strava's Oauth page is shown to the user, clicking to grant
+  the permissions will cause a redirect to a localhost page. Although
+  the page won't necessarily show anything, the redirected url will
+  have a code as a parameter.
+
+  Args:
+    code_from_redirect_url (str): The code that is appended to the 
+      redirected url (after granting my app permissions) as a parameter.
+    client_id (int or str): The Strava client id of the athlete
+      who granted permissions to my app. Generally will be me.
+    client_secret (str): The Strava client secret of the athlete
+      who granted permissions to my app. Generally will be me.
+    fname_out (str): Path to the json file that will be created to
+      locally store the token json response.
+
+  Returns:
+    str: A fresh access token for use with Strava's API.
+  
+  """
+  resp_token = requests.post(
+    url='https://www.strava.com/oauth/token',
+    data={
+      'client_id': client_id,
+      'client_secret': client_secret,
+      'code': code_from_redirect_url,
+      'grant_type': 'authorization_code'
+    }
+  )
+
+  if resp_token.status_code != 200:
+    raise Exception
+
+  return handle_token_response(resp_token, fname_out)
+
+
+def refresh_access_token(fname, client_id, client_secret):
+  """Ensure a fresh access token for interaction with the Strava API.
+
+  Args:
+    fname (str): Name of json file where Strava's json response from
+      the last token refresh is stored. The json should contain
+      keys 'access_token', 'refresh_token', and 'expires_at'.
+    client_id (int or str): The Strava client id of the athlete
+      associated with the access token.
+    client_secret (str): The Strava client secret of the athlete
+      associated with the access token.
+  
+  Returns:
+    str: A fresh access token for use with the Strava API.
+  
+  """
+  with open(fname, 'r') as f:
+    tokens = json.load(f)
+  
+  # Check if access_token is expired, and if so, refresh it.
+  if datetime.datetime.utcnow() < datetime.datetime.utcfromtimestamp(tokens['expires_at']):
+    return tokens['access_token']
+
+  else:
+    print('Refreshing expired token')
+
+    resp_token = requests.post(
+      url='https://www.strava.com/oauth/token',
+      data={
+        'client_id': client_id,
+        'client_secret': client_secret,
+        'refresh_token': tokens['refresh_token'],
+        'grant_type': 'refresh_token'
+      }
+    )
+  
+    return handle_token_response(resp_token, fname)
+
+
+def handle_token_response(resp_token, fname_out):
+  if resp_token.status_code == 200:
+    # Write the new json to the file.
+    tokens = resp_token.json()
+    with open(fname_out, 'w') as f:
+      json.dump(tokens, f)
+
+    return tokens['access_token']
