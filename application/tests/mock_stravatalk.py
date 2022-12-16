@@ -51,6 +51,6 @@ def get_activity_json(activity_id, access_token):
 
 
 def get_activity_streams_json(activity_id, access_token, types=None):
-  with open('application/tests/unit_testssample_data/get_activity_streams.json', 'r') as f:
+  with open('application/tests/unit_tests/sample_data/get_activity_streams.json', 'r') as f:
     data = json.load(f)
   return data

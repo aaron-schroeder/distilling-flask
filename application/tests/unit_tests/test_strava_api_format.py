@@ -94,19 +94,26 @@ class TestResponseFormat(unittest.TestCase):
     # get the fresh access token created during setUpClass
     actual = self.token
     mocked = mock_stravatalk.get_token('some_code', CLIENT_ID, CLIENT_SECRET)
-    self.has_same_structure(mocked, actual)
+    if not validate_structure(mocked, actual):
+      self.fail(
+        'Mocked structure not a subset of actual structure.\n'
+        'Mocked:\n'
+        f'{mocked}\n\n'
+        'Actual:\n'
+        f'{actual}'
+      )
 
   def test_refresh_token(self):
     # TODO: Don't check the expires_at, just refresh the token.
     self.compare_method('refresh_token', self.token, CLIENT_ID, CLIENT_SECRET)
 
   def test_get_activities(self):
-    self.compare_method('get_activities', self.token['access_token'])
+    self.compare_method('get_activities_json', self.token['access_token'])
 
   def test_get_activity(self):
     id = stravatalk.get_activities_json(self.token['access_token'])[0]['id']
-    self.compare_method('get_activity', id, self.token['access_token'])
+    self.compare_method('get_activity_json', id, self.token['access_token'])
 
   def test_get_activity_streams(self):
     id = stravatalk.get_activities_json(self.token['access_token'])[0]['id']
-    self.compare_method('get_activity_streams', id, self.token['access_token'])
+    self.compare_method('get_activity_streams_json', id, self.token['access_token'])
