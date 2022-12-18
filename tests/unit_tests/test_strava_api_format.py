@@ -4,8 +4,8 @@ import unittest
 from urllib.parse import urlparse, parse_qs
 
 from application import stravatalk
-from application.tests import mock_stravatalk, settings
-from application.tests.util import get_chromedriver, strava_auth_flow
+from tests import mock_stravatalk, settings
+from tests.util import get_chromedriver, strava_auth_flow
 
 
 with open('client_secrets.json', 'r') as f:

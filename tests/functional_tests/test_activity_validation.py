@@ -3,7 +3,7 @@ from unittest import skipIf
 
 from selenium.webdriver.common.by import By
 
-from application.tests import settings
+from tests import settings
 from .base import AuthenticatedUserFunctionalTest as FunctionalTest
 
 
