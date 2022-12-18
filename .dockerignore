@@ -1,0 +1,13 @@
+.git
+Dockerfile
+.dockerignore
+
+env/
+images/
+requirements_dev.txt
+
+# Local environment
+client_secrets.json
+strava_credentials.json
+*.sqlite
+run_app.py

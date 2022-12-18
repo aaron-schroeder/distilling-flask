@@ -8,3 +8,4 @@ flask-sqlalchemy>=2.5.1
 scipy
 fitparse>=1.2.0
 activereader>=0.0.1
+greenlet<0.5,>=0.4.5
