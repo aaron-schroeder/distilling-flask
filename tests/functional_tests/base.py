@@ -177,7 +177,11 @@ class LiveStravaFunctionalTest(FunctionalTest):
   LIVE_STRAVA_API = True
 
 
-class AuthenticatedUserFunctionalTest(LiveStravaFunctionalTest):
+class LoggedInFunctionalTest(LiveStravaFunctionalTest):
+  pass
+
+
+class AuthenticatedUserFunctionalTest(LoggedInFunctionalTest):
 
   def setUp(self):
     super().setUp()
