@@ -6,6 +6,9 @@ env/
 images/
 requirements_dev.txt
 
+# Not necessary inside container
+tests/
+
 # Local environment
 client_secrets.json
 strava_credentials.json
