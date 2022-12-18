@@ -4,8 +4,8 @@ from unittest import skip, skipIf
 
 from selenium.webdriver.common.by import By
 
-from application.tests import settings
-from application.tests.util import strava_auth_flow
+from tests import settings
+from tests.util import strava_auth_flow
 from .base import LiveStravaFunctionalTest
 
 

@@ -12,7 +12,7 @@ from selenium.common.exceptions import WebDriverException
 from selenium.webdriver.common.by import By
 
 from application import db, create_app
-from application.tests.util import get_chromedriver, strava_auth_flow
+from tests.util import get_chromedriver, strava_auth_flow
 
 
 MAX_WAIT = 90
@@ -86,7 +86,7 @@ class LiveServerTestCase(unittest.TestCase):
     else:
       def worker(app, port):
         from unittest.mock import patch
-        from application.tests import mock_stravatalk
+        from tests import mock_stravatalk
         with patch('application.stravatalk', mock_stravatalk):
           app.run(port=port, use_reloader=False)
     
