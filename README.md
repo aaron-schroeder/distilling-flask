@@ -44,6 +44,28 @@ See the [Examples](#examples) section below to see how everything works.
 
 Flask, Dash, Dash Bootstrap Components, pandas, and requests are required.
 
+### Docker container
+
+Create an image by running the following command in the same dir as `Dockerfile`: 
+```sh
+docker build -t distillingflask:latest .
+```
+
+Create and start a container from the image with
+```sh
+docker run --name distillingflask  \
+    -e MODULE_NAME=application.app  \
+    -e VARIABLE_NAME=server  \
+    -e STRAVA_CLIENT_ID=<client id>  \
+    -e STRAVA_CLIENT_SECRET=<client secret>  \
+    -d  \
+    -p 5000:80  \
+    --rm  \
+    distillingflask:latest
+```
+
+### Python IDE
+
 Clone the repo:
 ```
 git clone https://github.com/aaron-schroeder/distilling-flask.git
