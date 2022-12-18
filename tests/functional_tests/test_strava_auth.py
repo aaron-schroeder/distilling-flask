@@ -6,14 +6,14 @@ from selenium.webdriver.common.by import By
 
 from tests import settings
 from tests.util import strava_auth_flow
-from .base import LiveStravaFunctionalTest
+from .base import LoggedInFunctionalTest
 
 
 @skipIf(
   settings.SKIP_STRAVA_API,
   'Skipping tests that hit the real strava API server'
 )
-class StravaAuthTest(LiveStravaFunctionalTest):
+class StravaAuthTest(LoggedInFunctionalTest):
 
   def test_can_authorize(self):
     # A new user arrives on the app's main page and clicks a link to
@@ -27,11 +27,19 @@ class StravaAuthTest(LiveStravaFunctionalTest):
     strava_auth_flow(self.browser)
 
     # Now that my app has access to the user's strava data, they are
-    # redirected to a list of their strava activities.
-    header = self.browser.find_element(By.TAG_NAME, 'h2')
-    self.assertIn('Strava activities', header.text)
+    # redirected back to the main admin page, and notice it has more options.
 
+    # They see links inviting them to visit a list of their Strava activities...
+    self.check_for_link_text('Strava activities')
 
+    # ...a training log dashboard... 
+    # NOTE: This should only appear after an activity is saved.
+    #       Or it shouldn't freak out if there are no saved activities.
+    self.check_for_link_text('Training log dashboard')
+
+    # ...and to revoke the app's access to her Strava data, if they choose.
+    # TODO
+  
   @skip('Not ready yet')
   def test_revoke(self):
     # The user successfully authorizes the app to access strava

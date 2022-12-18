@@ -16,15 +16,15 @@ class NewVisitorTest(FunctionalTest):
 
   def test_can_see_landing_page(self):
 
-    # Edith has heard about a cool new online to-do app. She goes
-    # to check out its homepage.
+    # Edith has heard about a cool training log app.
+    # She goes to check out its homepage.
     self.browser.get(self.server_url)
 
     # She notices the page title and header welcomes her to
     # the app and tells her its name.
     self.assertIn('Welcome - Training Zealot', self.browser.title)
     header_text = self.browser.find_element(By.TAG_NAME, 'h2').text
-    self.assertIn('Welcome', header_text)
+    self.assertIn('Training Log', header_text)
     
     # She sees a navigation bar that takes her back to the app's home page.
     navbar = self.browser.find_element(
@@ -37,33 +37,18 @@ class NewVisitorTest(FunctionalTest):
       urljoin(self.server_url, '/')
     )
 
-    # She sees links inviting her to visit a list of her Strava activities...
-    self.check_for_link_text('Strava activities')
+    # She sees a graph of Aaron's training stress over time...
 
-    # ...a training log dashboard...
-    self.check_for_link_text('Training log dashboard')
-
-    # ...and a file analysis dashboard.
-    self.check_for_link_text('Analyze an activity file (.gpx, .fit, .tcx, .csv)')
+    # ...and a calendar view of his training log.
 
     # Satisfied, she goes back to sleep
 
-  def test_can_upload_activity(self):
-    # From the landing page, the user navigates to the file upload dashboard.
-    self.browser.get(self.server_url)
-    self.browser.find_element(
-      By.PARTIAL_LINK_TEXT,
-      'Analyze an activity file'
-    ).click()
 
-    # They use the upload widget to select an activity file to analyze.
-    input = self.wait_for_element(By.XPATH, '//*[@id="upload-data"]/div/input')
-    input.send_keys(
-      os.path.join(os.path.dirname(__file__), 'testdata.tcx')
-    )
+  def test_can_view_activity(self):
+    # A user visits the main page of the app - a training log.
 
-    # The page updates into a full activity analysis dashboard.
-    input = self.wait_for_element(By.XPATH, '//input[contains(@id, "tss")]')
-    tss = input.get_attribute('value')
-    self.assertRegex(tss, r'^[0-9].*\.[0-9]$')
+    # She notices that the individual activities in the training log are clickable.
+    
+    # She clicks one and is taken to an activity analysis page.
 
+    pass
