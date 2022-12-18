@@ -2,14 +2,14 @@
 Dockerfile
 .dockerignore
 
-env/
+# Not necessary inside container
 images/
 requirements_dev.txt
-
-# Not necessary inside container
 tests/
+README.md
 
 # Local environment
+env/
 client_secrets.json
 strava_credentials.json
 *.sqlite
