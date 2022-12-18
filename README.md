@@ -210,12 +210,12 @@ This requires user-supplied file `client_secrets.json`.
 
 ```sh
 pip install -r requirements_dev.txt
-python -m unittest discover -p test_*.py application.tests.functional_tests
+python -m unittest discover -p test_*.py tests.functional_tests
 ```
 
 ### Unit testing
 ```sh
-python -m unittest discover -p test_*.py application.tests.unit_tests
+python -m unittest discover -p test_*.py tests.unit_tests
 ```
 
 ## Project Status
