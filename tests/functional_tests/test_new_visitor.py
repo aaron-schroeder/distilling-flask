@@ -52,3 +52,19 @@ class NewVisitorTest(FunctionalTest):
     # She clicks one and is taken to an activity analysis page.
 
     pass
+
+  def test_cannot_see_login_required(self):
+    # A visitor with knowledge of the app's structure (but not the password)
+    # checks to see if they can get to a variety of login-required pages.
+    # But they keep getting redirected to the login page.
+
+    url_login = urljoin(self.server_url, '/login')
+
+    for relative_url in [
+      '/upload',
+      '/strava/authorize',
+      '/strava/activities'
+    ]:
+      self.browser_get_relative(relative_url)
+      self.assertEqual(self.browser.current_url, url_login)
+  

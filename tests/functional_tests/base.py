@@ -15,7 +15,7 @@ from application import db, create_app
 from tests.util import get_chromedriver, strava_auth_flow
 
 
-MAX_WAIT = 90
+MAX_WAIT = 10
 
 
 class LiveServerTestCase(unittest.TestCase):
@@ -79,6 +79,9 @@ class LiveServerTestCase(unittest.TestCase):
     Return the url of the test server
     """
     return f'http://localhost:{self._configured_port}'
+
+  def browser_get_relative(self, path):
+    self.browser.get(urljoin(self.server_url, path))
 
   def _spawn_live_server(self):
     if self.LIVE_STRAVA_API:
@@ -185,8 +188,5 @@ class AuthenticatedUserFunctionalTest(LoggedInFunctionalTest):
 
   def setUp(self):
     super().setUp()
-    self.browser.get(urljoin(
-      self.server_url,
-      url_for('strava_api.authorize')
-    ))
+    self.browser_get_relative(url_for('strava_api.authorize'))
     strava_auth_flow(self.browser)
