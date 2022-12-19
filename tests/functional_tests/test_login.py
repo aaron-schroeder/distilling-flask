@@ -1,3 +1,4 @@
+import time
 from urllib.parse import urljoin
 
 from selenium.webdriver.common.by import By
@@ -38,7 +39,22 @@ class LoginTest(FunctionalTest):
     )
     # TODO
 
+  def test_wrong_password_no_redirect(self):
+    self.browser_get_relative('/')
+    self.browser.find_element(By.LINK_TEXT, 'Admin').click()
+
+    pw_input = self.wait_for_element(By.ID, 'password')
+
+    login_url = self.browser.current_url
+
+    pw_input.send_keys('wrong_password')
+
+    time.sleep(5)
+
+    self.assertEqual(login_url, self.browser.current_url)
+
   def test_wrong_password_helptext(self):
+    # This tests the dashboard itself. Need to get that func set up.
     pass
 
   def test_three_strikes(self):
