@@ -1,6 +1,13 @@
+import os
+
 from flask_login import UserMixin
 
 from application import db, login
+from application import stravatalk
+
+
+CLIENT_ID = os.environ.get('STRAVA_CLIENT_ID')
+CLIENT_SECRET = os.environ.get('STRAVA_CLIENT_SECRET')
 
 
 class Activity(db.Model):
@@ -128,11 +135,26 @@ class Activity(db.Model):
 
 class AdminUser(UserMixin):
   id = 1
-  has_authorized = False
+  # strava_accounts = db.relationship(
+  #   'StravaAccount',
+  #   backref='admin_user',
+  #   lazy=True
+  # )
 
   def check_password(self, password):
     # return password == config.get('settings', 'password')
     return password == 'password'
+
+  @property
+  def strava_account(self):
+    accounts = StravaAccount.query.all()
+    if len(accounts) == 0:
+      return None
+    return accounts[0]
+
+  @property
+  def has_authorized(self):
+    return self.strava_account is not None
 
   def __repr__(self):
     return '<Admin User>'
@@ -141,3 +163,36 @@ class AdminUser(UserMixin):
 @login.user_loader
 def load_user(id):
   return AdminUser()
+
+
+class StravaAccount(db.Model):
+  # admin_user_id = db.Column(
+  #   db.Integer,
+  #   db.ForeignKey('admin_user.id'),
+  #   nullable=False
+  # )
+  # admin_user_id = 1
+  strava_id = db.Column(
+    db.Integer,
+    primary_key=True
+  )
+  access_token = db.Column(db.String())
+  refresh_token = db.Column(db.String())
+  expires_at = db.Column(db.Integer)
+  # email = db.Column(db.String)
+
+  def get_token(self):
+
+    # reconstruct the required elements of strava's access token
+    token = dict(
+      access_token=self.access_token,
+      refresh_token=self.refresh_token,
+      expires_at=self.expires_at,
+    )
+
+    # refresh if necessary
+    return stravatalk.refresh_token(token, CLIENT_ID, CLIENT_SECRET)
+
+  @property
+  def url(self):
+    return f'https://www.strava.com/athletes/{self.strava_id}'

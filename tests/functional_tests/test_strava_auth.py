@@ -34,7 +34,7 @@ class StravaAuthTest(LoggedInFunctionalTest):
     # In the navbar, they see an indication that they have authorized with
     # Strava.
     navbar = self.browser.find_element(By.TAG_NAME, 'nav')
-    self.assertIn('Authorized with Strava as', navbar.get_attribute('innerHtml'))
+    self.assertIn('Authorized with Strava as', navbar.get_attribute('innerHTML'))
 
     # ...as well as a link to revoke the app's access to her Strava data,
     # if they choose.
@@ -49,23 +49,8 @@ class StravaAuthTest(LoggedInFunctionalTest):
     # And the admin page once again indicates they are disconnected
     # from Strava.
     self.check_for_link_text('Authorize with Strava')
-  
-  @skip('User revokes access in main test')
-  def test_revoke(self):
-    # The user successfully authorizes the app to access strava
 
-    # After taking a look at the activity list, they decide the app sucks
-    # and choose to revoke its access to their strava data.
-
-    self.fail('finish the test')
-
-  def test_activity_list_redirects(self):
-    # They go to the activity list but since they haven't yet granted 
-    # permissions to Strava, they are
-    # redirected to an authorization screen on strava's website, which
-    # they fill out and submit.
-    pass
-
+  @skip('duh')
   def test_auth_page_redirects(self):
     # The admin user manually navigates to the strava authorization url,
     # but since they are already authorized with strava, they see a message

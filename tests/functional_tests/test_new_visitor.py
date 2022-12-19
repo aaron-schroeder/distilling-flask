@@ -65,7 +65,8 @@ class NewVisitorTest(FunctionalTest):
       '/upload',
       '/strava/authorize',
       '/strava/activities',
-      '/strava/callback'
+      '/strava/callback',
+      '/strava/revoke'
     ]:
       self.browser_get_relative(relative_url)
       time.sleep(1)
