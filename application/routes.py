@@ -1,5 +1,4 @@
 """Core Flask app routes."""
-import dash
 from flask import Blueprint, redirect, render_template
 from flask_login import logout_user, login_required
 
@@ -24,3 +23,9 @@ def view_activities():
     activities=Activity.query.all(),
     # title='Show Activities'
   )
+
+
+@route_blueprint.route('/logout')
+def logout():
+  logout_user()
+  return redirect('/')
