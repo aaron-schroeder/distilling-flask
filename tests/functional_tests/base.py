@@ -172,8 +172,9 @@ class FunctionalTest(LiveServerTestCase):
         time.sleep(0.5)
 
   def check_for_link_text(self, link_text):
-    self.assertIsNotNone(
-      self.browser.find_element(By.LINK_TEXT, link_text))
+    link = self.browser.find_element(By.LINK_TEXT, link_text)
+    self.assertIsNotNone(link)
+    return link
 
 
 class LiveStravaFunctionalTest(FunctionalTest):
@@ -181,7 +182,12 @@ class LiveStravaFunctionalTest(FunctionalTest):
 
 
 class LoggedInFunctionalTest(LiveStravaFunctionalTest):
-  pass
+  def setUp(self):
+    super().setUp()
+    self.browser_get_relative('/login')
+    pw_input = self.wait_for_element(By.ID, 'password')
+    pw_input.send_keys('password')
+    self.browser.find_element(By.XPATH, '//button[text()="Log in"]').click()
 
 
 class AuthenticatedUserFunctionalTest(LoggedInFunctionalTest):
