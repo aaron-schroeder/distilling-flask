@@ -3,7 +3,7 @@ import datetime
 from sqlalchemy import exc
 
 from application import db
-from application.models import Activity
+from application.models import Activity, AdminUser, StravaAccount
 from .base import FlaskTestCase
 
 
@@ -54,3 +54,40 @@ class ActivityModelTest(FlaskTestCase):
     db.session.add_all((act_1, act_2))
     with self.assertRaisesRegex(exc.IntegrityError, 'UNIQUE constraint failed: activity.strava_id'):
       db.session.commit()
+
+
+class AdminUserModelTest(FlaskTestCase):
+
+  def test_user_is_valid_with_id_only(self):
+    user = AdminUser()  # should not raise
+    self.assertIsNotNone(user.id)
+  
+  def test_id_is_always_same(self):
+    user_1 = AdminUser()
+    user_2 = AdminUser()
+    self.assertEqual(user_1.id, 1)
+    self.assertEqual(user_2.id, 1)
+
+
+class StravaAccountModelTest(FlaskTestCase):
+
+  def test_account_is_valid_with_id_only(self):
+    strava_acct = StravaAccount()
+    db.session.add(strava_acct)
+    db.session.commit()  # should not raise
+    self.assertEqual(StravaAccount.query.count(), 1)
+    self.assertIsNotNone(strava_acct.strava_id)
+
+    user = AdminUser()
+    self.assertIs(strava_acct, user.strava_account)
+
+  def test_access_token(self):
+    strava_acct = StravaAccount(
+      access_token='4190a7feccff6acaeb6a78cadda52e65de85a75es'
+    )
+    db.session.add(strava_acct)
+    db.session.commit()
+    self.assertEqual(
+      strava_acct.access_token,
+      '4190a7feccff6acaeb6a78cadda52e65de85a75es'
+    )
