@@ -408,7 +408,7 @@ def create_week_cal(df_week):
   fig.add_trace(dict(
     x=df_week['weekday'],
     y=[2 for d in df_week['weekday']],
-    text=[f'<a href="/dash/saved/{id}">{d / util.M_PER_MI:.1f}</a>' for id, d in zip(df_week['id'], df_week['distance_m'])],
+    text=[f'<a href="/saved/{id}">{d / util.M_PER_MI:.1f}</a>' for id, d in zip(df_week['id'], df_week['distance_m'])],
     name='easy', # they are all easy right now
     mode='markers+text',
     marker=dict(
