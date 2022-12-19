@@ -15,7 +15,7 @@ from application import db, create_app
 from tests.util import get_chromedriver, strava_auth_flow
 
 
-MAX_WAIT = 10
+MAX_WAIT = 20
 
 
 class LiveServerTestCase(unittest.TestCase):
@@ -188,7 +188,7 @@ class LoggedInFunctionalTest(LiveStravaFunctionalTest):
     super().setUp()
     self.browser_get_relative('/login')
     pw_input = self.wait_for_element(By.ID, 'password')
-    pw_input.send_keys('password')
+    pw_input.send_keys(self.dummy_password)
     self.browser.find_element(By.XPATH, '//button[text()="Log in"]').click()
 
 
