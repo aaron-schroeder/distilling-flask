@@ -92,8 +92,11 @@ import os
 # Get ahold of your the credentials for your Strava app
 # (sorry, you are on your own for now)
 # ...
-os.environ['CLIENT_ID'] = client_id
-os.environ['CLIENT_SECRET'] = client_secret
+os.environ['STRAVA_CLIENT_ID'] = client_id
+os.environ['STRAVA_CLIENT_SECRET'] = client_secret
+
+# Choose the password for this app. Don't put your Strava password.
+os.environ['PASSWORD'] = 'super_secret_password'
 
 import application
 app = application.create_app()
@@ -207,7 +210,9 @@ speed (new_src)
 
 ### Functional testing
 
-This requires user-supplied file `client_secrets.json`.
+This requires user-supplied files in the following locations:
+  - `client_secrets.json`
+  - `tests/functional_tests/strava_credentials.json`
 
 ```sh
 pip install -r requirements_dev.txt
