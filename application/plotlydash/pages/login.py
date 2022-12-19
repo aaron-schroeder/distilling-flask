@@ -10,7 +10,7 @@ dash.register_page(__name__, path_template='/login',
   title='Log in', name='Log in')
 
 
-def layout():
+def layout(**kwargs):
   return dbc.Container([
     dbc.Form(
       dbc.Row(
