@@ -1,5 +1,7 @@
 """Core Flask app routes."""
-from flask import Blueprint, render_template
+import dash
+from flask import Blueprint, redirect, render_template
+from flask_login import current_user
 
 from application.models import Activity
 
@@ -7,11 +9,12 @@ from application.models import Activity
 route_blueprint = Blueprint('route_blueprint', __name__)
 
 
-@route_blueprint.route('/')
-def start_dashapp():
-  """Route for the landing page of the Flask app."""
+@route_blueprint.route('/admin')
+def admin_landing():
+  if not current_user.is_authenticated:
+    return redirect(dash.page_registry['pages.login']['relative_path'])
 
-  return render_template('landing_page.html')
+  return render_template('admin.html')
 
 
 @route_blueprint.route('/view-saved-activities')

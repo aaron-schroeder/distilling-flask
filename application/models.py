@@ -1,4 +1,6 @@
-from application import db
+from flask_login import UserMixin
+
+from application import db, login
 
 
 class Activity(db.Model):
@@ -122,3 +124,20 @@ class Activity(db.Model):
 
   def __repr__(self):
       return '<Activity {}>'.format(self.id)
+
+
+class AdminUser(UserMixin):
+  id = 1
+  has_authorized = False
+
+  def check_password(self, password):
+    # return password == config.get('settings', 'password')
+    return password == 'password'
+
+  def __repr__(self):
+    return '<Admin User>'
+
+
+@login.user_loader
+def load_user(id):
+  return AdminUser()

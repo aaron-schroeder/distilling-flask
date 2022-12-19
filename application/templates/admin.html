@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+
+{% block header %}
+  <h2>{% block title %}Admin{% endblock %}</h2>
+{% endblock %}
+
+{% block content %}
+  {% if current_user.has_authorized %}
+    <a href="/strava/activities">Strava activities</a>
+  {% else %}
+    <a href="/strava/authorize">Authorize with Strava</a>
+  {% endif %}
+  <br>
+  <a href="/upload">Analyze an activity file (.gpx, .fit, .tcx, .csv)</a>
+{% endblock %}

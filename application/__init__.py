@@ -1,5 +1,6 @@
 import os
 from flask import Flask
+from flask_login import LoginManager
 from flask_sqlalchemy import SQLAlchemy
 
 
@@ -7,6 +8,7 @@ from application import config
 
 
 db = SQLAlchemy()
+login = LoginManager()
 
 
 def create_app(test_config=None):
@@ -33,6 +35,9 @@ def create_app(test_config=None):
   # SQLAlchemy
   db.init_app(app)
 
+  # Flask-Login
+  login.init_app(app)
+
   from application.routes import route_blueprint
   app.register_blueprint(route_blueprint)
 
@@ -47,5 +52,11 @@ def create_app(test_config=None):
     # SQLAlchemy
     from application import models
     db.create_all()  # Create sql tables for our data models
+
+    # Create an admin user (with a dummy password for now)
+    # if models.User.count() == 0:
+    #   admin = models.User()
+    #   db.session.add(admin)
+    #   db.session.commit()
 
   return app
