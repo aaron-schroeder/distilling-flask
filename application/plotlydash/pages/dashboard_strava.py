@@ -13,12 +13,14 @@ import pandas as pd
 from application import converters, stravatalk, util
 from application.plotlydash import dashboard_activity
 from application.plotlydash.aio_components import FigureDivAIO, StatsDivAIO
+from application.plotlydash.util import layout_login_required
 
 
 dash.register_page(__name__, path_template='/strava/<activity_id>',
   title='Strava Activity Dashboard', name='Strava Activity Dashboard')
 
 
+@layout_login_required
 def layout(activity_id=None):
   if activity_id is None:
     return html.Div([])

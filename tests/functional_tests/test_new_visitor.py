@@ -69,5 +69,5 @@ class NewVisitorTest(FunctionalTest):
     ]:
       self.browser_get_relative(relative_url)
       time.sleep(1)
-      self.assertEqual(self.browser.current_url, url_login)
+      self.assertIn(url_login, self.browser.current_url)
   

@@ -28,14 +28,15 @@ import pandas as pd
 from application import converters
 from application.plotlydash import dashboard_activity
 from application.plotlydash.aio_components import FigureDivAIO, StatsDivAIO
+from application.plotlydash.util import layout_login_required
 
 
 dash.register_page(__name__, path_template='/upload',
   title='Analyze an activity file', name='Analyze an activity file')
 
+
+@layout_login_required
 def layout():
-  if not current_user.is_authenticated:
-    return dcc.Location(pathname='/login', id='upload-login-required')
 
   return dbc.Container([
     dcc.Upload(
