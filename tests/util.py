@@ -33,7 +33,7 @@ def get_chromedriver():
 def load_strava_credentials():
   # path = os.path.dirname(os.path.realpath(__file__))
   # with open(os.path.join(path, 'strava_credentials.json'), 'r') as f:
-  with open('application/tests/functional_tests/strava_credentials.json', 'r') as f:
+  with open('tests/functional_tests/strava_credentials.json', 'r') as f:
     credentials = json.load(f)
   return credentials
 
