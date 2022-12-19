@@ -1,6 +1,8 @@
 import os
 
+import dash
 from flask import redirect, render_template, request, Response, session, url_for
+from flask_login import current_user
 
 from . import strava_api
 from application import stravatalk
@@ -12,6 +14,9 @@ CLIENT_SECRET = os.environ.get('STRAVA_CLIENT_SECRET')
 
 @strava_api.route('/authorize')
 def authorize():
+  if not current_user.is_authenticated:
+    return redirect(dash.page_registry['pages.login']['relative_path'])
+
   return redirect(
     f'https://www.strava.com/oauth/authorize?'  
     f'client_id={CLIENT_ID}&redirect_uri=http://localhost:5000/'
@@ -22,6 +27,9 @@ def authorize():
 
 @strava_api.route('/callback')
 def handle_code():
+  if not current_user.is_authenticated:
+    return redirect(dash.page_registry['pages.login']['relative_path'])
+
   if request.args.get('error', None) is not None:
     # Handles user clicking "cancel" button, resulting in a response like:
     # http://localhost:5000/strava/redirect?state=&error=access_denied
@@ -64,6 +72,9 @@ def handle_code():
 @strava_api.route('/activities')
 def display_activity_list():
   """Display list of strava activities to view in their own Dashboard."""
+  if not current_user.is_authenticated:
+    return redirect(dash.page_registry['pages.login']['relative_path'])
+
   token = session.get('token', None)
   if token is None:
     return redirect(url_for('strava_api.authorize'))

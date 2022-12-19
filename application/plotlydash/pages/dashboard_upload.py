@@ -22,7 +22,7 @@ import dash
 from dash import dcc, html, callback, Input, Output, State
 from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
-
+from flask_login import current_user
 import pandas as pd
 
 from application import converters
@@ -34,6 +34,8 @@ dash.register_page(__name__, path_template='/upload',
   title='Analyze an activity file', name='Analyze an activity file')
 
 def layout():
+  if not current_user.is_authenticated:
+    return dcc.Location(pathname='/login', id='upload-login-required')
 
   return dbc.Container([
     dcc.Upload(
