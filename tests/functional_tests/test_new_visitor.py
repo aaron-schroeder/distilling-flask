@@ -4,7 +4,7 @@ Refs:
   https://stackoverflow.com/questions/64717302/deprecationwarning-executable-path-has-been-deprecated-selenium-python
   https://www.obeythetestinggoat.com/book/chapter_02_unittest.html
 """
-import os
+import time
 from urllib.parse import urljoin
 
 from selenium.webdriver.common.by import By
@@ -61,10 +61,13 @@ class NewVisitorTest(FunctionalTest):
     url_login = urljoin(self.server_url, '/login')
 
     for relative_url in [
+      '/admin',
       '/upload',
       '/strava/authorize',
-      '/strava/activities'
+      '/strava/activities',
+      '/strava/callback'
     ]:
       self.browser_get_relative(relative_url)
+      time.sleep(1)
       self.assertEqual(self.browser.current_url, url_login)
   
