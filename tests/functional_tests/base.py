@@ -138,12 +138,14 @@ class LiveServerTestCase(unittest.TestCase):
 
 
 class FunctionalTest(LiveServerTestCase):
+  dummy_password = 'ilovestrava'
 
   def create_app(self):
     with open('client_secrets.json', 'r') as f:
       client_secrets = json.load(f)
     os.environ['STRAVA_CLIENT_ID'] = client_secrets['installed']['client_id']
     os.environ['STRAVA_CLIENT_SECRET'] = client_secrets['installed']['client_secret']
+    os.environ['PASSWORD'] = self.dummy_password
 
     return create_app(test_config={
       'TESTING': True,

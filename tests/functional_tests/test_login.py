@@ -1,3 +1,5 @@
+from urllib.parse import urljoin
+
 from selenium.webdriver.common.by import By
 
 from .base import FunctionalTest
@@ -10,7 +12,7 @@ class LoginTest(FunctionalTest):
     self.browser.find_element(By.LINK_TEXT, 'Admin').click()
 
     pw_input = self.wait_for_element(By.ID, 'password')
-    pw_input.send_keys('password')
+    pw_input.send_keys(self.dummy_password)
 
     self.browser.find_element(By.XPATH, '//button[text()="Log in"]').click()
 
@@ -30,7 +32,10 @@ class LoginTest(FunctionalTest):
     self.browser.find_element(By.LINK_TEXT, 'Log out').click()
 
     # They are logged out and back on the homepage.
-    print(self.browser.current_url)
+    self.assertEqual(
+      self.browser.current_url,
+      urljoin(self.server_url, '/')
+    )
     # TODO
 
   def test_wrong_password_helptext(self):

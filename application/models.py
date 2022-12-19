@@ -142,8 +142,10 @@ class AdminUser(UserMixin):
   # )
 
   def check_password(self, password):
-    # return password == config.get('settings', 'password')
-    return password == 'password'
+    # password_correct = config.get('settings', 'password')
+    password_correct = os.environ.get('PASSWORD', None)
+    if password_correct:
+      return password == password_correct
 
   @property
   def strava_account(self):
