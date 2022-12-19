@@ -58,6 +58,7 @@ docker run --name distillingflask  \
     -e VARIABLE_NAME=server  \
     -e STRAVA_CLIENT_ID=<client id>  \
     -e STRAVA_CLIENT_SECRET=<client secret>  \
+    -e PASSWORD=<password>  \
     -d  \
     -p 5000:80  \
     --rm  \

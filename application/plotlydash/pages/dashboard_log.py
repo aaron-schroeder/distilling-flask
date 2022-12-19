@@ -16,13 +16,17 @@ from application import util
 from application.models import db, Activity
 
 
-dash.register_page(__name__, path_template='/log',
+dash.register_page(__name__, path_template='/',
   title='Training Log Dashboard', name='Training Log Dashboard')
 
 
 def layout():
   # Load dates and TSS from db in to DF.
   activities=Activity.query.all()
+
+  if len(activities) == 0:
+    return dbc.Container('No activities have been saved yet.')
+
   fields = ['recorded', 'tss', 'title', 'elapsed_time_s']
   df = pd.DataFrame(
     [[getattr(a, field) for field in fields] for a in activities], 

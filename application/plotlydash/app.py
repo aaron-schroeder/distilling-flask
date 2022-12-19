@@ -12,7 +12,7 @@ def add_dashboard_to_flask(server):
   dash_app = Dash(
     __name__,
     server=server,
-    routes_pathname_prefix='/dash/',
+    routes_pathname_prefix='/',
     external_stylesheets=[
       dbc.themes.BOOTSTRAP,
       # '/static/css/styles.css',  # Not yet.
@@ -25,32 +25,18 @@ def add_dashboard_to_flask(server):
   )
 
   dash_app.layout = html.Div([
-    html.Nav(
-      dbc.Container(
-        html.A('The Training Zealot Analysis Platform', href='/', className='navbar-brand'),
-        fluid=True
-      ),
-      className='navbar navbar-light bg-light'),
-
-    dbc.Container(
+    dbc.NavbarSimple(
       [
-        html.Div(dcc.Link(
-          'Strava activities', href='/activities'
-        )),
-        html.Div(dcc.Link(
-          'Training log dashboard',
-          href=dash.page_registry['pages.dashboard_log']['relative_path']
-        )),
-        html.Div(dcc.Link(
-          'Analyze an activity file (.gpx, .fit, .tcx, .csv)',
-          href=dash.page_registry['pages.dashboard_upload']['relative_path']
-        ))
+        dbc.NavItem(
+          dbc.NavLink('Admin', href='/admin', external_link=True)
+        )
       ],
-      fluid=True,
+      brand='The Training Zealot Analysis Platform',
+      brand_href='/',
+      # color='primary',
+      # dark=True,
+      # className='navbar navbar-light bg-light'
     ),
-
-    html.Hr(),
-
     dash.page_container
   ])
 

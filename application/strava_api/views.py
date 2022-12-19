@@ -1,8 +1,11 @@
 import os
 
+import dash
 from flask import redirect, render_template, request, Response, session, url_for
+from flask_login import current_user, login_required
 
 from . import strava_api
+from application.models import db, StravaAccount
 from application import stravatalk
 
 
@@ -11,7 +14,9 @@ CLIENT_SECRET = os.environ.get('STRAVA_CLIENT_SECRET')
 
 
 @strava_api.route('/authorize')
+@login_required
 def authorize():
+
   return redirect(
     f'https://www.strava.com/oauth/authorize?'  
     f'client_id={CLIENT_ID}&redirect_uri=http://localhost:5000/'
@@ -21,7 +26,9 @@ def authorize():
 
 
 @strava_api.route('/callback')
+@login_required
 def handle_code():
+
   if request.args.get('error', None) is not None:
     # Handles user clicking "cancel" button, resulting in a response like:
     # http://localhost:5000/strava/redirect?state=&error=access_denied
@@ -51,25 +58,41 @@ def handle_code():
       error=error
     )
 
-  session['token'] = stravatalk.get_token(
+  token = stravatalk.get_token(
     request.args.get('code'),
     CLIENT_ID, 
     CLIENT_SECRET
   )
 
-  # Redirect them to an activity list that uses the session data
-  return redirect(url_for('strava_api.display_activity_list'))
+  strava_acct = StravaAccount(
+    strava_id=token['athlete']['id'],
+    access_token=token['access_token'],
+    refresh_token=token['refresh_token'],
+    expires_at=token['expires_at'],
+    # _=token['athlete']['firstname'],
+    # _=token['athlete']['lastname'],
+    # _=token['athlete']['profile_medium'],
+    # _=token['athlete']['profile'],
+  )
+  db.session.add(strava_acct)
+  db.session.commit()
+
+  # Redirect them to the main admin
+  return redirect(url_for('route_blueprint.admin_landing'))
+
+  # # Redirect them to an activity list that uses the session data
+  # return redirect(url_for('strava_api.display_activity_list'))
 
 
 @strava_api.route('/activities')
+@login_required
 def display_activity_list():
   """Display list of strava activities to view in their own Dashboard."""
-  token = session.get('token', None)
-  if token is None:
+  if not current_user.has_authorized:
     return redirect(url_for('strava_api.authorize'))
     # '?after="/strava/activities"'
-  token = stravatalk.refresh_token(token, CLIENT_ID, CLIENT_SECRET)
-  session['token'] = token
+
+  token = current_user.strava_account.get_token()
 
   activity_json = stravatalk.get_activities_json(
     token['access_token'],
@@ -78,11 +101,14 @@ def display_activity_list():
 
   return render_template(
     'strava_api/activity_list.html',
-    resp_json=activity_json,
-    athlete=token['athlete']
+    resp_json=activity_json
   )
 
-@strava_api.route('/logout')
-def logout():
-  session.pop('token')
-  return redirect(url_for('strava_api.authorize'))
+@strava_api.route('/revoke')
+@login_required
+def revoke():
+  if current_user.has_authorized:
+    db.session.delete(current_user.strava_account)
+  db.session.commit()
+
+  return redirect(url_for('route_blueprint.admin_landing'))

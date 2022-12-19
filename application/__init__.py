@@ -1,5 +1,7 @@
 import os
+import dash
 from flask import Flask
+from flask_login import LoginManager
 from flask_sqlalchemy import SQLAlchemy
 
 
@@ -7,6 +9,7 @@ from application import config
 
 
 db = SQLAlchemy()
+login = LoginManager()
 
 
 def create_app(test_config=None):
@@ -47,5 +50,9 @@ def create_app(test_config=None):
     # SQLAlchemy
     from application import models
     db.create_all()  # Create sql tables for our data models
+
+  # Flask-Login
+  login.init_app(app)
+  login.login_view = dash.page_registry['pages.login']['relative_path']
 
   return app

@@ -15,7 +15,7 @@ from application import db, create_app
 from tests.util import get_chromedriver, strava_auth_flow
 
 
-MAX_WAIT = 90
+MAX_WAIT = 20
 
 
 class LiveServerTestCase(unittest.TestCase):
@@ -80,6 +80,9 @@ class LiveServerTestCase(unittest.TestCase):
     """
     return f'http://localhost:{self._configured_port}'
 
+  def browser_get_relative(self, path):
+    self.browser.get(urljoin(self.server_url, path))
+
   def _spawn_live_server(self):
     if self.LIVE_STRAVA_API:
       worker = lambda app, port: app.run(port=port, use_reloader=False)
@@ -135,12 +138,14 @@ class LiveServerTestCase(unittest.TestCase):
 
 
 class FunctionalTest(LiveServerTestCase):
+  dummy_password = 'ilovestrava'
 
   def create_app(self):
     with open('client_secrets.json', 'r') as f:
       client_secrets = json.load(f)
     os.environ['STRAVA_CLIENT_ID'] = client_secrets['installed']['client_id']
     os.environ['STRAVA_CLIENT_SECRET'] = client_secrets['installed']['client_secret']
+    os.environ['PASSWORD'] = self.dummy_password
 
     return create_app(test_config={
       'TESTING': True,
@@ -169,20 +174,27 @@ class FunctionalTest(LiveServerTestCase):
         time.sleep(0.5)
 
   def check_for_link_text(self, link_text):
-    self.assertIsNotNone(
-      self.browser.find_element(By.LINK_TEXT, link_text))
+    link = self.browser.find_element(By.LINK_TEXT, link_text)
+    self.assertIsNotNone(link)
+    return link
 
 
 class LiveStravaFunctionalTest(FunctionalTest):
   LIVE_STRAVA_API = True
 
 
-class AuthenticatedUserFunctionalTest(LiveStravaFunctionalTest):
+class LoggedInFunctionalTest(LiveStravaFunctionalTest):
+  def setUp(self):
+    super().setUp()
+    self.browser_get_relative('/login')
+    pw_input = self.wait_for_element(By.ID, 'password')
+    pw_input.send_keys(self.dummy_password)
+    self.browser.find_element(By.XPATH, '//button[text()="Log in"]').click()
+
+
+class AuthenticatedUserFunctionalTest(LoggedInFunctionalTest):
 
   def setUp(self):
     super().setUp()
-    self.browser.get(urljoin(
-      self.server_url,
-      url_for('strava_api.authorize')
-    ))
+    self.browser_get_relative(url_for('strava_api.authorize'))
     strava_auth_flow(self.browser)

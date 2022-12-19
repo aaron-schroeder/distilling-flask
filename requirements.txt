@@ -9,3 +9,4 @@ scipy
 fitparse>=1.2.0
 activereader>=0.0.1
 greenlet<0.5,>=0.4.5
+flask-login==0.6.2

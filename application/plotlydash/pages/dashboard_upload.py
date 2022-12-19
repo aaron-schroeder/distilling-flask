@@ -22,17 +22,20 @@ import dash
 from dash import dcc, html, callback, Input, Output, State
 from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
-
+from flask_login import current_user
 import pandas as pd
 
 from application import converters
 from application.plotlydash import dashboard_activity
 from application.plotlydash.aio_components import FigureDivAIO, StatsDivAIO
+from application.plotlydash.util import layout_login_required
 
 
 dash.register_page(__name__, path_template='/upload',
   title='Analyze an activity file', name='Analyze an activity file')
 
+
+@layout_login_required
 def layout():
 
   return dbc.Container([

@@ -1,31 +1,35 @@
 import datetime
 import json
 import os
+import uuid
 
 import dash
 from dash import dcc, html, callback, Input, Output, State
 from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
-from flask import session
+from flask_login import current_user
 import dateutil
 import pandas as pd
 
 from application import converters, stravatalk, util
 from application.plotlydash import dashboard_activity
 from application.plotlydash.aio_components import FigureDivAIO, StatsDivAIO
+from application.plotlydash.util import layout_login_required
 
 
 dash.register_page(__name__, path_template='/strava/<activity_id>',
   title='Strava Activity Dashboard', name='Strava Activity Dashboard')
 
 
+@layout_login_required
 def layout(activity_id=None):
+  if not current_user.has_authorized:
+    return dcc.Location(pathname='/strava/authorize', id=str(uuid.uuid4()))
+
   if activity_id is None:
     return html.Div([])
 
-  token = session.get('token', None)
-  if token is None:
-    raise Exception
+  token = current_user.strava_account.get_token()
 
   stream_json = stravatalk.get_activity_streams_json(activity_id, token['access_token'])
 

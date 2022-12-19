@@ -4,23 +4,29 @@ from unittest import skipIf
 from selenium.webdriver.common.by import By
 
 from tests import settings
-from .base import AuthenticatedUserFunctionalTest as FunctionalTest
+from .base import AuthenticatedUserFunctionalTest
 
 
-@skipIf(
-  FunctionalTest.__name__ == 'FunctionalTest',
-  'Test will fail with mocked stravatalk because the app uses '
-  'session variables to store the token and I cannot mock them.'
-)
 @skipIf(
   settings.SKIP_STRAVA_OAUTH,
   'This test would pass were I not locked out of my Strava acct. Skipping.'
 )
-class TestStravaSave(FunctionalTest):
+class TestStravaSave(AuthenticatedUserFunctionalTest):
   def test_can_save_activity(self):
-    # From the landing page, the user navigates to their list of
-    # Strava activities.
-    self.browser.get(self.server_url)
+    # The user checks the training log view and sees there are no
+    # activities to display.
+    self.browser_get_relative('/')
+    content_container = self.wait_for_element(
+      By.XPATH,
+      '//*[@id="_pages_content"]//div[contains(@class, "container")]'
+    )
+    self.assertIn(
+      'No activities have been saved yet.',
+      content_container.get_attribute('innerHTML')
+    )
+
+    # The user navigates to their list of Strava activities.
+    self.browser.find_element(By.LINK_TEXT, 'Admin').click()
     self.browser.find_element(By.LINK_TEXT, 'Strava activities').click()
 
     # They are redirected to their list of strava activities.
@@ -48,14 +54,17 @@ class TestStravaSave(FunctionalTest):
     # Desired path:
     # The activity is saved successfully, and they are redirected to
     # its "Saved Activity" page.
-    self.fail('Finish the test!')
-
-    # self.client.post('/', data={'item_text': 'A new list item'})
-    # self.assertEqual(Item.objects.count(), 1)
-    # new_item = Item.objects.first()
-    # self.assertEqual(new_item.text, 'A new list item')
+    self.assertIn(
+      '/saved/',
+      self.browser.current_url
+    )
 
     # They check out the activity log to see if it updated.
+    self.browser_get_relative('/')
 
     # They find the saved activity in the calendar view,
     # with summary stats and a link back to the saved activity view.
+    self.assertNotIn(
+      'No activities have been saved yet.',
+      self.browser.page_source
+    )
