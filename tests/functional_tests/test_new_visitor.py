@@ -15,6 +15,8 @@ from .base import FunctionalTest
 class NewVisitorTest(FunctionalTest):
 
   def test_can_see_landing_page(self):
+    # TODO: Find a way to pre-populate the server db,
+    # so the graph actually displays.
 
     # Edith has heard about a cool training log app.
     # She goes to check out its homepage.
