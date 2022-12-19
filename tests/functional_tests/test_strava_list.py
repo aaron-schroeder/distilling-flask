@@ -13,3 +13,10 @@ class StravaListTest(AuthenticatedUserFunctionalTest):
     self.assertIn('Strava activities', header.text)
 
     # ...
+  
+  def test_list_redirects(self):
+    # They go to the activity list but since they haven't yet granted 
+    # permissions to Strava, they are
+    # redirected to an authorization screen on strava's website, which
+    # they fill out and submit.
+    pass
