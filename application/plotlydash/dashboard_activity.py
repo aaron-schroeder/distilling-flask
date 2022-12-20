@@ -20,27 +20,8 @@ def create_dash_app(df):
     external_stylesheets=[
       dbc.themes.BOOTSTRAP,
     ],
-    
-    # Script source: local download of the plotly mapbox distribution.
-    # Since the script is in assets/ and supplies the global Plotly var,
-    # it is used over the other plotly packages by default.
-    # (Modified to make my programmatic hover-on-map stuff work). 
-    # It includes everything I need:
-    # scatter, scattermapbox, choroplethmapbox and densitymapbox
-    # https://github.com/plotly/plotly.js/blob/master/dist/README.md#partial-bundles
-
-    # Turn this on to avoid using local scripts by loading from cdn.
-    # Note: Local scripts are by default from `async-plotlyjs.js`, which is
-    # minified and incomprehensible when debugging. Using plotly-mapbox,
-    # for example, allows me to see what is going on for easier debugging
-    # and future edits to the script itself.
-    # https://community.plotly.com/t/smaller-version-of-async-plotlyjs-js-its-so-big-and-loads-so-slow/42247/2
-    # https://github.com/plotly/dash-docs/issues/723#issuecomment-656393396
-    # https://github.com/plotly/plotly.js/blob/master/dist/README.md#partial-bundles
-    # external_scripts=[
-    #   #'https://cdn.plot.ly/plotly-basic-1.54.3.min.js',
-    #   'https://cdn.plot.ly/plotly-mapbox-1.58.4.js'
-    # ],
+    assets_external_path='https://cdn.jsdelivr.net/gh/aaron-schroeder'
+                         '/shared-assets@main/',
   )
 
   calc_power(df)
