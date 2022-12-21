@@ -51,6 +51,23 @@ class ProductionConfig(Config):
   DEBUG = False  # just in case
   SECRET_KEY = os.environ.get('SECRET_KEY') # don't set a default value
 
+  user = os.environ.get('POSTGRES_USER')
+  pw = os.environ.get('POSTGRES_PW')
+  
+  db_url = os.environ.get('POSTGRES_URL')
+  port = os.environ.get('POSTGRES_PORT')
+  
+  db = os.environ.get('POSTGRES_DB')
+
+  # I think this is the right form according to render
+  if (user and pw and db_url and db):
+    SQLALCHEMY_DATABASE_URI = f'postgresql+psycopg2://{user}:{pw}@{db_url}/{db}'
+  
+  # if (user and pw and db_url and port and db):
+  #   SQLALCHEMY_DATABASE_URI = f'postgresql+psycopg2://{user}:{pw}@{db_url}:{port}/{db}'
+  
+  # Otherwise use default sqlite config
+
 
 config = {
   'dev': Config,
