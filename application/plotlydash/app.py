@@ -42,8 +42,9 @@ def add_dashboard_to_flask(server):
           dbc.NavLink('Admin', href='/admin', external_link=True)
         )
       ],
-      brand='The Training Zealot Analysis Platform',
+      brand='Training Zealot Analysis Platform',
       brand_href='/',
+      expand='xs',
       # color='primary',
       # dark=True,
       # className='navbar navbar-light bg-light'
