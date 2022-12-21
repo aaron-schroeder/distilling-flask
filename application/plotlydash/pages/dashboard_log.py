@@ -43,12 +43,13 @@ def layout():
 
   return dbc.Container(
     [
-      html.H1('Activity Summary (Training Log)'),
+      html.H1('Training Log'),
       html.Hr(),
       html.H2('Training Stress'),
       dcc.Graph(
         id='tss-graph',
         figure=go.Figure(create_tss_fig(df)),
+        config={'displayModeBar': False}
       ),
       html.Hr(),
       html.H2('Weekly Log'),
@@ -91,7 +92,7 @@ def layout():
       # html.Hr(),
       html.Div(id='calendar-rows'),
       dbc.Row(
-        dbc.Button('Add more weeks', id='add-weeks', color='primary'),
+        dbc.Button('Expand prior weeks', id='add-weeks', color='primary'),
         justify='center',
         className='mb-2',
       ),
@@ -295,7 +296,8 @@ def create_tss_fig(df):
         range=[0, 1.1 * df['tss'].max()],
         tickformat='.1f',
       ),
-      margin=dict(b=0,t=0,r=0,l=0),
+      margin=dict(b=40,t=0,r=0,l=0),
+      legend={'orientation': 'h'}
     )
   )
 
