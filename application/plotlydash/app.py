@@ -15,7 +15,9 @@ def add_dashboard_to_flask(server):
     routes_pathname_prefix='/',
     external_stylesheets=[
       dbc.themes.BOOTSTRAP,
-      # '/static/css/styles.css',  # Not yet.
+      dbc.icons.FONT_AWESOME,
+      'https://cdn.jsdelivr.net/gh/aaron-schroeder/distilling-flask@master'
+      '/application/plotlydash/style.css',
       # Match the stylesheet used for Flask-generated pages.
       # TODO: Update to latest version.
       # 'https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css
@@ -49,6 +51,6 @@ def add_dashboard_to_flask(server):
     dash.page_container
   ])
 
-  dash_app.enable_dev_tools(debug=False)
+  dash_app.enable_dev_tools(debug=True)
 
   return dash_app.server

@@ -1,4 +1,5 @@
 import math
+import re
 import uuid
 
 from dash import (dcc, html, dash_table, callback, clientside_callback,
@@ -24,12 +25,11 @@ POWER_ID = 'power'
 
 
 def id_factory(component, subcomponent):
-  def id_func(aio_id, extra=''):
+  def id_func(aio_id):
     return {
       'component': component,
       'subcomponent': subcomponent,
       'aio_id': aio_id,
-      'extra': extra
     }
   return id_func
 
@@ -192,7 +192,12 @@ class FigureDivAIO(html.Div):
     super().__init__([
       dcc.Store(data=self.data_from_df(df), id=self.ids.store(aio_id)),
       dbc.Row(self._create_plot_opts(df)),
-      html.Div([], id=self.ids.figures(aio_id)),
+      dbc.Spinner(
+        html.Div(
+          children=[html.Div(style={'height': '400px'})],
+          id=self.ids.figures(aio_id)
+        ),
+      )
     ])
 
   @classmethod
@@ -251,11 +256,11 @@ class FigureDivAIO(html.Div):
         # layout.create_x_stream_radiogroup(x_stream_opts),
         x_stream_radiogroup,
       ),
-      dbc.Col(
-        # layout.create_plot_checkgroup(available_figs)
-        plot_checkgroup,
-        # layout.create_plot_checkgroup([MAP_ID, ELEVATION_ID, SPEED_ID])
-      ),
+      # dbc.Col(
+      #   # layout.create_plot_checkgroup(available_figs)
+      #   plot_checkgroup,
+      #   # layout.create_plot_checkgroup([MAP_ID, ELEVATION_ID, SPEED_ID])
+      # ),
     ]
 
   # @callback(
@@ -499,32 +504,12 @@ class FigureRowsAIO(html.Div):
     super().__init__(plotter.rows)
 
 
-class TimeColAIO(dbc.Col):
-  class ids:
-    hours = id_factory('TimeColAIO', 'hours')
-    minutes = id_factory('TimeColAIO', 'minutes')
-    seconds = id_factory('TimeColAIO', 'seconds')
-    # hours = lambda aio_id: {
-    #   'component': 'TimeColAIO',
-    #   'subcomponent': 'hours',
-    #   'aio_id': aio_id
-    # }
-    # minutes = lambda aio_id: {
-    #   'component': 'TimeColAIO',
-    #   'subcomponent': 'minutes',
-    #   'aio_id': aio_id
-    # }
-    # seconds = lambda aio_id: {
-    #   'component': 'TimeColAIO',
-    #   'subcomponent': 'seconds',
-    #   'aio_id': aio_id
-    # }
-
+class TimeInput(dbc.Input):
   def __init__(self, *args, **kwargs):
-    aio_id = kwargs.pop('aio_id', str(uuid.uuid4()))
-    extra = kwargs.pop('extra', '')
-    total_secs = kwargs.pop('seconds')
-    label = kwargs.pop('label', 'Time')
+    total_secs = kwargs.pop('seconds', 0)
+
+    # TODO: Remove duplicate kwargs if they are passed,
+    # and warn the user.
     derived_kwargs = kwargs.copy()
 
     hours = math.floor(total_secs / 3600.0)
@@ -532,54 +517,29 @@ class TimeColAIO(dbc.Col):
     seconds = round(total_secs - minutes * 60 - hours * 3600)
 
     super().__init__(
-      [
-        dbc.Label(f'{label}:'),
-        dbc.InputGroup([
-          dbc.Input(
-            type='number', 
-            id=self.ids.hours(aio_id, extra),
-            min=0, max=23,
-            placeholder='HH',
-            value=hours,
-          ),
-          dbc.InputGroupText(':'),
-          dbc.Input(
-            type='number', 
-            id=self.ids.minutes(aio_id, extra),
-            min=0, max=59,
-            placeholder='MM',
-            value=minutes,
-          ),
-          dbc.InputGroupText(':'),
-          dbc.Input(
-            type='number', 
-            id=self.ids.seconds(aio_id, extra),
-            min=0, max=59,
-            placeholder='SS',
-            value=f'{seconds:02}',
-          ),
-        ]),
-      ],
+      *args,
+      type='string',
+      placeholder='HH:MM:SS',
+      pattern='[0-9][0-9]:[0-5][0-9]:[0-5][0-9]',
+      value=f'{hours:02d}:{minutes:02d}:{seconds:02d}',
+      debounce=True,
+      style={'width': '100px'},
       **derived_kwargs
     )
 
 
-class PowerRowAIO(dbc.Row):
+def validate_time_str(time_str):
+  return time_str is not None and re.match('[0-9][0-9]:[0-5][0-9]:[0-5][0-9]', time_str)
+
+
+class TssDivAIO(html.Div):
   class ids:
-    class ngp:
-      hours = lambda aio_id: TimeColAIO.ids.hours(aio_id, 'ngp')
-      minutes = lambda aio_id: TimeColAIO.ids.minutes(aio_id, 'ngp')
-      seconds = lambda aio_id: TimeColAIO.ids.seconds(aio_id, 'ngp')
-    class cp:
-      hours = lambda aio_id: TimeColAIO.ids.hours(aio_id, 'cp')
-      minutes = lambda aio_id: TimeColAIO.ids.minutes(aio_id, 'cp')
-      seconds = lambda aio_id: TimeColAIO.ids.seconds(aio_id, 'cp')
-    class total:
-      hours = lambda aio_id: TimeColAIO.ids.hours(aio_id, 'total')
-      minutes = lambda aio_id: TimeColAIO.ids.minutes(aio_id, 'total')
-      seconds = lambda aio_id: TimeColAIO.ids.seconds(aio_id, 'total')
-    intensity = id_factory('PowerRowAIO', 'intensity')
-    tss = id_factory('PowerRowAIO', 'tss')
+    ngp = id_factory('TssDivAIO', 'ngp')
+    cp = id_factory('TssDivAIO', 'cp')
+    total_time = id_factory('TssDivAIO', 'total')
+    tss_per_cp_hr = id_factory('TssDivAIO', 'tss_per_cp_hr')
+    intensity = id_factory('TssDivAIO', 'intensity')
+    tss = id_factory('TssDivAIO', 'tss')
 
   def __init__(self, ngp=None, cp=None, total_time=None, aio_id=None):
     """
@@ -601,55 +561,111 @@ class PowerRowAIO(dbc.Row):
     ngp_total_secs = ngp_td.total_seconds()
 
     super().__init__([
-      TimeColAIO(aio_id=aio_id, extra='cp', seconds=6*60+30, label='CP', width=3),
-      TimeColAIO(aio_id=aio_id, extra='ngp', seconds=ngp_total_secs, label='NGP', width=4),
-      TimeColAIO(aio_id=aio_id, extra='total', seconds=total_time, label='Time', width=4),
-      dbc.Col(
+      html.Div(
         [
-          dbc.Label('IF:'),
-          dbc.Input(
-            type='number', 
-            id=self.ids.intensity(aio_id),
-            min=0, max=2, step=0.001,
-            placeholder='IF',
-            # value=round(intensity_factor, 3),
+          html.Div(
+            [
+              dbc.FormText('Functional Threshold Pace'),
+              TimeInput(id=self.ids.cp(aio_id), seconds=6*60+30),
+            ],
+            className='block'
+          ),
+          html.Div(
+            html.I(className='fa-solid fa-divide'),
+            # className='d-flex align-items-center justify-content-center',
+          ),
+          html.Div(
+            [
+              dbc.FormText('Normalized Graded Pace'),
+              TimeInput(id=self.ids.ngp(aio_id), seconds=ngp_total_secs),
+            ],
+            className='block'
           )
         ],
-        width=2,
+        # className='d-flex flex-column flex-lg-row justify-content-center',
+        id='equation-1'
       ),
-      dbc.Col(
+      dbc.Row(
+        html.I(className='fa-solid fa-down-long fa-2xl my-4'),
+      ),
+      html.Div(
         [
-          dbc.Label('TSS:'),
-          dbc.Input(
-            type='number', 
-            id=self.ids.tss(aio_id),
-            min=0, max=1000, step=0.1,
-            placeholder='TSS',
-            # value=round(tss, 1),
-          )
+          html.Div(
+            [
+              dbc.FormText('Total Time'),
+              TimeInput(id=self.ids.total_time(aio_id), seconds=total_time),
+            ],
+            id='total-time-block',
+            className='block'
+          ),
+          html.Div(html.I(className='fa-solid fa-multiply')),
+          html.Div(
+            [
+              html.Div(
+                [
+                  dbc.FormText('Intensity Factor'),
+                  dbc.Input(
+                    type='number', 
+                    id=self.ids.intensity(aio_id),
+                    min=0, max=2, step=0.001,
+                    placeholder='IF',
+                    style={'width': '100px'}
+                  ),
+                ],
+              ),
+              html.I(className='fa-solid fa-2'),
+            ],
+            id='if-block',
+            className='block'
+          ),
+          html.Div(html.I(className='fa-solid fa-multiply')),
+          html.Div(
+            [
+              dbc.FormText('TSS per hour'),
+              dbc.Input(
+                id=self.ids.tss_per_cp_hr(aio_id),
+                type='number',
+                value=100,
+                style={'width': '100px'}
+              ),
+            ],
+            id='points-block',
+            className='block'
+          ),
         ],
-        width=2,
+        id='equation-2'
       ),
+      dbc.Row(html.I(className='fa-solid fa-down-long fa-2xl my-4')),
+      dbc.Row(
+        html.Div(
+          [
+            dbc.FormText('TSS'),
+            dbc.Input(
+              type='number', 
+              id=self.ids.tss(aio_id),
+              min=0, max=1000, step=0.1,
+              placeholder='TSS',
+              style={'width': '100px'}
+            ),
+          ],
+          className='block'
+        ),
+        justify='center',
+      )
     ])
 
   @callback(
     Output(ids.intensity(MATCH), 'value'),
-    Input(ids.ngp.hours(MATCH), 'value'),
-    Input(ids.ngp.minutes(MATCH), 'value'),
-    Input(ids.ngp.seconds(MATCH), 'value'),
-    Input(ids.cp.minutes(MATCH), 'value'),
-    Input(ids.cp.seconds(MATCH), 'value'),
+    Input(ids.ngp(MATCH), 'value'),
+    Input(ids.cp(MATCH), 'value'),
   )
-  def update_intensity_factor(ngp_hr, ngp_min, ngp_sec, cp_min, cp_sec):
-    if ngp_min is None or cp_min is None:
+  def update_intensity_factor(ngp_str, cp_str):
+
+    if not validate_time_str(ngp_str) or not validate_time_str(cp_str):
       raise PreventUpdate
 
-    ngp_hr = int(ngp_hr) or 0
-    ngp_sec = int(ngp_sec) or 0
-    cp_sec = int(cp_sec) or 0
-
-    ngp_secs_per_mile = ngp_hr * 3600 + ngp_min * 60 + ngp_sec
-    cp_secs_per_mile = cp_min * 60 + cp_sec
+    ngp_secs_per_mile = util.string_to_seconds(ngp_str)
+    cp_secs_per_mile = util.string_to_seconds(cp_str)
 
     intensity_factor = cp_secs_per_mile / ngp_secs_per_mile
     
@@ -658,28 +674,30 @@ class PowerRowAIO(dbc.Row):
   @callback(
     Output(ids.tss(MATCH), 'value'),
     Input(ids.intensity(MATCH), 'value'),
-    Input(ids.total.hours(MATCH), 'value'),
-    Input(ids.total.minutes(MATCH), 'value'),
-    Input(ids.total.seconds(MATCH), 'value'),
+    Input(ids.total_time(MATCH), 'value'),
+    Input(ids.tss_per_cp_hr(MATCH), 'value')
   )
-  def update_tss(intensity_factor, hours, minutes, seconds):
-    if intensity_factor is None:
+  def update_tss(intensity_factor, total_time_str, tss_per_cp_hr):
+
+    if (
+      intensity_factor is None 
+      or not validate_time_str(total_time_str)
+      or tss_per_cp_hr is None
+    ):
       raise PreventUpdate
 
-    total_hours = int(hours) + int(minutes) / 60 + int(seconds) / 3600
+    total_hours = util.string_to_seconds(total_time_str) / 3600
 
-    # This is TP uses 110...not me!
-    tss_per_cp_hr = 100
     tss = tss_per_cp_hr * total_hours * intensity_factor ** 2
 
     return round(tss, 1)
 
 
-class StatsDivAIO(html.Div):
+class StatsDivAIO(dbc.Accordion):
   class ids:
     table = id_factory('StatsDivAIO', 'table')
-    intensity = lambda aio_id: PowerRowAIO.ids.intensity(aio_id)
-    tss = lambda aio_id: PowerRowAIO.ids.tss(aio_id)
+    intensity = lambda aio_id: TssDivAIO.ids.intensity(aio_id)
+    tss = lambda aio_id: TssDivAIO.ids.tss(aio_id)
 
   def __init__(self, df=None, aio_id=None):
     if df is None:
@@ -718,16 +736,23 @@ class StatsDivAIO(html.Div):
 
     df_stats = self._calc_stats_df(df)
 
-    super().__init__([
-      html.Div(self.create_moving_table(df_stats)),
-      # html.Div(DataTableAIO(df_stats)),
-      PowerRowAIO(
-        aio_id=aio_id,
-        ngp=ngp_ms,
-        total_time=df['time'].iloc[-1]-df['time'].iloc[0]
-      ),
-      html.Hr(),
-    ])
+    super().__init__(
+      [
+        dbc.AccordionItem(
+          html.Div(self.create_moving_table(df_stats)),
+          title='Stats Table',
+        ),
+        dbc.AccordionItem(
+          TssDivAIO(
+            aio_id=aio_id,
+            ngp=ngp_ms,
+            total_time=df['time'].iloc[-1]-df['time'].iloc[0]
+          ),
+          title='Training Stress Score details'
+        ),
+      ],
+      start_collapsed=True,
+    )
 
   def _calc_stats_df(self, df):
     """Calculate summary stats."""
