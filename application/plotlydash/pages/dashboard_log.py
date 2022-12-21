@@ -92,14 +92,16 @@ def layout():
       # html.Hr(),
       html.Div(id='calendar-rows'),
       dbc.Row(
-        dbc.Button('Expand prior weeks', id='add-weeks', color='primary'),
+        dbc.Button(
+          'Expand prior weeks',
+          id='add-weeks',
+          color='primary',
+          style={'width': 'fit-content'}
+        ),
         justify='center',
         className='mb-2',
       ),
       dcc.Location(id='url'),
-      # dcc.Store(id='activity-data'), # data streams
-      # dcc.Store(id='activity-stats'), # could be strava response etc
-      # dcc.Store(id='calc-stats'), # storage for DF-to-stats calc
     ],
     id='dash-container',
     fluid=True,
