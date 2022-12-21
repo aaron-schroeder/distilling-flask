@@ -12,39 +12,48 @@ class Config:
 
   Set by `app.config.from_object(config.Config)`
   
-  https://flask.palletsprojects.com/en/1.1.x/config/
-  https://flask.palletsprojects.com/en/1.1.x/config/#configuring-from-files
+  https://flask.palletsprojects.com/en/2.2.x/config/
   """
 
-  # General Flask Config: not hidden because I only run dev mode.
-
-  # https://flask.palletsprojects.com/en/1.1.x/config/#SECRET_KEY
-  # SECRET_KEY = os.environ.get('SECRET_KEY')
-  SECRET_KEY = 'dev'
+  SECRET_KEY = os.environ.get('SECRET_KEY', 'dev')
   
-  ENV = 'development'  # auto when FLASK_ENV = 'development'
-  DEBUG = True  # auto when FLASK_ENV = 'development'
+  # Deprecated:
+  # https://flask.palletsprojects.com/en/2.2.x/config/#ENV
+  # ENV = 'development'  
+  
+  # Prefer --debug arg? Or envvar?
+  DEBUG = True
 
-  # Flask application folder name. No need to hide AFAIK.
-  #FLASK_APP = os.environ.get('FLASK_APP')
   FLASK_APP = 'application'
 
-  # FLASK_DEBUG = 1  # likely not needed
-
-  # Strava token - load from environment variable.
-  ACCESS_TOKEN = os.environ.get('ACCESS_TOKEN')
-
-  # --- Database settings ---
-  # https://hackersandslackers.com/flask-sqlalchemy-database-models/
-  
-  # Define URI in dotenv:
-  # SQLALCHEMY_DATABASE_URI = os.environ.get('SQLALCHEMY_DATABASE_URI')
-
-  # Define URI here:
   path = os.path.dirname( os.path.realpath(__file__) )
   database_path = os.path.join(path, 'mydb.sqlite')
   SQLALCHEMY_DATABASE_URI = 'sqlite:///' + database_path
 
   SQLALCHEMY_ECHO = True
   SQLALCHEMY_TRACK_MODIFICATIONS = False
-  # --- End of database settings ---
+
+
+class TestingConfig(Config):
+  """
+  Refs:
+    https://coddyschool.com/upload/Flask_Web_Development_Developing.pdf#page=97
+  """
+  TESTING = True
+  SQLALCHEMY_DATABASE_URI = os.environ.get(
+    'TEST_DATABASE_URL',
+    'sqlite://'
+  )
+  SECRET_KEY = 'super secret key'
+
+
+class ProductionConfig(Config):
+  DEBUG = False  # just in case
+  SECRET_KEY = os.environ.get('SECRET_KEY') # don't set a default value
+
+
+config = {
+  'dev': Config,
+  'test': TestingConfig,
+  'prod': ProductionConfig
+}

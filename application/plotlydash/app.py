@@ -52,6 +52,4 @@ def add_dashboard_to_flask(server):
     dash.page_container
   ])
 
-  dash_app.enable_dev_tools(debug=True)
-
   return dash_app.server

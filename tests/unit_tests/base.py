@@ -20,20 +20,9 @@ class FlaskTestCase(unittest.TestCase):
       https://coddyschool.com/upload/Flask_Web_Development_Developing.pdf#page=221
       https://stackoverflow.com/questions/60111814/flask-application-was-not-able-to-create-a-url-adapter-for-request
     """
-    # self.app = create_app('testing')
-    self.app = create_app(test_config={
-      'TESTING': True,
-      'SQLALCHEMY_DATABASE_URI': os.environ.get(
-        'TEST_DATABASE_URL',
-        # 'sqlite:///' + os.path.join(BASEDIR, 'data-test.sqlite')
-        'sqlite://'
-      ),
-      'SECRET_KEY': 'super secret key'
-    })
+    self.app = create_app(config_name='test')
     self.app_context = self.app.app_context()
     self.app_context.push()
-    # self.client.
-    # db.create_all()
     self.client = self.app.test_client(use_cookies=True)
 
   def tearDown(self):

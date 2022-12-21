@@ -5,14 +5,14 @@ from flask_login import LoginManager
 from flask_sqlalchemy import SQLAlchemy
 
 
-from application import config
+from application.config import config
 
 
 db = SQLAlchemy()
 login = LoginManager()
 
 
-def create_app(test_config=None):
+def create_app(config_name='config'):
   """Construct core Flask application with embedded Dash apps.
 
   The application factory function. Flask auto-detects `create_app`
@@ -21,10 +21,7 @@ def create_app(test_config=None):
   """
   app = Flask(__name__, instance_relative_config=True)
 
-  if test_config is None:
-    app.config.from_object(config.Config)
-  else:
-    app.config.from_mapping(test_config)
+  app.config.from_object(config[config_name])
 
   # ensure the instance folder exists
   # TODO: Figure out if I need this at all.

@@ -147,11 +147,7 @@ class FunctionalTest(LiveServerTestCase):
     os.environ['STRAVA_CLIENT_SECRET'] = client_secrets['installed']['client_secret']
     os.environ['PASSWORD'] = self.dummy_password
 
-    return create_app(test_config={
-      'TESTING': True,
-      'SQLALCHEMY_DATABASE_URI': 'sqlite:///mydb.sqlite',
-      'SECRET_KEY': 'super secret key'
-    })
+    return create_app(config_name='test')
 
   def setUp(self):
     self.browser = get_chromedriver()
