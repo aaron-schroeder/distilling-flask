@@ -1,6 +1,6 @@
 import os
+from urllib.parse import urljoin
 
-import dash
 from flask import redirect, render_template, request, Response, session, url_for
 from flask_login import current_user, login_required
 
@@ -17,11 +17,20 @@ CLIENT_SECRET = os.environ.get('STRAVA_CLIENT_SECRET')
 @login_required
 def authorize():
 
+  server_url = os.environ.get(
+    'DISTILLINGFLASK_SERVER_URL',
+    'http://localhost:5000'
+  )
+
+  redirect_uri = urljoin(
+    server_url,
+    url_for('strava_api.handle_code')
+  )
+
   return redirect(
     f'https://www.strava.com/oauth/authorize?'  
-    f'client_id={CLIENT_ID}&redirect_uri=http://localhost:5000/'
-    f'{url_for("strava_api.handle_code")}&approval_prompt=auto'
-    '&response_type=code&scope=activity:read_all'
+    f'client_id={CLIENT_ID}&redirect_uri={redirect_uri}'
+    f'&approval_prompt=auto&response_type=code&scope=activity:read_all'
   )
 
 
