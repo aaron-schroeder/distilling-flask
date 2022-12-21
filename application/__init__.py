@@ -46,6 +46,10 @@ def create_app(config_name='config'):
     
     # SQLAlchemy
     from application import models
+    # temporary - start with a fresh db since I haven't got migrations
+    # set up yet.
+    db.drop_all() 
+    
     db.create_all()  # Create sql tables for our data models
 
   # Flask-Login
