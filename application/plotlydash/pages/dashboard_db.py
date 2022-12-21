@@ -39,7 +39,7 @@ def layout(activity_id=None):
       dcc.Store(id='activity-stats', data=activity_dict),
     ],
     id='dash-container',
-    fluid=True,
+    # fluid=True,
   )
 
 

@@ -174,7 +174,9 @@ class Plotter(object):
       clear_on_unhover=True,
       config=dict(
         modeBarButtonsToRemove=['hoverClosestCartesian'],
-      )
+      ),
+      # style={'border': '2px black solid'}
+      className='border border-dark',
     )
 
     self.add_graph_to_layout(new_graph, new_row=new_row)
