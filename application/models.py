@@ -68,7 +68,7 @@ class Activity(db.Model):
   # Maybe
   # Doesn't necessarily exist, but must be unique if it does.
   strava_id = db.Column(
-    db.Integer,
+    db.BigInteger,
     unique=True,
     nullable=True,
   )
