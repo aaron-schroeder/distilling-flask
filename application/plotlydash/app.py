@@ -16,21 +16,17 @@ def add_dashboard_to_flask(server):
     external_stylesheets=[
       dbc.themes.BOOTSTRAP,
       dbc.icons.FONT_AWESOME,
-      'https://cdn.jsdelivr.net/gh/aaron-schroeder/distilling-flask@master'
-      '/application/plotlydash/style.css',
       # Match the stylesheet used for Flask-generated pages.
       # TODO: Update to latest version.
       # 'https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css
       # '/bootstrap.min.css',
     ],
-    # Include my online assets folder, which contains a modified script
-    # to make my programmatic hover-on-map stuff work.
-    # NOTE: there must be a file in my local assets folder with the
-    # same name as the corresponding online resource.
-    # https://dash.plotly.com/external-resources'
-    # '/load-assets-from-a-folder-hosted-on-a-cdn'
-    assets_external_path='https://cdn.jsdelivr.net/gh/aaron-schroeder'
-                         '/shared-assets@main/',
+    external_scripts=[
+      # Include a modified plotly.js script to make my programmatic
+      # hover-on-map stuff work.
+      'https://cdn.jsdelivr.net/gh/aaron-schroeder/shared-assets@main/assets/'
+      'plotly-strict-2.0.0-rc-adsmod.0.js',
+    ],
     suppress_callback_exceptions=True,
     use_pages=True
   )
