@@ -12,6 +12,8 @@ import dateutil
 import pandas as pd
 
 from application import converters, stravatalk, util
+from application.models import db, Activity
+from sqlalchemy.exc import IntegrityError
 from application.plotlydash import dashboard_activity
 from application.plotlydash.aio_components import FigureDivAIO, StatsDivAIO
 from application.plotlydash.util import layout_login_required
@@ -83,12 +85,7 @@ def save_activity(
   ):
     raise PreventUpdate
 
-  fname_json = f'application/activity_files/original/{activity_data["id"]}.json'
-  fname_csv = f'application/activity_files/csv/{activity_data["id"]}.csv'
-
   # Create a new activity record in the database
-  from application.models import db, Activity
-  from sqlalchemy.exc import IntegrityError
 
   try:
     new_act = Activity(
@@ -99,8 +96,6 @@ def save_activity(
       tz_local=activity_data['timezone'],
       moving_time_s=activity_data['moving_time'],
       elapsed_time_s=activity_data['elapsed_time'],
-      filepath_orig=fname_json,
-      filepath_csv=fname_csv,
       # Fields below here not required
       strava_id=activity_data['id'],
       distance_m=activity_data['distance'],
@@ -116,14 +111,6 @@ def save_activity(
     return html.Div([
       'There was an error saving this activity.'
     ])
-
-  # Save the strava response json
-  with open(fname_json, 'w') as outfile:
-    json.dump(stream_list, outfile)
-
-  # Save the processed DataFrame as CSV
-  df = pd.DataFrame.from_records(record_data)
-  df.to_csv(fname_csv)
 
   return f'Activity saved successfully! Internal ID = {new_act.id}'
   # return dcc.Location(id=new_act.id, pathname=f'/dash/saved-activity/{new_act.id}')
