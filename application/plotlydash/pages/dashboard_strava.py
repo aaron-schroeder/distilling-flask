@@ -48,7 +48,6 @@ def layout(activity_id=None):
       StatsDivAIO(df=df, aio_id='strava'),
       FigureDivAIO(df=df, aio_id='strava'),
       dcc.Store(id='strava-summary-response', data=activity_json),
-      dcc.Store(id='strava-stream-response', data=stream_json)
     ],
     id='dash-container',
     fluid=True,
@@ -61,7 +60,6 @@ def layout(activity_id=None):
   Output('save-result', 'children'),
   Input('save-activity', 'n_clicks'),
   State(FigureDivAIO.ids.store('strava'), 'data'),
-  State('strava-stream-response', 'data'),
   State('strava-summary-response', 'data'),
   State(StatsDivAIO.ids.intensity('strava'), 'value'),
   State(StatsDivAIO.ids.tss('strava'), 'value'),
@@ -69,8 +67,7 @@ def layout(activity_id=None):
 )
 def save_activity(
   n_clicks, 
-  record_data, 
-  stream_list, 
+  record_data,
   activity_data, 
   intensity_factor,
   tss
@@ -80,13 +77,11 @@ def save_activity(
     n_clicks is None
     or n_clicks == 0
     or record_data is None
-    or stream_list is None
     or activity_data is None
   ):
     raise PreventUpdate
 
   # Create a new activity record in the database
-
   try:
     new_act = Activity(
       title=activity_data['name'],
@@ -135,14 +130,8 @@ def update_stats(activity_data):
     ]),
     html.Div(activity_data['description']),
     dbc.Row([
-      dbc.Col(
-        dbc.Button('Save activity to DB', id='save-activity'),
-        # align='center',
-        # className='text-center',
-      ),
-      dbc.Col(
-        id='save-result',
-      )
+      dbc.Col(dbc.Button('Save activity to DB', id='save-activity')),
+      dbc.Col(id='save-result')
     ]),
     html.Hr(),
   ]

@@ -4,7 +4,6 @@ import dash
 from dash import dcc, html, callback, Input, Output
 from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
-import pandas as pd
 
 from application import converters, stravatalk, util
 from application.models import db, Activity, AdminUser
@@ -55,7 +54,6 @@ def layout(activity_id=None):
       dcc.Store(id='activity-stats', data=activity_dict),
     ],
     id='dash-container',
-    # fluid=True,
   )
 
 
