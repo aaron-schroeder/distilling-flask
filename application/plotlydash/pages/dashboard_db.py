@@ -4,10 +4,10 @@ import dash
 from dash import dcc, html, callback, Input, Output
 from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
-import pandas as pd
 
-from application import util
-from application.models import db, Activity
+from application import converters, stravatalk, util
+from application.models import db, Activity, AdminUser
+from application.plotlydash import dashboard_activity
 from application.plotlydash.aio_components import FigureDivAIO, StatsDivAIO
 
 
@@ -19,18 +19,33 @@ def layout(activity_id=None):
   if activity_id is None:
     return html.Div([])
 
-  activity = Activity.query.get(activity_id)
+  admin_user = AdminUser()
+  if not admin_user.has_authorized:
+    return dbc.Container('This app\'s administrator is not currently granting '
+                         'permission to access their Strava activities.')
   
-  df = pd.read_csv(activity.filepath_csv)
+  token = AdminUser().strava_account.get_token()
+
+  activity = Activity.query.get(activity_id)
+
+  stream_json = stravatalk.get_activity_streams_json(
+    activity.strava_id, 
+    token['access_token']
+  )
+
+  # Likely to be added
+  # activity_json = stravatalk.get_activity_json(activity_id, token['access_token'])
+
+  # Read the Strava json response into a DataFrame and perform
+  # additional calculations on it.
+  df = converters.from_strava_streams(stream_json)
+  dashboard_activity.calc_power(df)
 
   activity_dict = {
     k: f if not isinstance(f, datetime.date) else f.isoformat()
     for k, f in activity.__dict__.items() if not k.startswith('_')
   }
 
-  # Initialize an empty layout to be populated with callback data.
-  # TODO: Bring this part of layout in here? Plotter can fill it...
-  # app.layout = LAYOUT
   return dbc.Container(
     [
       html.Div(id='model-stats'),
@@ -39,7 +54,6 @@ def layout(activity_id=None):
       dcc.Store(id='activity-stats', data=activity_dict),
     ],
     id='dash-container',
-    # fluid=True,
   )
 
 

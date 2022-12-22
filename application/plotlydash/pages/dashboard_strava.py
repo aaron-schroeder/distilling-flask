@@ -12,6 +12,8 @@ import dateutil
 import pandas as pd
 
 from application import converters, stravatalk, util
+from application.models import db, Activity
+from sqlalchemy.exc import IntegrityError
 from application.plotlydash import dashboard_activity
 from application.plotlydash.aio_components import FigureDivAIO, StatsDivAIO
 from application.plotlydash.util import layout_login_required
@@ -46,7 +48,6 @@ def layout(activity_id=None):
       StatsDivAIO(df=df, aio_id='strava'),
       FigureDivAIO(df=df, aio_id='strava'),
       dcc.Store(id='strava-summary-response', data=activity_json),
-      dcc.Store(id='strava-stream-response', data=stream_json)
     ],
     id='dash-container',
     fluid=True,
@@ -59,7 +60,6 @@ def layout(activity_id=None):
   Output('save-result', 'children'),
   Input('save-activity', 'n_clicks'),
   State(FigureDivAIO.ids.store('strava'), 'data'),
-  State('strava-stream-response', 'data'),
   State('strava-summary-response', 'data'),
   State(StatsDivAIO.ids.intensity('strava'), 'value'),
   State(StatsDivAIO.ids.tss('strava'), 'value'),
@@ -67,8 +67,7 @@ def layout(activity_id=None):
 )
 def save_activity(
   n_clicks, 
-  record_data, 
-  stream_list, 
+  record_data,
   activity_data, 
   intensity_factor,
   tss
@@ -78,18 +77,11 @@ def save_activity(
     n_clicks is None
     or n_clicks == 0
     or record_data is None
-    or stream_list is None
     or activity_data is None
   ):
     raise PreventUpdate
 
-  fname_json = f'application/activity_files/original/{activity_data["id"]}.json'
-  fname_csv = f'application/activity_files/csv/{activity_data["id"]}.csv'
-
   # Create a new activity record in the database
-  from application.models import db, Activity
-  from sqlalchemy.exc import IntegrityError
-
   try:
     new_act = Activity(
       title=activity_data['name'],
@@ -99,8 +91,6 @@ def save_activity(
       tz_local=activity_data['timezone'],
       moving_time_s=activity_data['moving_time'],
       elapsed_time_s=activity_data['elapsed_time'],
-      filepath_orig=fname_json,
-      filepath_csv=fname_csv,
       # Fields below here not required
       strava_id=activity_data['id'],
       distance_m=activity_data['distance'],
@@ -116,14 +106,6 @@ def save_activity(
     return html.Div([
       'There was an error saving this activity.'
     ])
-
-  # Save the strava response json
-  with open(fname_json, 'w') as outfile:
-    json.dump(stream_list, outfile)
-
-  # Save the processed DataFrame as CSV
-  df = pd.DataFrame.from_records(record_data)
-  df.to_csv(fname_csv)
 
   return f'Activity saved successfully! Internal ID = {new_act.id}'
   # return dcc.Location(id=new_act.id, pathname=f'/dash/saved-activity/{new_act.id}')
@@ -148,14 +130,8 @@ def update_stats(activity_data):
     ]),
     html.Div(activity_data['description']),
     dbc.Row([
-      dbc.Col(
-        dbc.Button('Save activity to DB', id='save-activity'),
-        # align='center',
-        # className='text-center',
-      ),
-      dbc.Col(
-        id='save-result',
-      )
+      dbc.Col(dbc.Button('Save activity to DB', id='save-activity')),
+      dbc.Col(id='save-result')
     ]),
     html.Hr(),
   ]

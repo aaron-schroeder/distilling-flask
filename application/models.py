@@ -52,20 +52,7 @@ class Activity(db.Model):
     nullable=False,
     default='UTC',
   )
-
-  filepath_orig = db.Column(
-    db.String(200),
-    unique=True,
-    nullable=True,
-  )
   
-  filepath_csv = db.Column(
-    db.String(200),
-    unique=True,
-    nullable=True,
-  )
-  
-  # Maybe
   # Doesn't necessarily exist, but must be unique if it does.
   strava_id = db.Column(
     db.BigInteger,
