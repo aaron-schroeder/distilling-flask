@@ -12,7 +12,7 @@ db = SQLAlchemy()
 login = LoginManager()
 
 
-def create_app(config_name='config'):
+def create_app(config_name='dev'):
   """Construct core Flask application with embedded Dash apps.
 
   The application factory function. Flask auto-detects `create_app`
