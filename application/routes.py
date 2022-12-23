@@ -1,5 +1,5 @@
 """Core Flask app routes."""
-from flask import Blueprint, redirect, render_template
+from flask import Blueprint, redirect, render_template, request
 from flask_login import logout_user, login_required
 
 from application.models import Activity

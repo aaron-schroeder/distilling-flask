@@ -70,10 +70,10 @@ def update_stats(activity_data):
     html.H2(f"{activity_data['title']} ({activity_data['recorded']})"),
     dbc.Row([
       # dbc.Col(f"{activity_data['distance'] / 1609.34:.2f} mi"),
-      dbc.Col(f"{activity_data['elapsed_time_s']} sec (total)"),
-      dbc.Col(f"{activity_data['elevation_m'] * util.FT_PER_M:.0f} ft (gain)"),
+      dbc.Col(f"Elapsed time: {util.seconds_to_string(activity_data['elapsed_time_s'])}"),
+      dbc.Col(f"Gain: {activity_data['elevation_m'] * util.FT_PER_M:.0f} ft"),
       # dbc.Col(f"{activity_data['moving_time']} sec (moving)"),
-      dbc.Col(f"{activity_data['tss']} ({activity_data['intensity_factor']})"),
+      dbc.Col(f"TSS: {activity_data['tss']:.0f} (IF: {activity_data['intensity_factor']:.2f})"),
     ]),
     html.Div(activity_data['description']),
     html.Hr(),

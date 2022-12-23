@@ -93,7 +93,7 @@ def layout():
       html.Div(id='calendar-rows'),
       dbc.Row(
         dbc.Button(
-          'Expand prior weeks',
+          'Show 3 prior weeks',
           id='add-weeks',
           color='primary',
           style={'width': 'fit-content'}
