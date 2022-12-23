@@ -13,3 +13,4 @@ flask-login==0.6.2
 specialsauce>=0.0.2
 gunicorn
 psycopg2
+flask-wtf
