@@ -387,12 +387,11 @@ class FigureRowsAIO(html.Div):
         **TRACE_LAYOUT[SPEED]
       )
 
-      # if df.fld.has(GRADE):
-        # spd_axis = plotter.get_yaxis(SPEED_ID, POWER)
-      for stream in ['equiv_speed', 'GAP', 'NGP']:
+      # for stream in ['equiv_speed', 'GAP', 'NGP']:
+      for stream in ['GAP', 'NGP']:
         if df.fld.has(stream):
           plotter.add_trace(SPEED_ID, stream,
-            text=df[stream].apply(util.speed_to_pace), 
+            text=df[stream].apply(util.speed_to_pace),
             visible=True,
             **TRACE_LAYOUT[SPEED]
           )

@@ -92,7 +92,13 @@ def get_activities_json(access_token, limit=None, page=None):
     access_token (str): Fresh access token for the Strava API.
     limit (int): Maximum number of activities to be returned in the summary.
       Default None, which will allow Strava API to set the default
-      (30 as of this writing).
+      (30 as of this writing). Strava will return a bad response if this
+      parameter is set at more than 200.
+    page (int): the page of the resulting activities to display.
+      Defaults to 1.
+      If this exceeds the last page of activities at the given number per
+      page, Strava returns an empty object (no error or bad response).
+    
 
   Returns:
     list: dicts with summary data for the requested number of the
@@ -109,9 +115,12 @@ def get_activities_json(access_token, limit=None, page=None):
 
   resp = requests.get(
     'https://www.strava.com/api/v3/athlete/activities',
-    data=data,
+    params=data,
     headers={'Authorization': f'Bearer {access_token}'}
   )
+
+  if resp.status_code != 200:
+    print(resp.content)
 
   return resp.json()
 

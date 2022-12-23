@@ -180,7 +180,15 @@ class StravaAccount(db.Model):
     )
 
     # refresh if necessary
-    return stravatalk.refresh_token(token, CLIENT_ID, CLIENT_SECRET)
+    fresh_token = stravatalk.refresh_token(token, CLIENT_ID, CLIENT_SECRET)
+
+    if token != fresh_token:
+      self.access_token = token['access_token']
+      self.refresh_token = token['refresh_token']
+      self.expires_at = token['expires_at']
+      db.session.commit()
+
+    return fresh_token
 
   @property
   def url(self):

@@ -1,6 +1,4 @@
 import datetime
-import json
-import os
 import uuid
 
 import dash
@@ -68,7 +66,7 @@ def layout(activity_id=None):
 def save_activity(
   n_clicks, 
   record_data,
-  activity_data, 
+  activity_data,
   intensity_factor,
   tss
 ):
