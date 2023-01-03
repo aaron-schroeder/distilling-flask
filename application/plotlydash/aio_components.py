@@ -511,9 +511,11 @@ class TimeInput(dbc.Input):
     # and warn the user.
     derived_kwargs = kwargs.copy()
 
-    hours = math.floor(total_secs / 3600.0)
-    minutes = math.floor(total_secs / 60) - hours * 60
-    seconds = round(total_secs - minutes * 60 - hours * 3600)
+    total_secs_int = round(total_secs)
+
+    hours = math.floor(total_secs_int / 3600.0)
+    minutes = math.floor(total_secs_int / 60.0) - hours * 60
+    seconds = total_secs_int - minutes * 60 - hours * 3600
 
     super().__init__(
       *args,
