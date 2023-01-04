@@ -1,4 +1,6 @@
+import time
 from unittest import skipIf
+from urllib.parse import urlparse
 
 from selenium.webdriver.common.by import By
 
@@ -17,15 +19,19 @@ class TestBatchSave(AuthenticatedUserFunctionalTest):
 
     # They notice a new button to save all the activities associated
     # with their Strava account. 
-    save_all_btn = self.wait_for_element(
-      By.XPATH, '//button[text() = "Save All Strava Activities"]'
-    )
+    save_all_input = self.wait_for_element(By.ID, 'submit')
 
     # Since they have no saved activities, they click it to save some time.
-    self.fail('finish the test')
-    save_all_btn.click()
+    time_init = time.time()
+    save_all_input.click()
 
-    # They are redirected to the training log dashboard and a message
-    # appears telling them that the activities are being added in the 
-    # background.
+    # They are immediately redirected to the training log dashboard and 
+    # a message appears telling them that the activities are being added
+    # in the background.
+    self.assertLessEqual(time.time()-time_init, 1.0)
+    self.assertEqual(
+      urlparse(self.browser.current_url).path,
+      '/'
+    )
+
     self.fail('finish the test')
