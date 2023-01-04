@@ -5,7 +5,8 @@ import time
 from flask import url_for
 from selenium import webdriver
 from selenium.common.exceptions import (
-  ElementClickInterceptedException
+  ElementClickInterceptedException,
+  NoSuchElementException
 )
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
@@ -41,13 +42,17 @@ def load_strava_credentials():
 def strava_auth_flow(browser):
   credentials = load_strava_credentials()
 
-  un = browser.find_element(By.ID, 'email')
-  un.clear()
-  un.send_keys(credentials['USERNAME'])
-  pw = browser.find_element(By.ID, 'password')
-  pw.clear()
-  pw.send_keys(credentials['PASSWORD'])
-  browser.find_element(By.ID, 'login-button').click()
+  try:
+    un = browser.find_element(By.ID, 'email')
+  except NoSuchElementException:
+    pass
+  else:
+    un.clear()
+    un.send_keys(credentials['USERNAME'])
+    pw = browser.find_element(By.ID, 'password')
+    pw.clear()
+    pw.send_keys(credentials['PASSWORD'])
+    browser.find_element(By.ID, 'login-button').click()
 
   try:
     auth_btn = browser.find_element(By.ID, 'authorize')
