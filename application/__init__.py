@@ -1,15 +1,17 @@
 import os
+
+from celery import Celery
 import dash
 from flask import Flask
 from flask_login import LoginManager
 from flask_sqlalchemy import SQLAlchemy
 
-
-from application.config import config
+from application.config import config, Config
 
 
 db = SQLAlchemy()
 login = LoginManager()
+celery = Celery(__name__, broker=Config.CELERY_BROKER_URL)
 
 
 def create_app(config_name='dev'):
@@ -32,6 +34,9 @@ def create_app(config_name='dev'):
 
   # SQLAlchemy
   db.init_app(app)
+
+  # Celery
+  celery.conf.update(app.config)
 
   from application.routes import route_blueprint
   app.register_blueprint(route_blueprint)

@@ -14,3 +14,5 @@ specialsauce>=0.0.2
 gunicorn
 psycopg2
 flask-wtf
+Celery>=5.2.7
+redis>=4.4.0
