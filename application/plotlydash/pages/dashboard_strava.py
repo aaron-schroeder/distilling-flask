@@ -43,7 +43,7 @@ def layout(activity_id=None):
   out = dbc.Container(
     [
       html.Div(id='strava-stats'),
-      StatsDivAIO(df=df, aio_id='strava'),
+      StatsDivAIO(df=df, activity=None, aio_id='strava'),
       FigureDivAIO(df=df, aio_id='strava'),
       dcc.Store(id='strava-summary-response', data=activity_json),
     ],
@@ -61,6 +61,8 @@ def layout(activity_id=None):
   State('strava-summary-response', 'data'),
   State(StatsDivAIO.ids.intensity('strava'), 'value'),
   State(StatsDivAIO.ids.tss('strava'), 'value'),
+  State(StatsDivAIO.ids.cp('strava'), 'value'),
+  State(StatsDivAIO.ids.cp('strava'), 'value'),
   prevent_initial_call=True
 )
 def save_activity(

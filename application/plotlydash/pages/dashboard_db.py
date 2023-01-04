@@ -49,7 +49,7 @@ def layout(activity_id=None):
   return dbc.Container(
     [
       html.Div(id='model-stats'),
-      StatsDivAIO(df=df, aio_id='saved'),
+      StatsDivAIO(df=df, activity=activity, aio_id='saved'),
       FigureDivAIO(df=df, aio_id='saved'),
       dcc.Store(id='activity-stats', data=activity_dict),
     ],
@@ -59,6 +59,7 @@ def layout(activity_id=None):
 
 @callback(
   Output('model-stats', 'children'),
+  # Output(StatsDivAIO.ids.tss('strava'), ),
   Input('activity-stats', 'data'),
 )
 def update_stats(activity_data):

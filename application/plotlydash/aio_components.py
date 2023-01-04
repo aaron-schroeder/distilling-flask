@@ -533,6 +533,27 @@ def validate_time_str(time_str):
   return time_str is not None and re.match('[0-9][0-9]:[0-5][0-9]:[0-5][0-9]', time_str)
 
 
+class OriginLabel(dbc.FormText):
+  def __init__(self, *args, **kwargs):
+    derived_args = list(args)
+    derived_kwargs = kwargs.copy()
+
+    if len(derived_args) > 0:
+      input = derived_args.pop(0)
+    else:
+      input = derived_kwargs.pop('original', None)
+
+    # original_val = kwargs.pop('original', None)
+    
+    # derived_kwargs = kwargs.copy()
+
+    super().__init__(
+      f'Original: {input.value}',
+      *derived_args,
+      **derived_kwargs
+    )
+
+
 class TssDivAIO(html.Div):
   class ids:
     ngp = id_factory('TssDivAIO', 'ngp')
@@ -542,7 +563,7 @@ class TssDivAIO(html.Div):
     intensity = id_factory('TssDivAIO', 'intensity')
     tss = id_factory('TssDivAIO', 'tss')
 
-  def __init__(self, ngp=None, cp=None, total_time=None, aio_id=None):
+  def __init__(self, ngp=None, cp=None, total_time=None, activity=None, aio_id=None):
     """
     ngp: Normalized Graded Pace for this activity, in meters per second.
     cp: Critical Pace for this athlete, in meters per second.
@@ -558,8 +579,10 @@ class TssDivAIO(html.Div):
     if aio_id is None:
       aio_id = str(uuid.uuid4())
 
-    ngp_td = util.speed_to_timedelta(ngp)
-    ngp_total_secs = ngp_td.total_seconds()
+    activity = activity or object
+
+    ngp_total_secs = util.speed_to_timedelta(ngp).total_seconds()
+    cp_total_secs = util.speed_to_timedelta(cp).total_seconds()
 
     super().__init__([
       html.Div(
@@ -567,7 +590,9 @@ class TssDivAIO(html.Div):
           html.Div(
             [
               dbc.FormText('Functional Threshold Pace'),
-              TimeInput(id=self.ids.cp(aio_id), seconds=6*60+30),
+              TimeInput(id=self.ids.cp(aio_id), seconds=cp_total_secs),
+              # OriginLabel(TimeInput(seconds=6*60+30))
+              # OriginLabel(TimeInput(seconds=1609.34/activity.cp))
             ],
             className='block'
           ),
@@ -579,6 +604,7 @@ class TssDivAIO(html.Div):
             [
               dbc.FormText('Normalized Graded Pace'),
               TimeInput(id=self.ids.ngp(aio_id), seconds=ngp_total_secs),
+              # OriginLabel(TimeInput(seconds=1609.34/activity.ngp_ms))
             ],
             className='block'
           )
@@ -595,6 +621,11 @@ class TssDivAIO(html.Div):
             [
               dbc.FormText('Total Time'),
               TimeInput(id=self.ids.total_time(aio_id), seconds=total_time),
+              OriginLabel(
+                TimeInput(seconds=activity.elapsed_time_s)
+                if hasattr(activity, 'elapsed_time_s')
+                else dbc.Input(value=None)
+              )
             ],
             id='total-time-block',
             className='block'
@@ -612,6 +643,7 @@ class TssDivAIO(html.Div):
                     placeholder='IF',
                     style={'width': '100px'}
                   ),
+                  OriginLabel(dbc.Input(value=getattr(activity, 'intensity_factor', None))),
                 ],
               ),
               html.I(className='fa-solid fa-2'),
@@ -629,6 +661,7 @@ class TssDivAIO(html.Div):
                 value=100,
                 style={'width': '100px'}
               ),
+              OriginLabel(dbc.Input(value=100))
             ],
             id='points-block',
             className='block'
@@ -648,6 +681,7 @@ class TssDivAIO(html.Div):
               placeholder='TSS',
               style={'width': '100px'}
             ),
+            OriginLabel(dbc.Input(value=getattr(activity, 'tss', None)))
           ],
           className='block'
         ),
@@ -699,8 +733,10 @@ class StatsDivAIO(dbc.Accordion):
     table = id_factory('StatsDivAIO', 'table')
     intensity = lambda aio_id: TssDivAIO.ids.intensity(aio_id)
     tss = lambda aio_id: TssDivAIO.ids.tss(aio_id)
+    cp = lambda aio_id: TssDivAIO.ids.cp(aio_id)
+    ngp = lambda aio_id: TssDivAIO.ids.ngp(aio_id)
 
-  def __init__(self, df=None, aio_id=None):
+  def __init__(self, df=None, activity=None, aio_id=None):
     if df is None:
       raise Exception('No data supplied. Pass in a dataframe as `df=`')
     
@@ -746,8 +782,10 @@ class StatsDivAIO(dbc.Accordion):
         dbc.AccordionItem(
           TssDivAIO(
             aio_id=aio_id,
+            cp=1609.34/(6*60+30),
             ngp=ngp_ms,
-            total_time=df['time'].iloc[-1]-df['time'].iloc[0]
+            total_time=df['time'].iloc[-1]-df['time'].iloc[0],
+            activity=activity,
           ),
           title='Training Stress Score details'
         ),

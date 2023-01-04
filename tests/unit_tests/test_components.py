@@ -1,6 +1,6 @@
 import unittest
 
-from application.plotlydash.aio_components import TimeInput
+from application.plotlydash.aio_components import TimeInput, OriginLabel
 
 
 class TestTimeInput(unittest.TestCase):
@@ -15,3 +15,13 @@ class TestTimeInput(unittest.TestCase):
 
   def test_no_60_seconds(self):
     self.assertEqual(TimeInput(seconds=59.6).value, '00:01:00')
+
+
+class TestOriginLabel(unittest.TestCase):
+
+  def test_static(self):
+    input = TimeInput(id='t', seconds=6*60+30)
+    self.assertEqual(
+      OriginLabel(id='t').children,
+      f'Original: {input.value}'      
+    )
