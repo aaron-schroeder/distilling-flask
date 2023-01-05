@@ -214,6 +214,15 @@ def display_activity_list():
   )
 
 
+@strava_api.route('/manage')
+@login_required
+def manage():
+  return render_template(
+    'strava_api/manage.html',
+    strava_accounts=StravaAccount.query.all()
+  )
+
+
 @strava_api.route('/revoke')
 @login_required
 def revoke():
@@ -222,8 +231,3 @@ def revoke():
   db.session.commit()
 
   return redirect(url_for('route_blueprint.admin_landing'))
-
-
-@strava_api.route('/add_activities', methods=['POST'])
-def batch_add_activities():
-  print('adding those activities!')

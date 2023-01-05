@@ -1,0 +1,16 @@
+{% extends 'admin_base.html' %}
+  
+{% block header %}
+  <h2>{% block title %}Manage Connected Strava Accounts{% endblock %}</h2>
+{% endblock %}
+
+{% block content %}
+  {# for strava_account in current_user.strava_accounts #}
+  {% for strava_account in strava_accounts %}
+    <div>
+      <a href="{{strava_account.url}}">{{strava_account}}</a>
+      <a href="{{ url_for('strava_api.revoke') }}">Revoke access</a>
+    </div>
+  {% endfor %}
+  <div><a href="{{ url_for('strava_api.authorize') }}">Connect Another Strava Account</a></div>
+{% endblock content %}
