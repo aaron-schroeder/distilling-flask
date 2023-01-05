@@ -25,7 +25,13 @@ def layout():
   activities=Activity.query.all()
 
   if len(activities) == 0:
-    return dbc.Container('No activities have been saved yet.')
+    return dbc.Container(
+      [
+        html.H1('Training Log'),
+        html.Hr(),
+        html.Div('No activities have been saved yet.')
+      ]
+    )
 
   fields = ['recorded', 'tss', 'title', 'elapsed_time_s']
   df = pd.DataFrame(

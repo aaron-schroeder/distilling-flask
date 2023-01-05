@@ -8,9 +8,7 @@ from .base import FunctionalTest
 
 class LoginTest(FunctionalTest):
   def test_can_log_in(self):
-    self.browser.get(self.server_url)
-
-    self.browser.find_element(By.LINK_TEXT, 'Admin').click()
+    self.navigate_to_admin()
 
     pw_input = self.wait_for_element(By.ID, 'password')
     pw_input.send_keys(self.dummy_password)
@@ -40,8 +38,7 @@ class LoginTest(FunctionalTest):
     # TODO
 
   def test_wrong_password_no_redirect(self):
-    self.browser_get_relative('/')
-    self.browser.find_element(By.LINK_TEXT, 'Admin').click()
+    self.navigate_to_admin()
 
     pw_input = self.wait_for_element(By.ID, 'password')
 

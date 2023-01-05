@@ -20,6 +20,9 @@ class UploadTest(LoggedInFunctionalTest):
     )
 
     # The page updates into a full activity analysis dashboard.
-    input = self.wait_for_element(By.XPATH, '//input[contains(@id, "tss")]')
+    input = self.wait_for_element(
+      By.XPATH,
+      '//input[contains(@id, \'"subcomponent":"tss"\')]'
+    )
     tss = input.get_attribute('value')
     self.assertRegex(tss, r'^[0-9].*\.[0-9]$')

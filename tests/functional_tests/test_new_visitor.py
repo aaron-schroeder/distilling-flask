@@ -15,29 +15,38 @@ from .base import FunctionalTest
 class NewVisitorTest(FunctionalTest):
 
   def test_can_see_landing_page(self):
-    # TODO: Find a way to pre-populate the server db,
-    # so the graph actually displays.
 
     # Edith has heard about a cool training log app.
     # She goes to check out its homepage.
-    self.browser.get(self.server_url)
+    self.browser_get_relative('/')
 
     # She notices the page title and header welcomes her to
     # the app and tells her its name.
-    self.assertIn('Welcome - Training Zealot', self.browser.title)
-    header_text = self.browser.find_element(By.TAG_NAME, 'h2').text
+    time.sleep(2)  # wait a beat for the page to update
+    self.assertIn('Training Log Dashboard', self.browser.title)
+    header_text = self.browser.find_element(By.TAG_NAME, 'h1').text
     self.assertIn('Training Log', header_text)
     
     # She sees a navigation bar that takes her back to the app's home page.
     navbar = self.browser.find_element(
       By.XPATH,
-      '//nav[contains(@class, "navbar")]/a[contains(@class, "navbar-brand")]'
+      '//nav[contains(@class, "navbar")]//a[contains(@class, "navbar-brand")]'
     )
-    self.assertIn('The Training Zealot Analysis Platform', navbar.text)
+    self.assertIn('Training Zealot Analysis Platform', navbar.text)
     self.assertEqual(
       navbar.get_attribute('href'),
       urljoin(self.server_url, '/')
     )
+
+    # Since the app is just getting started, no activities have been 
+    # saved yet.
+    self.assertIn(
+      'no activities have been saved',
+      self.browser.page_source.lower()
+    )
+
+    # TODO: Find a way to pre-populate the server db,
+    # so the graph actually displays.
 
     # She sees a graph of Aaron's training stress over time...
 

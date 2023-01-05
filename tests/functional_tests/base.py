@@ -80,9 +80,6 @@ class LiveServerTestCase(unittest.TestCase):
     """
     return f'http://localhost:{self._configured_port}'
 
-  def browser_get_relative(self, path):
-    self.browser.get(urljoin(self.server_url, path))
-
   def _spawn_live_server(self):
     if self.LIVE_STRAVA_API:
       worker = lambda app, port: app.run(port=port, use_reloader=False)
@@ -174,6 +171,17 @@ class FunctionalTest(LiveServerTestCase):
     self.assertIsNotNone(link)
     return link
 
+  def browser_get_relative(self, path):
+    self.browser.get(urljoin(self.server_url, path))
+
+  def navigate_to_admin(self):
+    self.browser_get_relative('/')
+    self.wait_for_element(
+      By.XPATH, 
+      '//button[contains(@class, "toggler")]'
+    ).click()
+    self.browser.find_element(By.LINK_TEXT, 'Admin').click()
+
 
 class LiveStravaFunctionalTest(FunctionalTest):
   LIVE_STRAVA_API = True
@@ -192,5 +200,7 @@ class AuthenticatedUserFunctionalTest(LoggedInFunctionalTest):
 
   def setUp(self):
     super().setUp()
+    time.sleep(0.2)
     self.browser_get_relative(url_for('strava_api.authorize'))
+    time.sleep(0.2)
     strava_auth_flow(self.browser)

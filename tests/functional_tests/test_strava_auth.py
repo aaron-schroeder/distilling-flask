@@ -32,7 +32,7 @@ class StravaAuthTest(LoggedInFunctionalTest):
     self.check_for_link_text('Strava activities')
 
     # In the navbar, they see an indication that they have authorized with
-    # Strava.
+    # Strava, as well as some info about that account.
     navbar = self.browser.find_element(By.TAG_NAME, 'nav')
     self.assertIn('Authorized with Strava as', navbar.get_attribute('innerHTML'))
 

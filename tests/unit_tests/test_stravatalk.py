@@ -80,18 +80,18 @@ class TestGetActivities(unittest.TestCase):
   def test_no_kwargs(self, mock_get):
     result = stravatalk.get_activities_json(self.access_token)
     # self.assertEqual(result, mock_json)
-    data_arg = mock_get.call_args.kwargs['data']
+    data_arg = mock_get.call_args.kwargs['params']
     self.assertNotIn('page', data_arg)
     self.assertNotIn('per_page', data_arg)
 
   def test_page(self, mock_get):
     result = stravatalk.get_activities_json(self.access_token, page=2)
-    data_arg = mock_get.call_args.kwargs['data']
+    data_arg = mock_get.call_args.kwargs['params']
     self.assertEqual(data_arg['page'], 2)
 
   def test_limit(self, mock_get):
     result = stravatalk.get_activities_json(self.access_token, limit=5)
-    data_arg = mock_get.call_args.kwargs['data']
+    data_arg = mock_get.call_args.kwargs['params']
     self.assertEqual(data_arg['per_page'], 5)
 
   def test_headers(self, mock_get):

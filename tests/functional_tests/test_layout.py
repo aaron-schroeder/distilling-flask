@@ -8,10 +8,10 @@ class LayoutTest(FunctionalTest):
 
   def test_layout_and_styling_smoke(self):
     # A user visits the landing page.
-    self.browser.get(self.server_url)
+    self.browser_get_relative('/')
 
     # They notice the font family isn't just some plain old default...
-    title = self.browser.find_element(By.XPATH, '//header/h2')
+    title = self.wait_for_element(By.TAG_NAME, 'h1')
     self.assertNotIn(
       'Times New Roman',
       title.value_of_css_property('font-family').strip()

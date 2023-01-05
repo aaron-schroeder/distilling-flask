@@ -10,7 +10,7 @@ class StravaListTest(AuthenticatedUserFunctionalTest):
 
     # They see a list of their strava activities.
     header = self.browser.find_element(By.TAG_NAME, 'h2')
-    self.assertIn('Strava activities', header.text)
+    self.assertIn('strava activities', header.text.lower())
 
     # ...
   

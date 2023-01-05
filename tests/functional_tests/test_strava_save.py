@@ -26,7 +26,7 @@ class TestStravaSave(AuthenticatedUserFunctionalTest):
     )
 
     # The user navigates to their list of Strava activities.
-    self.browser.find_element(By.LINK_TEXT, 'Admin').click()
+    self.navigate_to_admin()
     self.browser.find_element(By.LINK_TEXT, 'Strava activities').click()
 
     # They are redirected to their list of strava activities.
@@ -35,7 +35,7 @@ class TestStravaSave(AuthenticatedUserFunctionalTest):
     links = section.find_elements(By.TAG_NAME, 'a')
     links[0].click()
 
-    # They wait a million years for the appearance of a button that
+    # They wait for the appearance of a button that
     # allows them to save the activity to the database.
     btn = self.wait_for_element(By.ID, 'save-activity')
     self.assertIn('Save activity', btn.text)

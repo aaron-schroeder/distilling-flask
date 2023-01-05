@@ -721,19 +721,28 @@ class StatsDivAIO(dbc.Accordion):
       # TODO: Figure out how/where to make this repeatable.
       # 1sec even samples make the math so much easier.
       interp_fn = interp1d(df['time'], df['NGP'], kind='linear')
-      ngp_1sec = interp_fn([i for i in range(df['time'].max())])
+    elif SPEED in df.columns:
+      interp_fn = interp1d(df['time'], df[SPEED], kind='linear')
+    else:
+      # There just isn't enough data in the DF to make this div interesting.
+      super().__init__(
+        [],
+        start_collapsed=True,
+      )
+      return
 
-      # Apply a 30-sec rolling average.
-      window = 30
-      ngp_rolling = pd.Series(ngp_1sec).rolling(window).mean()
-      
-      # ngp_sma = putil.sma(
-      #   df['NGP'], 
-      #   window,
-      #   time_series=df['time']
-      # )
+    ngp_1sec = interp_fn([i for i in range(df['time'].max())])
 
-      ngp_ms = putil.lactate_norm(ngp_rolling[29:])
+    # Apply a 30-sec rolling average.
+    window = 30
+    ngp_rolling = pd.Series(ngp_1sec).rolling(window).mean()
+    # ngp_sma = putil.sma(
+    #   df['NGP'], 
+    #   window,
+    #   time_series=df['time']
+    # )
+
+    ngp_ms = putil.lactate_norm(ngp_rolling[29:])
 
     df_stats = self._calc_stats_df(df)
 
