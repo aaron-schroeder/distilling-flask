@@ -1,8 +1,9 @@
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from flask import url_for
+import stravalib
 
-from application.models import AdminUser
+from application.models import db, AdminUser, StravaAccount
 from .base import FlaskTestCase, LoggedInFlaskTestCase, AuthenticatedFlaskTestCase
 
 
@@ -38,9 +39,11 @@ class TestAuthorize(LoggedInFlaskTestCase):
 
 class TestHandleCode(LoggedInFlaskTestCase):
 
-  @patch('application.strava_api.views.stravatalk.get_token')
-  def test_strava_oauth_callback(self, mock_get_token):
-    mock_get_token.return_value = MOCK_TOKEN
+  @patch('stravalib.Client.get_athlete')
+  @patch('stravalib.Client.exchange_code_for_token')
+  def test_strava_oauth_callback(self, mock_exchange_code_for_token, mock_get_athlete):
+    mock_exchange_code_for_token.return_value = MOCK_TOKEN
+    mock_get_athlete.return_value = Mock(id=1)
 
     rv = self.client.get(
       f'{url_for("strava_api.handle_code")}'
@@ -127,26 +130,26 @@ class TestActivityListLoggedIn(LoggedInFlaskTestCase):
 
 
 class TestActivityListAuthorized(AuthenticatedFlaskTestCase):
-  @patch('application.strava_api.views.stravatalk.refresh_token')
-  @patch('application.strava_api.views.stravatalk.get_activities_json')
+  @patch('stravalib.Client.refresh_access_token')
+  @patch('stravalib.Client.get_activities')
   def test_activity_list(self, mock_get_activities, mock_refresh_token):
     
     mock_refresh_token.return_value = MOCK_TOKEN
     mock_get_activities.return_value = [
-      {
-        'id': 1, 
-        'name': 'Activity 1', 
-        'start_date_local' : '2018-02-20T10:02:13Z',
-        'distance': 10000,
-        'total_elevation_gain': 100,
-      },
-      {
-        'id': 2, 
-        'name': 'Activity 2', 
-        'start_date_local' : '2018-02-20T10:02:13Z',
-        'distance': 10000,
-        'total_elevation_gain': 100,
-      },
+      stravalib.model.Activity(
+        id=1, 
+        name='Activity 1', 
+        start_date_local='2018-02-20T10:02:13Z',
+        distance=10000,
+        total_elevation_gain=100,
+      ),
+      stravalib.model.Activity(
+        id=2, 
+        name='Activity 2', 
+        start_date_local='2018-02-20T10:02:13Z',
+        distance=10000,
+        total_elevation_gain=100,
+      ),
     ]
 
     response = self.client.get('/strava/activities')
@@ -157,8 +160,8 @@ class TestActivityListAuthorized(AuthenticatedFlaskTestCase):
     self.assertIn('Activity 2', html_data)
 
 
-  @patch('application.strava_api.views.stravatalk.refresh_token')
-  @patch('application.strava_api.views.stravatalk.get_activities_json')
+  @patch('stravalib.Client.refresh_access_token')
+  @patch('stravalib.Client.get_activities')
   def test_page_two(self, mock_get_activities, mock_refresh_token):
     mock_refresh_token.return_value = MOCK_TOKEN
     mock_get_activities.return_value = []
@@ -176,6 +179,16 @@ class TestActivityListAuthorized(AuthenticatedFlaskTestCase):
   def test_token_refreshed_if_expired(self):
     # Might want to just verify that token is passed to refresh_token,
     # and then test refresh_token behavior in test_stravatalk.py
+    pass
+
+
+class TestManageAccounts(LoggedInFlaskTestCase):
+  def test_displays_account_info(self):
+    db.session.add(StravaAccount(strava_id=1))
+    db.session.commit()
+    self.client.get(url_for('strava_api.manage'))
+  
+  def test_displays_multiple_accounts(self):
     pass
 
 

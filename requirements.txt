@@ -15,3 +15,4 @@ gunicorn
 psycopg2
 flask-wtf
 flask-migrate>=4.0.1
+stravalib>=1.1.0

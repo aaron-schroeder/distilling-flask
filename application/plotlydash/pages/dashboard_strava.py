@@ -8,8 +8,9 @@ import dash_bootstrap_components as dbc
 from flask_login import current_user
 import dateutil
 import pandas as pd
+from stravalib import Client
 
-from application import converters, stravatalk, util
+from application import converters, util
 from application.models import db, Activity
 from sqlalchemy.exc import IntegrityError
 from application.plotlydash import dashboard_activity
@@ -30,14 +31,17 @@ def layout(activity_id=None):
     return html.Div([])
 
   token = current_user.strava_account.get_token()
+  client = Client(access_token=token['access_token'])
 
-  stream_json = stravatalk.get_activity_streams_json(activity_id, token['access_token'])
-
-  activity_json = stravatalk.get_activity_json(activity_id, token['access_token'])
+  activity = client.get_activity(activity_id)
 
   # Read the Strava json response into a DataFrame and perform
   # additional calculations on it.
-  df = converters.from_strava_streams(stream_json)
+  df = converters.from_strava_streams(client.get_activity_streams(
+    activity_id,
+    types=['time', 'latlng', 'distance', 'altitude', 'velocity_smooth',
+      'heartrate', 'cadence', 'watts', 'temp', 'moving', 'grade_smooth']
+  ))
   dashboard_activity.calc_power(df)
 
   out = dbc.Container(
@@ -45,7 +49,7 @@ def layout(activity_id=None):
       html.Div(id='strava-stats'),
       StatsDivAIO(df=df, aio_id='strava'),
       FigureDivAIO(df=df, aio_id='strava'),
-      dcc.Store(id='strava-summary-response', data=activity_json),
+      dcc.Store(id='strava-summary-response', data=activity.to_dict()),
     ],
     id='dash-container',
     fluid=True,

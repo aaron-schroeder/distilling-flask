@@ -1,9 +1,10 @@
+import datetime
 import os
 
 from flask_login import UserMixin
+from stravalib import Client
 
 from application import db, login
-from application import stravatalk
 
 
 CLIENT_ID = os.environ.get('STRAVA_CLIENT_ID')
@@ -169,26 +170,30 @@ class StravaAccount(db.Model):
   refresh_token = db.Column(db.String())
   expires_at = db.Column(db.Integer)
   # email = db.Column(db.String)
+  # token = db.Column(db.PickleType)
 
   def get_token(self):
 
-    # reconstruct the required elements of strava's access token
-    token = dict(
-      access_token=self.access_token,
-      refresh_token=self.refresh_token,
-      expires_at=self.expires_at,
+    if datetime.datetime.utcnow() < datetime.datetime.utcfromtimestamp(self.expires_at):
+      return dict(
+        access_token=self.access_token,
+        refresh_token=self.refresh_token,
+        expires_at=self.expires_at,
+      )
+
+    print('refreshing expired token')
+    token = Client().refresh_access_token(
+      client_id=CLIENT_ID,
+      client_secret=CLIENT_SECRET,
+      refresh_token=self.refresh_token
     )
 
-    # refresh if necessary
-    fresh_token = stravatalk.refresh_token(token, CLIENT_ID, CLIENT_SECRET)
+    self.access_token = token['access_token']
+    self.refresh_token = token['refresh_token']
+    self.expires_at = token['expires_at']
+    db.session.commit()
 
-    if token != fresh_token:
-      self.access_token = token['access_token']
-      self.refresh_token = token['refresh_token']
-      self.expires_at = token['expires_at']
-      db.session.commit()
-
-    return fresh_token
+    return token
 
   @property
   def url(self):

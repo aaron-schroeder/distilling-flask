@@ -18,18 +18,17 @@ MOVING = 'moving'
 POWER = 'power'
 
 
-def from_strava_streams(stream_list):
+def from_strava_streams(streams):
   """Processes strava stream list (json) into a DataFrame.
   
   Args:
-    stream_list (list(dict)): Strava stream data, as returned from a
-      call to Strava's API. Each dict is expected to contain keys for
-      'type' (stream's field name) and 'data'.
+    stream_dict (dict(stravalib.model.Stream)): Strava stream data,
+      as returned by `stravalib.Client.get_activity_streams()`.
 
   """
-  stream_dict = {stream['type']: stream['data'] for stream in stream_list}
+  stream_data_dict = {key: stream.data for key, stream in streams.items()}
 
-  df = pd.DataFrame.from_dict(stream_dict)
+  df = pd.DataFrame.from_dict(stream_data_dict)
 
   # Rename streams to standard names if they are there, ignore if not.
   df = df.rename(columns=dict(

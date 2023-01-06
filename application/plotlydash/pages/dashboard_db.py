@@ -4,8 +4,9 @@ import dash
 from dash import dcc, html, callback, Input, Output
 from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
+from stravalib import Client
 
-from application import converters, stravatalk, util
+from application import converters, util
 from application.models import db, Activity, AdminUser
 from application.plotlydash import dashboard_activity
 from application.plotlydash.aio_components import FigureDivAIO, StatsDivAIO
@@ -25,20 +26,17 @@ def layout(activity_id=None):
                          'permission to access their Strava activities.')
   
   token = AdminUser().strava_account.get_token()
+  client = Client(access_token=token['access_token'])
 
   activity = Activity.query.get(activity_id)
 
-  stream_json = stravatalk.get_activity_streams_json(
-    activity.strava_id, 
-    token['access_token']
-  )
-
-  # Likely to be added
-  # activity_json = stravatalk.get_activity_json(activity_id, token['access_token'])
-
-  # Read the Strava json response into a DataFrame and perform
+  # Read the Strava response into a DataFrame and perform
   # additional calculations on it.
-  df = converters.from_strava_streams(stream_json)
+  df = converters.from_strava_streams(client.get_activity_streams(
+    activity.strava_id,
+    types=['time', 'latlng', 'distance', 'altitude', 'velocity_smooth',
+      'heartrate', 'cadence', 'watts', 'temp', 'moving', 'grade_smooth']
+  ))
   dashboard_activity.calc_power(df)
 
   activity_dict = {

@@ -10,8 +10,8 @@
       <p>{{ form.submit() }}</p>
   </form>
 
-  {% for act in resp_json %}
-    <a href="/strava/{{ act['id'] }}">{{ act['name'] }}</a> ({{ act['start_date_local'] }}) ({{ (act['distance'] / 1609.34) | round (1) }} mi, {{ (act.total_elevation_gain * 3.28084) | round(0) | int }} ft)
+  {% for act in activities %}
+    <a href="/strava/{{ act.id }}">{{ act.name }}</a> ({{ act.start_date_local }}) ({{ (act.distance.to('mile')).magnitude | round (1) }} mi, {{ act.total_elevation_gain.to('foot').magnitude | round(0) | int }}')
     <br>
   {% endfor %}
   {% with p=request.args.get('page')|int or 1 %}
