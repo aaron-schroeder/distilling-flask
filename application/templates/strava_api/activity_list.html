@@ -15,19 +15,21 @@
     <br>
   {% endfor %}
   {% with p=request.args.get('page')|int or 1 %}
+  {% with limit=request.args.get('limit') %}
     <nav aria-label="...">
       <ul class="pagination">
         {% if p==1 %}
           <li class="page-item disabled"><a class="page-link" href="#"><span aria-hidden="true">&larr;</span>Newer</a></li>
         {% else %}
-          <li class="page-item"><a class="page-link" href="/strava/activities?page={{ p - 1 }}"><span aria-hidden="true">&larr;</span>Newer</a></li>
+          <li class="page-item"><a class="page-link" href="/strava/activities?page={{ p - 1 }}{% if limit %}&limit={{ limit }}{% endif %}"><span aria-hidden="true">&larr;</span>Newer</a></li>
         {% endif %}
         {% if last_page %}
           <li class="page-item disabled"><a class="page-link" href="#"><span aria-hidden="true">Older<span aria-hidden="true">&rarr;</span></a></li>
         {% else %}
-          <li class="page-item"><a class="page-link" href="/strava/activities?page={{ p + 1 }}">Older<span aria-hidden="true">&rarr;</span></a></li>
+          <li class="page-item"><a class="page-link" href="/strava/activities?page={{ p + 1 }}{% if limit %}&limit={{ limit }}{% endif %}">Older<span aria-hidden="true">&rarr;</span></a></li>
         {% endif %}
       </ul>
     </nav>
+  {% endwith %}
   {% endwith %}
 {% endblock %}

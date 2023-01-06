@@ -102,21 +102,21 @@ def handle_code():
 @strava_api.route('/activities', methods=['GET', 'POST'])
 @login_required
 def display_activity_list():
-  """Display list of strava activities to view in their own Dashboard."""
+  """Display list of strava activities to view in individual Dashboards."""
   if not current_user.has_authorized:
     return redirect(url_for('strava_api.authorize'))
     # '?after="/strava/activities"'
 
-  print(f'Acct: {current_user.strava_account}')
-  print(f'expires_at: {current_user.strava_account.expires_at}')
-
   token = current_user.strava_account.get_token()
   client = Client(access_token=token['access_token'])
 
-  activities = list(client.get_activities(
-    # page=request.args.get('page'),  # stravalib does not accept this param
-    limit=request.args.get('limit')  # stravalib does not actually use this param
-  ))
+  limit = int(request.args.get('limit', 25))
+  page = int(request.args.get('page', 1))
+
+  activities = client.get_activities(limit=limit)
+  activities.per_page = limit
+  activities._page = page
+  activities = list(activities)
 
   form = BatchForm()
   if form.validate_on_submit():
@@ -127,26 +127,7 @@ def display_activity_list():
       # And redirect immediately w/ message.
 
       # Get all activity ids (assumes everything is a valid run rn)
-      activity_ids = []
-      page = 1
-      while True:
-        try:
-          activities_next = client.get_activities(
-            # page=page,
-            limit=200
-          )
-        except Exception:
-          print(f'exception on page {page}')
-          break
-        if len(activities_next) == 0:
-          print(f'Reached end of activities.')
-          print(f'(Page: {request.args.get("page")}, '
-                f'per page: {request.args.get("limit")})')
-          break
-        activity_ids.extend([
-          activity.id for activity in activities_next
-        ])
-        page += 1
+      activity_ids = [activity.id for activity in client.get_activities()]
       print(f'Num. of activities retrieved: {len(activity_ids)}')
 
       # Get data for each activity and create an entry in db.
@@ -210,8 +191,7 @@ def display_activity_list():
   return render_template(
     'strava_api/activity_list.html',
     activities=activities,
-    # resp_json=activity_json,
-    last_page=(len(activities) != request.args.get('limit', 100)),
+    last_page=(len(activities) != limit),
     form=form
   )
 
