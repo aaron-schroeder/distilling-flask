@@ -116,7 +116,7 @@ def display_activity_list():
   activities = client.get_activities(limit=limit)
   activities.per_page = limit
   activities._page = page
-  activities = list(activities)
+  activity_list = list(activities)
 
   form = BatchForm()
   if form.validate_on_submit():
@@ -190,8 +190,8 @@ def display_activity_list():
 
   return render_template(
     'strava_api/activity_list.html',
-    activities=activities,
-    last_page=(len(activities) != limit),
+    activities=activity_list,
+    last_page=(len(activity_list) != limit),
     form=form
   )
 

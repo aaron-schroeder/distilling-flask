@@ -1,13 +1,13 @@
 from unittest.mock import Mock, patch
 
 from flask import url_for
-import stravalib
 
 from application.models import db, AdminUser, StravaAccount
-from .base import FlaskTestCase, LoggedInFlaskTestCase, AuthenticatedFlaskTestCase
+from tests.mock_stravalib import BatchedResultsIterator as MockBatchIterator
+from .base import LoggedInFlaskTestCase, AuthenticatedFlaskTestCase
 
 
-# TODO: Use dummy values instead
+# TODO: Use dummy values instsead
 MOCK_TOKEN = {
   "token_type": "Bearer",
   "access_token": "720e40342a74ec60554ac0c67c2eea15d0b83f61",
@@ -133,24 +133,9 @@ class TestActivityListAuthorized(AuthenticatedFlaskTestCase):
   @patch('stravalib.Client.refresh_access_token')
   @patch('stravalib.Client.get_activities')
   def test_activity_list(self, mock_get_activities, mock_refresh_token):
-    
+
     mock_refresh_token.return_value = MOCK_TOKEN
-    mock_get_activities.return_value = [
-      stravalib.model.Activity(
-        id=1, 
-        name='Activity 1', 
-        start_date_local='2018-02-20T10:02:13Z',
-        distance=10000,
-        total_elevation_gain=100,
-      ),
-      stravalib.model.Activity(
-        id=2, 
-        name='Activity 2', 
-        start_date_local='2018-02-20T10:02:13Z',
-        distance=10000,
-        total_elevation_gain=100,
-      ),
-    ]
+    mock_get_activities.return_value = MockBatchIterator()
 
     response = self.client.get('/strava/activities')
 
@@ -164,11 +149,11 @@ class TestActivityListAuthorized(AuthenticatedFlaskTestCase):
   @patch('stravalib.Client.get_activities')
   def test_page_two(self, mock_get_activities, mock_refresh_token):
     mock_refresh_token.return_value = MOCK_TOKEN
-    mock_get_activities.return_value = []
+    mock_get_activities.return_value = MockBatchIterator()
 
     response = self.client.get('/strava/activities?page=2')
     self.assertEqual(response.status_code, 200)
-    self.assertEqual(mock_get_activities.call_args.kwargs['page'], '2')
+    self.assertEqual(mock_get_activities.return_value._page, 2)
 
   def test_no_next_arrow_if_no_next_page(self):
     # Currently would fail.
