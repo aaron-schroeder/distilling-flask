@@ -24,8 +24,6 @@ def create_app(config_name='dev'):
 
   app.config.from_object(config[config_name])
 
-  print(app.config.get('SQLALCHEMY_DATABASE_URI'))
-
   # ensure the instance folder exists
   # TODO: Figure out if I need this at all.
   try:
