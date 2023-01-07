@@ -1,9 +1,11 @@
+import datetime
+from functools import cached_property
 import os
 
 from flask_login import UserMixin
+from stravalib import Client
 
 from application import db, login
-from application import stravatalk
 
 
 CLIENT_ID = os.environ.get('STRAVA_CLIENT_ID')
@@ -58,6 +60,12 @@ class Activity(db.Model):
     db.BigInteger,
     unique=True,
     nullable=True,
+  )
+
+  # CAN link to strava acct, but does not have to.
+  strava_acct_id = db.Column(
+    db.Integer,
+    db.ForeignKey('strava_account.strava_id')
   )
 
   # Maybe (strava, file upload, etc)
@@ -169,26 +177,66 @@ class StravaAccount(db.Model):
   refresh_token = db.Column(db.String())
   expires_at = db.Column(db.Integer)
   # email = db.Column(db.String)
+  # token = db.Column(db.PickleType)
+  activities = db.relationship('Activity', backref='strava_acct', lazy='dynamic')
 
+  # @property
   def get_token(self):
 
-    # reconstruct the required elements of strava's access token
-    token = dict(
-      access_token=self.access_token,
-      refresh_token=self.refresh_token,
-      expires_at=self.expires_at,
+    if datetime.datetime.utcnow() < datetime.datetime.utcfromtimestamp(self.expires_at):
+      return dict(
+        access_token=self.access_token,
+        refresh_token=self.refresh_token,
+        expires_at=self.expires_at,
+      )
+
+    print('refreshing expired token')
+    token = Client().refresh_access_token(
+      client_id=CLIENT_ID,
+      client_secret=CLIENT_SECRET,
+      refresh_token=self.refresh_token
     )
 
-    # refresh if necessary
-    fresh_token = stravatalk.refresh_token(token, CLIENT_ID, CLIENT_SECRET)
+    self.access_token = token['access_token']
+    self.refresh_token = token['refresh_token']
+    self.expires_at = token['expires_at']
+    db.session.commit()
 
-    if token != fresh_token:
-      self.access_token = token['access_token']
-      self.refresh_token = token['refresh_token']
-      self.expires_at = token['expires_at']
-      db.session.commit()
+    return token
 
-    return fresh_token
+  @property
+  def client(self):
+    token = self.get_token()
+    return Client(access_token=token['access_token'])
+    # return Client(access_token=self.token['access_token'])
+
+  @cached_property
+  def athlete(self):
+    return self.client.get_athlete()
+
+  @property
+  def profile_picture_url(self):
+    return self.athlete.profile
+
+  @property
+  def firstname(self):
+    return self.athlete.firstname
+
+  @property
+  def lastname(self):
+    return self.athlete.lastname
+
+  @property
+  def run_count(self):
+    return self.athlete.stats.all_run_totals.count
+
+  @property
+  def follower_count(self):
+    return self.athlete.follower_count
+
+  @property
+  def email(self):
+    return self.athlete.email
 
   @property
   def url(self):

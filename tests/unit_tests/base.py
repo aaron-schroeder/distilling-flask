@@ -29,6 +29,7 @@ class FlaskTestCase(unittest.TestCase):
     self.app_context = self.app.app_context()
     self.app_context.push()
     self.client = self.app.test_client(use_cookies=True)
+    db.create_all()
 
   def tearDown(self):
     db.session.remove()
@@ -65,5 +66,5 @@ class LoggedInFlaskTestCase(FlaskTestCase):
 class AuthenticatedFlaskTestCase(LoggedInFlaskTestCase):
   def setUp(self):
     super().setUp()
-    db.session.add(StravaAccount(strava_id=1))
+    db.session.add(StravaAccount(strava_id=1, expires_at=0))
     db.session.commit()

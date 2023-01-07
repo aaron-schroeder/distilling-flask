@@ -5,11 +5,7 @@
 {% endblock %}
 
 {% block content %}
-  {% if current_user.has_authorized %}
-    <a href="/strava/activities">Strava activities</a>
-  {% else %}
-    <a href="/strava/authorize">Authorize with Strava</a>
-  {% endif %}
+  <a href="{{ url_for('strava_api.manage') }}">Manage Strava Connections</a>
   <br>
   <a href="/upload">Analyze an activity file (.gpx, .fit, .tcx, .csv)</a>
 {% endblock %}

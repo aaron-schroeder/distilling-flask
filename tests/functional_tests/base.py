@@ -66,6 +66,8 @@ class LiveServerTestCase(unittest.TestCase):
     self._ctx = self.app.test_request_context()
     self._ctx.push()
 
+    db.create_all()
+
     try:
       self._spawn_live_server()
       super(LiveServerTestCase, self).__call__(result)
@@ -86,8 +88,8 @@ class LiveServerTestCase(unittest.TestCase):
     else:
       def worker(app, port):
         from unittest.mock import patch
-        from tests import mock_stravatalk
-        with patch('application.stravatalk', mock_stravatalk):
+        from tests import mock_stravalib
+        with patch('stravalib.Client', mock_stravalib.Client):
           app.run(port=port, use_reloader=False)
     
     self._process = multiprocessing.Process(

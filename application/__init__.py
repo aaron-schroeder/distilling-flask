@@ -3,13 +3,14 @@ import dash
 from flask import Flask
 from flask_login import LoginManager
 from flask_sqlalchemy import SQLAlchemy
-
+from flask_migrate import Migrate
 
 from application.config import config
 
 
 db = SQLAlchemy()
 login = LoginManager()
+migrate = Migrate()
 
 
 def create_app(config_name='dev'):
@@ -50,10 +51,13 @@ def create_app(config_name='dev'):
     # set up yet.
     # db.drop_all()
     
-    db.create_all()  # Create sql tables for our data models
+    # db.create_all()  # Create sql tables for our data models
 
   # Flask-Login
   login.init_app(app)
   login.login_view = dash.page_registry['pages.login']['relative_path']
+
+  # flask-migrate
+  migrate.init_app(app, db)
 
   return app

@@ -28,7 +28,10 @@ class Config:
 
   path = os.path.dirname( os.path.realpath(__file__) )
   database_path = os.path.join(path, 'mydb.sqlite')
-  SQLALCHEMY_DATABASE_URI = 'sqlite:///' + database_path
+  SQLALCHEMY_DATABASE_URI = os.environ.get(
+    'DATABASE_URL',
+    f'sqlite:///{database_path}'
+  )
 
   SQLALCHEMY_ECHO = True
   SQLALCHEMY_TRACK_MODIFICATIONS = False
