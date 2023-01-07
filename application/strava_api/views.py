@@ -3,7 +3,7 @@ import os
 from urllib.parse import urljoin
 
 import dateutil
-from flask import redirect, render_template, request, url_for
+from flask import flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 import pandas as pd
 from scipy.interpolate import interp1d
@@ -96,19 +96,24 @@ def handle_code():
   db.session.commit()
 
   # Redirect them to the main admin
-  return redirect(url_for('route_blueprint.admin_landing'))
+  flash(f'Strava account for {strava_acct.firstname} {strava_acct.lastname} '
+        'successfully added!')
+  return redirect(url_for('strava_api.manage'))
 
 
 @strava_api.route('/activities', methods=['GET', 'POST'])
 @login_required
 def display_activity_list():
   """Display list of strava activities to view in individual Dashboards."""
-  if not current_user.has_authorized:
+  try:
+    strava_account = StravaAccount.query.get(request.args.get('id'))
+  except IntegrityError as e:
+    print(e)
     return redirect(url_for('strava_api.authorize'))
     # '?after="/strava/activities"'
 
-  token = current_user.strava_account.get_token()
-  client = Client(access_token=token['access_token'])
+  token = strava_account.get_token()
+  client = Client(access_token=token['access_token']) # strava_account.token[]
 
   limit = int(request.args.get('limit', 25))
   page = int(request.args.get('page', 1))
@@ -117,6 +122,11 @@ def display_activity_list():
   activities.per_page = limit
   activities._page = page
   activity_list = list(activities)
+
+  for activity in activity_list:
+    print([a.strava_id == activity.id for a in strava_account.activities])
+    activity._saved = any([a.strava_id == activity.id for a in strava_account.activities])
+    # if Activity.query.filter_by(activity.strava_id)
 
   form = BatchForm()
   if form.validate_on_submit():
@@ -208,8 +218,15 @@ def manage():
 @strava_api.route('/revoke')
 @login_required
 def revoke():
-  if current_user.has_authorized:
-    db.session.delete(current_user.strava_account)
+  try:
+    strava_account = StravaAccount.query.get(request.args.get('id'))
+  except IntegrityError as e:
+    print(e)
+
+  db.session.delete(strava_account)
   db.session.commit()
 
-  return redirect(url_for('route_blueprint.admin_landing'))
+  flash(f'Strava account {strava_account.firstname} {strava_account.lastname} '
+         'successfully removed!')
+
+  return redirect(url_for('strava_api.manage'))

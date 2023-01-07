@@ -1,9 +1,10 @@
 {% extends 'base.html' %}
 
-{% block navbar_right %}
-  {% if current_user.has_authorized %}
-    <div>Authorized with Strava as <a href="{{current_user.strava_account.url}}">{{current_user.strava_account}}</a></div>
-    <a href="{{ url_for('strava_api.revoke') }}">Revoke access</a>
-  {% endif %}
-  <a href="/logout">Log out</a>
-{% endblock navbar_right %}
+{% block nav_items %}
+  <div class="nav-item">
+    <a href="{{ url_for('strava_api.manage') }}" class="nav-link">Manage Strava Accounts</a>
+  </div>
+  <div class="nav-item">
+    <a href="{{ url_for('route_blueprint.logout') }}" class="nav-link">Log Out</a>
+  </div>
+{% endblock nav_items %}

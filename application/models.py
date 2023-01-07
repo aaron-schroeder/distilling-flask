@@ -1,4 +1,5 @@
 import datetime
+from functools import cached_property
 import os
 
 from flask_login import UserMixin
@@ -59,6 +60,12 @@ class Activity(db.Model):
     db.BigInteger,
     unique=True,
     nullable=True,
+  )
+
+  # CAN link to strava acct, but does not have to.
+  strava_acct_id = db.Column(
+    db.Integer,
+    db.ForeignKey('strava_account.strava_id')
   )
 
   # Maybe (strava, file upload, etc)
@@ -171,7 +178,9 @@ class StravaAccount(db.Model):
   expires_at = db.Column(db.Integer)
   # email = db.Column(db.String)
   # token = db.Column(db.PickleType)
+  activities = db.relationship('Activity', backref='strava_acct', lazy='dynamic')
 
+  # @property
   def get_token(self):
 
     if datetime.datetime.utcnow() < datetime.datetime.utcfromtimestamp(self.expires_at):
@@ -194,6 +203,40 @@ class StravaAccount(db.Model):
     db.session.commit()
 
     return token
+
+  @property
+  def client(self):
+    token = self.get_token()
+    return Client(access_token=token['access_token'])
+    # return Client(access_token=self.token['access_token'])
+
+  @cached_property
+  def athlete(self):
+    return self.client.get_athlete()
+
+  @property
+  def profile_picture_url(self):
+    return self.athlete.profile
+
+  @property
+  def firstname(self):
+    return self.athlete.firstname
+
+  @property
+  def lastname(self):
+    return self.athlete.lastname
+
+  @property
+  def run_count(self):
+    return self.athlete.stats.all_run_totals.count
+
+  @property
+  def follower_count(self):
+    return self.athlete.follower_count
+
+  @property
+  def email(self):
+    return self.athlete.email
 
   @property
   def url(self):

@@ -11,7 +11,7 @@ import pandas as pd
 from stravalib import Client
 
 from application import converters, util
-from application.models import db, Activity
+from application.models import db, Activity, StravaAccount
 from sqlalchemy.exc import IntegrityError
 from application.plotlydash import dashboard_activity
 from application.plotlydash.aio_components import FigureDivAIO, StatsDivAIO
@@ -23,14 +23,18 @@ dash.register_page(__name__, path_template='/strava/<activity_id>',
 
 
 @layout_login_required
-def layout(activity_id=None):
+def layout(activity_id=None, **queries):
   if not current_user.has_authorized:
     return dcc.Location(pathname='/strava/authorize', id=str(uuid.uuid4()))
 
-  if activity_id is None:
+  strava_acct_id = queries.get('id') or queries.get('strava_id')
+
+  if activity_id is None or strava_acct_id is None:
     return html.Div([])
 
-  token = current_user.strava_account.get_token()
+  strava_account = StravaAccount.query.get(strava_acct_id)
+  # token = current_user.strava_account.get_token()
+  token = strava_account.get_token()
   client = Client(access_token=token['access_token'])
 
   activity = client.get_activity(activity_id)
