@@ -24,18 +24,12 @@ dash.register_page(__name__, path_template='/strava/<activity_id>',
 
 @layout_login_required
 def layout(activity_id=None, **queries):
-  if not current_user.has_authorized:
-    return dcc.Location(pathname='/strava/authorize', id=str(uuid.uuid4()))
+  strava_acct = StravaAccount.query.get(queries.get('id') or queries.get('strava_id'))
 
-  strava_acct_id = queries.get('id') or queries.get('strava_id')
+  if activity_id is None or strava_acct is None:
+    return html.Div([])  # todo: add help text
 
-  if activity_id is None or strava_acct_id is None:
-    return html.Div([])
-
-  strava_account = StravaAccount.query.get(strava_acct_id)
-  # token = current_user.strava_account.get_token()
-  token = strava_account.get_token()
-  client = Client(access_token=token['access_token'])
+  client = strava_acct.client
 
   activity = client.get_activity(activity_id)
 

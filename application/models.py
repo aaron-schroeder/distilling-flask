@@ -143,15 +143,8 @@ class AdminUser(UserMixin):
       return password == password_correct
 
   @property
-  def strava_account(self):
-    accounts = StravaAccount.query.all()
-    if len(accounts) == 0:
-      return None
-    return accounts[0]
-
-  @property
-  def has_authorized(self):
-    return self.strava_account is not None
+  def strava_accounts(self):
+    return StravaAccount.query.all()
 
   def __repr__(self):
     return '<Admin User>'
@@ -203,6 +196,10 @@ class StravaAccount(db.Model):
     db.session.commit()
 
     return token
+
+  @property
+  def has_authorized(self):
+    return self.access_token is not None
 
   @property
   def client(self):

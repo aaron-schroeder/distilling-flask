@@ -105,15 +105,13 @@ def handle_code():
 @login_required
 def display_activity_list():
   """Display list of strava activities to view in individual Dashboards."""
-  try:
-    strava_account = StravaAccount.query.get(request.args.get('id'))
-  except IntegrityError as e:
-    print(e)
+  strava_account = StravaAccount.query.get(request.args.get('id'))
+
+  if strava_account is None:
     return redirect(url_for('strava_api.authorize'))
     # '?after="/strava/activities"'
 
-  token = strava_account.get_token()
-  client = Client(access_token=token['access_token']) # strava_account.token[]
+  client = strava_account.client
 
   limit = int(request.args.get('limit', 25))
   page = int(request.args.get('page', 1))
@@ -122,11 +120,11 @@ def display_activity_list():
   activities.per_page = limit
   activities._page = page
   activity_list = list(activities)
+  saved_activity_id_list = [a.strava_id for a in strava_account.activities.all()]
 
   for activity in activity_list:
-    print([a.strava_id == activity.id for a in strava_account.activities])
-    activity._saved = any([a.strava_id == activity.id for a in strava_account.activities])
-    # if Activity.query.filter_by(activity.strava_id)
+    # activity._saved = any([a.strava_id == activity.id for a in strava_account.activities])
+    activity._saved = activity.id in saved_activity_id_list
 
   form = BatchForm()
   if form.validate_on_submit():
@@ -218,15 +216,20 @@ def manage():
 @strava_api.route('/revoke')
 @login_required
 def revoke():
-  try:
-    strava_account = StravaAccount.query.get(request.args.get('id'))
-  except IntegrityError as e:
-    print(e)
+  
+  strava_account = StravaAccount.query.get(request.args.get('id'))
+  
+  if strava_account is None:
+    flash(f'No strava account was found with id {request.args.get("id")}')
+    return redirect(url_for('strava_api.manage'))
+
+  msg_success = (
+    f'Strava account {strava_account.firstname} {strava_account.lastname} '
+     'successfully removed!'
+  )
 
   db.session.delete(strava_account)
   db.session.commit()
 
-  flash(f'Strava account {strava_account.firstname} {strava_account.lastname} '
-         'successfully removed!')
-
+  flash(msg_success)
   return redirect(url_for('strava_api.manage'))

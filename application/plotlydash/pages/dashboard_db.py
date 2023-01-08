@@ -20,15 +20,15 @@ def layout(activity_id=None):
   if activity_id is None:
     return html.Div([])
 
-  admin_user = AdminUser()
-  if not admin_user.has_authorized:
+  activity = Activity.query.get(activity_id)
+
+  strava_account = activity.strava_acct
+  if not strava_account or not strava_account.has_authorized:
     return dbc.Container('This app\'s administrator is not currently granting '
                          'permission to access their Strava activities.')
   
-  token = AdminUser().strava_account.get_token()
+  token = strava_account.get_token()
   client = Client(access_token=token['access_token'])
-
-  activity = Activity.query.get(activity_id)
 
   # Read the Strava response into a DataFrame and perform
   # additional calculations on it.
