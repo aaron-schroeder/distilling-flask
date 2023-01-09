@@ -4,7 +4,6 @@ import dash
 from dash import dcc, html, callback, Input, Output
 from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
-from stravalib import Client
 
 from application import converters, util
 from application.models import db, Activity, AdminUser
@@ -27,8 +26,7 @@ def layout(activity_id=None):
     return dbc.Container('This app\'s administrator is not currently granting '
                          'permission to access their Strava activities.')
   
-  token = strava_account.get_token()
-  client = Client(access_token=token['access_token'])
+  client = strava_account.client
 
   # Read the Strava response into a DataFrame and perform
   # additional calculations on it.

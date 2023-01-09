@@ -1,9 +1,11 @@
 import datetime
 from functools import cached_property
+from importlib import import_module
 import os
+import sys
 
+from flask import current_app
 from flask_login import UserMixin
-from stravalib import Client
 
 from application import db, login
 
@@ -155,6 +157,42 @@ def load_user(id):
   return AdminUser()
 
 
+def cached_import(module_path, class_name):
+  """
+  based on `django.utils.module_loading.import_string`
+  """
+
+  # Check whether module is loaded and fully initialized.
+  if not (
+    (module := sys.modules.get(module_path))
+    and (spec := getattr(module, "__spec__", None))
+    and getattr(spec, "_initializing", False) is False
+  ):
+    module = import_module(module_path)
+  return getattr(module, class_name)
+
+
+def import_string(dotted_path):
+  """
+  Import a dotted module path and return the attribute/class designated by the
+  last name in the path. Raise ImportError if the import failed.
+
+  based on `django.utils.module_loading.import_string`
+  """
+  try:
+    module_path, class_name = dotted_path.rsplit(".", 1)
+  except ValueError as err:
+    raise ImportError("%s doesn't look like a module path" % dotted_path) from err
+
+  try:
+    return cached_import(module_path, class_name)
+  except AttributeError as err:
+    raise ImportError(
+      'Module "%s" does not define a "%s" attribute/class'
+      % (module_path, class_name)
+    ) from err
+
+
 class StravaAccount(db.Model):
   # admin_user_id = db.Column(
   #   db.Integer,
@@ -184,7 +222,7 @@ class StravaAccount(db.Model):
       )
 
     print('refreshing expired token')
-    token = Client().refresh_access_token(
+    token = self.get_client().refresh_access_token(
       client_id=CLIENT_ID,
       client_secret=CLIENT_SECRET,
       refresh_token=self.refresh_token
@@ -204,8 +242,20 @@ class StravaAccount(db.Model):
   @property
   def client(self):
     token = self.get_token()
-    return Client(access_token=token['access_token'])
-    # return Client(access_token=self.token['access_token'])
+    return self.get_client(access_token=token['access_token'])
+
+  @staticmethod
+  def get_client(backend=None, access_token=None):  # , fail_silently=False, **kwds):
+    """Load a strava connection backend and return an instance of it.
+    If backend is None (default), use stravalib.
+    (later, use settings.STRAVA_BACKEND.)
+    Both fail_silently and other keyword arguments are used in the
+    constructor of the backend.
+    """
+    print(current_app.config['STRAVA_API_BACKEND'])
+    backend = backend or current_app.config['STRAVA_API_BACKEND']
+    klass = import_string(backend or 'stravalib.Client')
+    return klass(access_token=access_token)
 
   @cached_property
   def athlete(self):

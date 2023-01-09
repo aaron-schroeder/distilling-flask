@@ -4,15 +4,21 @@ import os
 import socket
 import time
 import unittest
+from unittest.mock import patch
 from urllib.parse import urljoin
 
 import dash
 from flask import url_for
-from selenium.common.exceptions import WebDriverException
+from selenium.common.exceptions import (
+  ElementClickInterceptedException,
+  WebDriverException
+)
 from selenium.webdriver.common.by import By
 
-from application import db, create_app
+from application import create_app
+from application.models import db, StravaAccount
 from tests.util import get_chromedriver, strava_auth_flow
+from tests import mock_stravalib, settings
 
 
 MAX_WAIT = 20
@@ -28,8 +34,6 @@ class LiveServerTestCase(unittest.TestCase):
   .. _flask-testing: https://github.com/jarus/flask-testing/blob/v0.8.1/flask_testing/utils.py#L426
   .. _django: https://github.com/django/django/blob/stable/4.1.x/django/test/testcases.py#L1777
   """
-  LIVE_STRAVA_API = False
-
   def create_app(self):
     """
     Create your Flask app here, with any
@@ -42,7 +46,15 @@ class LiveServerTestCase(unittest.TestCase):
     Does the required setup, doing it here means you don't have to
     call super.setUp in subclasses.
     """
-    # Get the app, making sure that the global callback list doesn't
+    dash_callback_list_pre = dash._callback.GLOBAL_CALLBACK_LIST.copy()
+
+    self.app = self.create_app()
+    self.app.config['STRAVA_API_BACKEND'] = (
+      'tests.mock_stravalib.Client' if settings.SKIP_STRAVA_API 
+      else 'stravalib.Client'
+    )
+    
+    # Make sure that the global callback list doesn't
     # grow each time a LiveServerTestCase is called.
     # This issue arises because I create the app in the main thread 
     # (which populates GLOBAL_CALLBACK_LIST with my app's callbacks),
@@ -51,8 +63,6 @@ class LiveServerTestCase(unittest.TestCase):
     # Since globals are copied from the thread that spawned them,
     # the dash app can't unset the global variable from its thread.
     # See: https://github.com/plotly/dash/issues/1933
-    dash_callback_list_pre = dash._callback.GLOBAL_CALLBACK_LIST.copy()
-    self.app = self.create_app()
     if (
       len(dash_callback_list_pre) > 0 
       and len(dash._callback.GLOBAL_CALLBACK_LIST) > len(dash_callback_list_pre)
@@ -67,6 +77,19 @@ class LiveServerTestCase(unittest.TestCase):
     self._ctx.push()
 
     db.create_all()
+
+    if settings.SKIP_STRAVA_API:
+      # Spoof a StravaAccount that has authorized with strava.
+      # This will only be used with mockstravatalk, not the real thing.
+      db.session.add(
+        StravaAccount(
+          strava_id=123,
+          access_token='some_access_token',
+          refresh_token='some_refresh_token',
+          expires_at=0,
+        )
+      )
+      db.session.commit()
 
     try:
       self._spawn_live_server()
@@ -83,12 +106,10 @@ class LiveServerTestCase(unittest.TestCase):
     return f'http://localhost:{self._configured_port}'
 
   def _spawn_live_server(self):
-    if self.LIVE_STRAVA_API:
+    if not settings.SKIP_STRAVA_API:
       worker = lambda app, port: app.run(port=port, use_reloader=False)
     else:
       def worker(app, port):
-        from unittest.mock import patch
-        from tests import mock_stravalib
         with patch('stravalib.Client', mock_stravalib.Client):
           app.run(port=port, use_reloader=False)
     
@@ -178,18 +199,17 @@ class FunctionalTest(LiveServerTestCase):
 
   def navigate_to_admin(self):
     self.browser_get_relative('/')
-    self.wait_for_element(
-      By.XPATH, 
-      '//button[contains(@class, "toggler")]'
-    ).click()
-    self.browser.find_element(By.LINK_TEXT, 'Admin').click()
+    try:
+      self.wait_for_element(
+        By.XPATH, 
+        '//button[contains(@class, "toggler")]'
+      ).click()
+    except ElementClickInterceptedException:
+      print(self.browser.page_source)
+    self.wait_for_element(By.LINK_TEXT, 'Admin').click()
 
 
-class LiveStravaFunctionalTest(FunctionalTest):
-  LIVE_STRAVA_API = True
-
-
-class LoggedInFunctionalTest(LiveStravaFunctionalTest):
+class LoggedInFunctionalTest(FunctionalTest):
   def setUp(self):
     super().setUp()
     self.browser_get_relative('/login')
@@ -202,7 +222,14 @@ class AuthenticatedUserFunctionalTest(LoggedInFunctionalTest):
 
   def setUp(self):
     super().setUp()
-    time.sleep(0.2)
-    self.browser_get_relative(url_for('strava_api.authorize'))
-    time.sleep(0.2)
-    strava_auth_flow(self.browser)
+    if settings.SKIP_STRAVA_API:
+      # No need to go through real auth process, since the
+      # database is pre-spoofed.
+      time.sleep(0.2)
+      self.browser_get_relative(url_for('strava_api.manage'))
+      time.sleep(0.2)
+    else:
+      time.sleep(0.2)
+      self.browser_get_relative(url_for('strava_api.authorize'))
+      time.sleep(0.2)
+      strava_auth_flow(self.browser)

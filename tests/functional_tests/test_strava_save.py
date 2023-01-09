@@ -27,7 +27,12 @@ class TestStravaSave(AuthenticatedUserFunctionalTest):
 
     # The user navigates to their list of Strava activities.
     self.navigate_to_admin()
-    self.browser.find_element(By.LINK_TEXT, 'Strava activities').click()
+    self.browser.find_element(By.LINK_TEXT, 'Manage Strava Connections').click()
+    self.assertEqual(
+      self.browser.find_element(By.TAG_NAME, 'h2').text,
+      'Manage Connected Strava Accounts'
+    )
+    self.wait_for_element(By.PARTIAL_LINK_TEXT, 'Activities').click()
 
     # They are redirected to their list of strava activities.
     # They click the link for the first activity presented.

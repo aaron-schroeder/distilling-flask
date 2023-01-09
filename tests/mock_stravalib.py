@@ -17,10 +17,26 @@ class Client:
   def refresh_access_token(self, refresh_token=None, client_id=None, client_secret=None):
     return MOCK_TOKEN
 
-  def get_athlete(*args, **kwargs):
-    return stravalib.model.Athlete(id=1)
+  def get_athlete(self, *args, **kwargs):
+    sample_athlete = stravalib.model.Athlete.deserialize(
+      # '... tests/unit_tests/sample_data/get_athlete.json ...'
+      dict(
+        id=1,
+        firstname='Sample',
+        lastname='Athlete',
+        city='Sample City',
+        state='Sample State',
+        country='Sample Country',
+      ),
+      bind_client=self
+    )
+    sample_athlete._stats = stravalib.model.AthleteStats(
+      all_run_totals=stravalib.model.ActivityTotals(count=10)
+    )
 
-  def get_activities_json(self, limit=None, page=None):
+    return sample_athlete
+
+  def get_activities(self, limit=None, page=None):
     # TODO: Handle different inputs for `limit` and `page`
     return BatchedResultsIterator()
 

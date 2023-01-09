@@ -8,7 +8,6 @@ import dash_bootstrap_components as dbc
 from flask_login import current_user
 import dateutil
 import pandas as pd
-from stravalib import Client
 
 from application import converters, util
 from application.models import db, Activity, StravaAccount

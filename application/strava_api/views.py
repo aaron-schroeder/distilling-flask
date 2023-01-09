@@ -8,7 +8,6 @@ from flask_login import current_user, login_required
 import pandas as pd
 from scipy.interpolate import interp1d
 from sqlalchemy.exc import IntegrityError
-from stravalib import Client
 
 from . import strava_api
 from application import converters, util
@@ -31,7 +30,7 @@ def authorize():
     'http://localhost:5000'
   )
 
-  return redirect(Client().authorization_url(
+  return redirect(StravaAccount.get_client().authorization_url(
     CLIENT_ID,
     scope=['activity:read_all'],
     redirect_uri=urljoin(
@@ -74,13 +73,13 @@ def handle_code():
       error=error
     )
 
-  token = Client().exchange_code_for_token(
+  token = StravaAccount.get_client().exchange_code_for_token(
     client_id=CLIENT_ID,
     client_secret=CLIENT_SECRET,
     code=request.args.get('code'),
   )
 
-  athlete = Client(access_token=token['access_token']).get_athlete()
+  athlete = StravaAccount.get_client(access_token=token['access_token']).get_athlete()
 
   strava_acct = StravaAccount(
     strava_id=athlete.id,
