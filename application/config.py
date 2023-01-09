@@ -36,6 +36,8 @@ class Config:
   SQLALCHEMY_ECHO = True
   SQLALCHEMY_TRACK_MODIFICATIONS = False
 
+  STRAVA_API_BACKEND = os.environ.get('STRAVA_API_BACKEND', 'stravalib.Client')
+
 
 class TestingConfig(Config):
   """
@@ -62,7 +64,6 @@ class ProductionConfig(Config):
   
   db = os.environ.get('POSTGRES_DB')
 
-  # I think this is the right form according to render
   if (user and pw and db_url and db):
     SQLALCHEMY_DATABASE_URI = f'postgresql+psycopg2://{user}:{pw}@{db_url}/{db}'
   

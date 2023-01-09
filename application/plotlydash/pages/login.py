@@ -1,3 +1,5 @@
+import uuid
+
 import dash
 from dash import dcc, html, callback, Input, Output, State, ALL
 import dash_bootstrap_components as dbc
@@ -50,7 +52,7 @@ def validate_password(n_clicks, password):
     if user.check_password(password):
       # Login and redirect to admin landing page.
       login_user(user, remember=True)
-      return dcc.Location(pathname='/admin', id='dumdum'), False
+      return dcc.Location(pathname='/admin', id=str(uuid.uuid4())), False
     else:
       return None, True
   return None, False

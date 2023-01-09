@@ -66,5 +66,6 @@ class LoggedInFlaskTestCase(FlaskTestCase):
 class AuthenticatedFlaskTestCase(LoggedInFlaskTestCase):
   def setUp(self):
     super().setUp()
-    db.session.add(StravaAccount(strava_id=1, expires_at=0))
+    self.strava_acct = StravaAccount(strava_id=1, expires_at=0)
+    db.session.add(self.strava_acct)
     db.session.commit()

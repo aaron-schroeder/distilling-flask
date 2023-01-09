@@ -17,7 +17,7 @@ class ActivityValidationTest(AuthenticatedUserFunctionalTest):
     # TODO: Find a way to start off with an activity in the database.
 
     # The user navigates to their list of Strava activities.
-    self.browser.find_element(By.LINK_TEXT, 'Strava activities').click()
+    self.wait_for_element(By.PARTIAL_LINK_TEXT, 'Activities').click()
 
     # They are redirected to their list of strava activities.
     # They click the link for the first activity presented.

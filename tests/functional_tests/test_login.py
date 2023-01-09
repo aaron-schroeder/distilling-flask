@@ -22,13 +22,17 @@ class LoginTest(FunctionalTest):
     )
 
     # They see links for authenticating a strava account...
-    self.check_for_link_text('Authorize with Strava')
+    self.check_for_link_text('Manage Strava Connections')
 
     # ...and a file analysis dashboard.
     self.check_for_link_text('Analyze an activity file (.gpx, .fit, .tcx, .csv)')
 
     # The admin dgafs and logs out.
-    self.browser.find_element(By.LINK_TEXT, 'Log out').click()
+    self.browser.find_element(
+      By.XPATH, 
+      '//button[contains(@class, "toggler")]'
+    ).click()
+    self.wait_for_element(By.LINK_TEXT, 'Log Out').click()
 
     # They are logged out and back on the homepage.
     self.assertEqual(
@@ -45,6 +49,8 @@ class LoginTest(FunctionalTest):
     login_url = self.browser.current_url
 
     pw_input.send_keys('wrong_password')
+
+    self.browser.find_element(By.XPATH, '//button[text()="Log in"]').click()
 
     time.sleep(5)
 

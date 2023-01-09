@@ -75,7 +75,7 @@ class StravaAccountModelTest(FlaskTestCase):
     self.assertIsNotNone(strava_acct.strava_id)
 
     user = AdminUser()
-    self.assertIs(strava_acct, user.strava_account)
+    self.assertIs(strava_acct, user.strava_accounts[0])
 
   def test_access_token(self):
     strava_acct = StravaAccount(
