@@ -34,8 +34,8 @@ def layout(**url_queries):
         id='datatable-activity',
         row_selectable='multi',
         page_current=0,
-        page_size=PAGE_SIZE,
-        # page_count=math.ceiling(1019/PAGE_SIZE),
+        page_size=int(url_queries.get('limit', PAGE_SIZE)),
+        # page_count=math.ceiling(activity_count/page_size),
         page_action='custom',
         # filter_action='custom',
         sort_action='custom',
@@ -63,8 +63,9 @@ def update_table(page_current, page_size, sort_by, strava_id):
     raise PreventUpdate
   
   strava_acct = StravaAccount.query.get(strava_id)
+  
   activities = strava_acct.client.get_activities(limit=page_size)
-  activities.per_page = page_size
+  activities.per_page = min(page_size, 200)
   activities._page = page_current + 1
 
   saved_activity_id_list = [a.strava_id for a in strava_acct.activities.all()]
@@ -93,11 +94,10 @@ def update_table(page_current, page_size, sort_by, strava_id):
     # No sort is applied
     dfs = df
 
-  
   dfs['Distance'] = dfs['Distance'].apply(lambda float: f'{float:.2f} mi')
   dfs['Elevation'] = dfs['Elevation'].apply(lambda float: f'{float:.0f} ft')
-  # dfs['Date'] = {some date format}
-
+  # eg "Sat, 12/31/2022 20:10:00"
+  dfs['Date'] = dfs['Date'].dt.strftime(date_format='%a, %m/%d/%Y %H:%M:%S')
 
   return (
     [
