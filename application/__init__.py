@@ -34,7 +34,7 @@ def create_app(config_name='dev'):
   # SQLAlchemy
   db.init_app(app)
 
-  from application.routes import route_blueprint
+  from application.routes import route_blueprint  # ... as route_blueprint
   app.register_blueprint(route_blueprint)
 
   from application.strava_api import strava_api as strava_api_blueprint

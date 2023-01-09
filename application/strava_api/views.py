@@ -100,8 +100,8 @@ def handle_code():
   return redirect(url_for('strava_api.manage'))
 
 
-@strava_api.route('/activities', methods=['GET', 'POST'])
-@login_required
+# @strava_api.route('/activities', methods=['GET', 'POST'])
+# @login_required
 def display_activity_list():
   """Display list of strava activities to view in individual Dashboards."""
   strava_account = StravaAccount.query.get(request.args.get('id'))
