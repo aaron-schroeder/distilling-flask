@@ -38,7 +38,7 @@ def layout(**url_queries):
         # page_count=math.ceiling(1019/PAGE_SIZE),
         page_action='custom',
         # filter_action='custom',
-        # sort_action='custom',
+        sort_action='custom',
         # sort_mode='multi',
       ),
       dcc.Store(id='strava-id', data=strava_id)
@@ -55,9 +55,10 @@ def layout(**url_queries):
   Output('datatable-activity', 'data'),
   Input('datatable-activity', 'page_current'),
   Input('datatable-activity', 'page_size'),
+  Input('datatable-activity', 'sort_by'),
   State('strava-id', 'data'),
 )
-def update_table(page_current, page_size, strava_id):
+def update_table(page_current, page_size, sort_by, strava_id):
   if strava_id is None:
     raise PreventUpdate
   
@@ -74,19 +75,35 @@ def update_table(page_current, page_size, strava_id):
       'Date': activity.start_date_local,
       'Title': f'[{activity.name}](/strava/activity/{activity.id}?id={strava_acct.strava_id})',
       'Time': f'{util.seconds_to_string(activity.moving_time.total_seconds(), show_hour=True)}',
-      'Distance': f'{activity.distance.to("mile").magnitude:.2f} mi',
-      'Elevation': f'{activity.total_elevation_gain.to("foot").magnitude:.0f} ft',
+      'Distance': activity.distance.to("mile").magnitude,
+      'Elevation': activity.total_elevation_gain.to("foot").magnitude,
       'Saved': activity.id in saved_activity_id_list,
       # 'Map': activity.map,  # stravalib.model.Map
     }
     for activity in activities
   ])
 
+  if sort_by and len(sort_by):
+    # Sort is applied
+    dfs = df.sort_values(
+      sort_by[0]['column_id'],
+      ascending=sort_by[0]['direction'] == 'asc'
+    )
+  else:
+    # No sort is applied
+    dfs = df
+
+  
+  dfs['Distance'] = dfs['Distance'].apply(lambda float: f'{float:.2f} mi')
+  dfs['Elevation'] = dfs['Elevation'].apply(lambda float: f'{float:.0f} ft')
+  # dfs['Date'] = {some date format}
+
+
   return (
     [
       {'name': c, 'id': c, 'presentation': 'markdown'} if c == 'Title'
       else {'name': c, 'id': c}
-      for c in df.columns
+      for c in dfs.columns
     ],
-    df.to_dict('records')
+    dfs.to_dict('records')
   )
