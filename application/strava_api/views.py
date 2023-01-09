@@ -81,22 +81,32 @@ def handle_code():
 
   athlete = StravaAccount.get_client(access_token=token['access_token']).get_athlete()
 
-  strava_acct = StravaAccount(
-    strava_id=athlete.id,
-    access_token=token['access_token'],
-    refresh_token=token['refresh_token'],
-    expires_at=token['expires_at'],
-    # _=token['athlete']['firstname'],
-    # _=token['athlete']['lastname'],
-    # _=token['athlete']['profile_medium'],
-    # _=token['athlete']['profile'],
-  )
-  db.session.add(strava_acct)
+  strava_acct = StravaAccount.query.get(athlete.id)
+
+  if strava_acct:
+    strava_acct.access_token = token['access_token']
+    strava_acct.refresh_token = token['refresh_token']
+    strava_acct.expires_at = token['expires_at']
+    action = 'updated'
+  else:
+    strava_acct = StravaAccount(
+      strava_id=athlete.id,
+      access_token=token['access_token'],
+      refresh_token=token['refresh_token'],
+      expires_at=token['expires_at'],
+      # _=token['athlete']['firstname'],
+      # _=token['athlete']['lastname'],
+      # _=token['athlete']['profile_medium'],
+      # _=token['athlete']['profile'],
+    )
+    db.session.add(strava_acct)
+    action = 'added'
+
   db.session.commit()
 
   # Redirect them to the main admin
   flash(f'Strava account for {strava_acct.firstname} {strava_acct.lastname} '
-        'successfully added!')
+        f'successfully {action}!')
   return redirect(url_for('strava_api.manage'))
 
 
