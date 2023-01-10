@@ -59,18 +59,13 @@ def wait_for_element(browser, by, value):
 def strava_auth_flow(browser):
   credentials = load_strava_credentials()
 
-  try:
-    un = browser.find_element(By.ID, 'email')
-  except NoSuchElementException:
-    print(browser.current_url)
-    pass
-  else:
-    un.clear()
-    un.send_keys(credentials['USERNAME'])
-    pw = browser.find_element(By.ID, 'password')
-    pw.clear()
-    pw.send_keys(credentials['PASSWORD'])
-    browser.find_element(By.ID, 'login-button').click()
+  un = browser.find_element(By.ID, 'email')
+  un.clear()
+  un.send_keys(credentials['USERNAME'])
+  pw = browser.find_element(By.ID, 'password')
+  pw.clear()
+  pw.send_keys(credentials['PASSWORD'])
+  browser.find_element(By.ID, 'login-button').click()
 
   try:
     auth_btn = browser.find_element(By.ID, 'authorize')

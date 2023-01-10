@@ -5,46 +5,39 @@ import pandas as pd
 from scipy.interpolate import interp1d
 from sqlalchemy.exc import IntegrityError
 
-from application import celery, converters, stravatalk
-from application.models import db, Activity
+from application import celery, converters
+from application.models import db, Activity, StravaAccount
 from application.plotlydash.dashboard_activity import calc_power
 import power.util as putil
 
 
 @celery.task
-def async_save_all_activities(token):
-  # Get all activity ids (assumes everything is a valid run rn)
-  activity_ids = []
-  page = 1
-  while True:
-    try:
-      activity_json_next = stravatalk.get_activities_json(
-        token['access_token'],
-        page=page,
-        limit=200
-      )
-    except Exception:
-      print(f'exception on page {page}')
-      break
-    if len(activity_json_next) == 0:
-      print(f'Reached end of activities.')
-      print(f'(Page: {page}, '
-            f'per page: 200)')
-      break
-    activity_ids.extend([
-      activity['id'] for activity in activity_json_next
-    ])
-    page += 1
+def async_save_strava_activities(account_id, activity_ids=[]):
+
+  strava_acct = StravaAccount.query.get(account_id)
+  client = strava_acct.client
+
+  if activity_ids == 'all':
+    # Get all activity ids (assumes everything is a valid run rn)
+    activity_ids = [activity.id for activity in client.get_activities()]
+
   print(f'Num. of activities retrieved: {len(activity_ids)}')
 
   # Get data for each activity and create an entry in db.
   activities = []
   for activity_id in activity_ids:
-    stream_json = stravatalk.get_activity_streams_json(
-      activity_id, 
-      token['access_token']
-    )
-    df = converters.from_strava_streams(stream_json)
+    activity_data = client.get_activity(activity_id).to_dict()
+
+    if activity_data['type'] not in ('Run', 'Walk', 'Hike'):
+      print(f"Throwing out a {activity_data['type']}")
+      continue
+
+    df = converters.from_strava_streams(client.get_activity_streams(
+      activity_id,
+      types=['time', 'latlng', 'distance', 'altitude', 'velocity_smooth',
+          'heartrate', 'cadence', 'watts', 'temp', 'moving',
+          'grade_smooth']
+    ))
     calc_power(df)
 
     if 'NGP' in df.columns:
@@ -66,11 +59,6 @@ def async_save_all_activities(token):
       intensity_factor = None
       tss = None
 
-    activity_data = stravatalk.get_activity_json(
-      activity_id, 
-      token['access_token']
-    )
-
     activities.append(Activity(
       title=activity_data['name'],
       description=activity_data['description'],
@@ -81,6 +69,7 @@ def async_save_all_activities(token):
       elapsed_time_s=activity_data['elapsed_time'],
       # Fields below here not required
       strava_id=activity_data['id'],
+      strava_acct_id=strava_acct.strava_id,
       distance_m=activity_data['distance'],
       elevation_m=activity_data['total_elevation_gain'],
       intensity_factor=intensity_factor,
@@ -88,6 +77,7 @@ def async_save_all_activities(token):
     ))
 
   try:
+    print(f'Saving {len(activities)} runs/walks/hikes.')
     db.session.add_all(activities)
     db.session.commit()
 
