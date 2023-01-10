@@ -9,35 +9,36 @@ from flask_login import current_user
 import dateutil
 import pandas as pd
 
-from application import converters, stravatalk, util
-from application.models import db, Activity
+from application import converters, util
+from application.models import db, Activity, StravaAccount
 from sqlalchemy.exc import IntegrityError
 from application.plotlydash import dashboard_activity
 from application.plotlydash.aio_components import FigureDivAIO, StatsDivAIO
 from application.plotlydash.util import layout_login_required
 
 
-dash.register_page(__name__, path_template='/strava/<activity_id>',
+dash.register_page(__name__, path_template='/strava/activity/<activity_id>',
   title='Strava Activity Dashboard', name='Strava Activity Dashboard')
 
 
 @layout_login_required
-def layout(activity_id=None):
-  if not current_user.has_authorized:
-    return dcc.Location(pathname='/strava/authorize', id=str(uuid.uuid4()))
+def layout(activity_id=None, **queries):
+  strava_acct = StravaAccount.query.get(queries.get('id') or queries.get('strava_id'))
 
-  if activity_id is None:
-    return html.Div([])
+  if activity_id is None or strava_acct is None:
+    return html.Div([])  # todo: add help text
 
-  token = current_user.strava_account.get_token()
+  client = strava_acct.client
 
-  stream_json = stravatalk.get_activity_streams_json(activity_id, token['access_token'])
-
-  activity_json = stravatalk.get_activity_json(activity_id, token['access_token'])
+  activity = client.get_activity(activity_id)
 
   # Read the Strava json response into a DataFrame and perform
   # additional calculations on it.
-  df = converters.from_strava_streams(stream_json)
+  df = converters.from_strava_streams(client.get_activity_streams(
+    activity_id,
+    types=['time', 'latlng', 'distance', 'altitude', 'velocity_smooth',
+      'heartrate', 'cadence', 'watts', 'temp', 'moving', 'grade_smooth']
+  ))
   dashboard_activity.calc_power(df)
 
   out = dbc.Container(
@@ -45,7 +46,7 @@ def layout(activity_id=None):
       html.Div(id='strava-stats'),
       StatsDivAIO(df=df, aio_id='strava'),
       FigureDivAIO(df=df, aio_id='strava'),
-      dcc.Store(id='strava-summary-response', data=activity_json),
+      dcc.Store(id='strava-summary-response', data=activity.to_dict()),
     ],
     id='dash-container',
     fluid=True,

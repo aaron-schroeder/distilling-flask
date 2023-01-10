@@ -28,13 +28,17 @@ class Config:
 
   path = os.path.dirname( os.path.realpath(__file__) )
   database_path = os.path.join(path, 'mydb.sqlite')
-  SQLALCHEMY_DATABASE_URI = 'sqlite:///' + database_path
+  SQLALCHEMY_DATABASE_URI = os.environ.get(
+    'DATABASE_URL',
+    f'sqlite:///{database_path}'
+  )
 
   SQLALCHEMY_ECHO = True
   SQLALCHEMY_TRACK_MODIFICATIONS = False
 
   CELERY_BROKER_URL = 'redis://localhost:6379/0'
   # CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+  STRAVA_API_BACKEND = os.environ.get('STRAVA_API_BACKEND', 'stravalib.Client')
 
 
 class TestingConfig(Config):
@@ -62,7 +66,6 @@ class ProductionConfig(Config):
   
   db = os.environ.get('POSTGRES_DB')
 
-  # I think this is the right form according to render
   if (user and pw and db_url and db):
     SQLALCHEMY_DATABASE_URI = f'postgresql+psycopg2://{user}:{pw}@{db_url}/{db}'
   

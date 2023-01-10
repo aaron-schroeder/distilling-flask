@@ -35,8 +35,6 @@ class ActivityModelTest(FlaskTestCase):
       tz_local='UTC',
       moving_time_s=3600,
       elapsed_time_s=3660,
-      filepath_orig=f'activity_1.tcx',
-      filepath_csv=f'activity_1.csv',
       strava_id=1,
     )
     act_2 = Activity(
@@ -47,8 +45,6 @@ class ActivityModelTest(FlaskTestCase):
       tz_local='America/Denver',
       moving_time_s=3700,
       elapsed_time_s=3760,
-      filepath_orig=f'activity_2.tcx',
-      filepath_csv=f'activity_2.csv',
       strava_id=1
     )
     db.session.add_all((act_1, act_2))
@@ -79,7 +75,7 @@ class StravaAccountModelTest(FlaskTestCase):
     self.assertIsNotNone(strava_acct.strava_id)
 
     user = AdminUser()
-    self.assertIs(strava_acct, user.strava_account)
+    self.assertIs(strava_acct, user.strava_accounts[0])
 
   def test_access_token(self):
     strava_acct = StravaAccount(

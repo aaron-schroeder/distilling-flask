@@ -16,10 +16,10 @@ def pace_to_speed(pace_string):
   return M_PER_MI / pace.total_seconds()
   
 
-def datetime_to_string(dt):
-  if dt.hour > 0:
+def datetime_to_string(dt, show_hour=False):
+  if show_hour or dt.hour > 0:
     return dt.strftime('%-H:%M:%S')
-  
+
   return dt.strftime('%-M:%S')
 
 
@@ -63,10 +63,10 @@ def seconds_to_datetime(seconds):
   return td + time_zero
 
 
-def seconds_to_string(seconds):
+def seconds_to_string(seconds, show_hour=False):
   time_dt = seconds_to_datetime(seconds)
   
-  return datetime_to_string(time_dt)
+  return datetime_to_string(time_dt, show_hour=show_hour)
 
 
 def string_to_seconds(pace_str):

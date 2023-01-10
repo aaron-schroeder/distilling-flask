@@ -1,11 +1,14 @@
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from flask import url_for
+import stravalib
 
-from .base import FlaskTestCase
+from application.models import db, AdminUser, StravaAccount
+from tests.mock_stravalib import BatchedResultsIterator as MockBatchIterator
+from .base import LoggedInFlaskTestCase, AuthenticatedFlaskTestCase
 
 
-# TODO: Use dummy values instead
+# TODO: Use dummy values instsead
 MOCK_TOKEN = {
   "token_type": "Bearer",
   "access_token": "720e40342a74ec60554ac0c67c2eea15d0b83f61",
@@ -14,15 +17,16 @@ MOCK_TOKEN = {
   "refresh_token": "88580d9668f0934546af193d4b3f8214e99f78d9",
   "athlete": {
     "firstname": "Aaron",
-    "lastname": "Schroeder"
+    "lastname": "Schroeder",
+    "id": 1,
   }
 }
 
 
-class TestAuthorize(FlaskTestCase):
+class TestAuthorize(LoggedInFlaskTestCase):
   def test_strava_oauth_authorize(self):
-    with self.app.test_request_context():
-      rv = self.client.get(url_for('strava_api.authorize'))
+    rv = self.client.get(url_for('strava_api.authorize'))
+    
     # response should be a redirect
     self.assertEqual(rv.status_code, 302)
     # should redirect to strava's authorization endpoint
@@ -34,34 +38,35 @@ class TestAuthorize(FlaskTestCase):
     # TODO: figure out if more testing is called for
 
 
-class TestRevoke(FlaskTestCase):
-  
-  def test_user_revokes(self):
-    """The user revokes app access at https://www.strava.com/settings/apps"""
-    pass
+class TestHandleCode(LoggedInFlaskTestCase):
 
-
-class TestHandleCode(FlaskTestCase):
-
-  @patch('application.strava_api.views.stravatalk.get_token')
-  def test_strava_oauth_callback(self, mock_get_token):
+  @patch('stravalib.Client.get_athlete')
+  @patch('stravalib.Client.exchange_code_for_token')
+  @patch('stravalib.Client.refresh_access_token')
+  def test_strava_oauth_callback(self, mock_get_token, mock_exchange_code_for_token, mock_get_athlete):
     mock_get_token.return_value = MOCK_TOKEN
+    mock_exchange_code_for_token.return_value = MOCK_TOKEN
+    mock_get_athlete.return_value = Mock(id=1)
 
-    callback_url = '/strava/callback?code=some_code&scope=read,activity:read_all'
-    rv = self.client.get(callback_url)
+    rv = self.client.get(
+      f'{url_for("strava_api.handle_code")}'
+      '?code=some_code&scope=read,activity:read_all'
+    )
 
     # Since the scope is accepted correctly, the user is redirected
-    # to their strava activity list.
+    # to their strava account list. (Should it go to activity list instead?)
     self.assertEqual(rv.status_code, 302)
-    self.assertEqual(rv.location, '/strava/activities')
+    self.assertEqual(rv.location, url_for('strava_api.manage'))
 
     # Next, the external strava api responds to a POST request
     # from my app that includes the code that was previously
     # passed as a parameter on Strava's GET request to the callback url
     # (that strava interaction is mocked out here).
-    # Then, the access token returned by strava is set as a session variable.
-    with self.client.session_transaction() as sess:
-      self.assertEqual(sess.get('token'), MOCK_TOKEN)
+    # Then, the access token returned by strava is stored in the database.
+    self.assertEqual(
+      AdminUser().strava_accounts[0].access_token,
+      MOCK_TOKEN['access_token']
+    )
 
     # TODO, when making user model:
     # # when response is new user, db entry created
@@ -81,8 +86,10 @@ class TestHandleCode(FlaskTestCase):
     # should be `read,activity:read_all`, but `read` isn't
     # absolutely necessary
 
-    callback_url = '/strava/callback?code=some_code&scope=read'
-    rv = self.client.get(callback_url)
+    rv = self.client.get(
+      f'{url_for("strava_api.handle_code")}'
+      '?code=some_code&scope=read'
+    )
 
     # When the scope is not accepted (no `activity:read_all`),
     # display a message that tells them to accept the right permissions
@@ -94,8 +101,10 @@ class TestHandleCode(FlaskTestCase):
   def test_handle_strava_error(self):
     # User clicks `cancel` button when accepting strava permissions, 
     # resulting in strava issuing a GET request to the callback endpoint like:
-    callback_url = '/strava/callback?error=access_denied'
-    rv = self.client.get(callback_url)
+    rv = self.client.get(
+      f'{url_for("strava_api.handle_code")}'
+      '?error=access_denied'
+    )
     
     # The callback endpoint does not redirect, but displays a message
     # about it being necessary to grant my app access to their strava
@@ -112,84 +121,50 @@ class TestHandleCode(FlaskTestCase):
     # I guess the app could make a bad post request, or strava could be down
     # for some reason.
     pass
-    
-
-class TestActivityList(FlaskTestCase):
-  def test_redirect_when_no_token(self):
-    with self.client.session_transaction() as s:
-      self.assertIsNone(s.get('token'))
-    
-    response = self.client.get('/strava/activities')
-    self.assertEqual(response.status_code, 302)
-    self.assertEqual(response.location, '/strava/authorize')
-
-  @patch('application.strava_api.views.stravatalk.refresh_token')
-  @patch('application.strava_api.views.stravatalk.get_activities_json')
-  def test_activity_list(self, mock_get_activities, mock_refresh_token):
-    with self.client.session_transaction() as s:
-      s['token'] = MOCK_TOKEN
-    
-    mock_refresh_token.return_value = MOCK_TOKEN
-    mock_get_activities.return_value = [
-      {
-        'id': 1, 
-        'name': 'Activity 1', 
-        'start_date_local' : '2018-02-20T10:02:13Z',
-        'distance': 10000,
-        'total_elevation_gain': 100,
-      },
-      {
-        'id': 2, 
-        'name': 'Activity 2', 
-        'start_date_local' : '2018-02-20T10:02:13Z',
-        'distance': 10000,
-        'total_elevation_gain': 100,
-      },
-    ]
-
-    response = self.client.get('/strava/activities')
-
-    self.assertEqual(response.status_code, 200)
-    html_data = response.get_data(as_text=True)
-    self.assertIn('Activity 1', html_data)
-    self.assertIn('Activity 2', html_data)
 
 
-  @patch('application.strava_api.views.stravatalk.refresh_token')
-  @patch('application.strava_api.views.stravatalk.get_activities_json')
-  def test_page_two(self, mock_get_activities, mock_refresh_token):
-    with self.client.session_transaction() as s:
-      s['token'] = MOCK_TOKEN
-    
-    mock_refresh_token.return_value = MOCK_TOKEN
-    mock_get_activities.return_value = []
-    response = self.client.get('/strava/activities?page=2')
-    
-    self.assertEqual(response.status_code, 200)
-    self.assertIn({'page': '2'}, mock_get_activities.call_args)
+class TestManageAccounts(LoggedInFlaskTestCase):
+  @patch('stravalib.model.Athlete.stats')
+  @patch('stravalib.Client.get_athlete')
+  @patch('stravalib.Client.refresh_access_token')
+  def test_displays_account_info(self,  mock_refresh_access_token, mock_get_athlete, mock_stats):
+    mock_refresh_access_token.return_value = MOCK_TOKEN
+    mock_get_athlete.return_value = stravalib.model.Athlete(
+      firstname='Aaron',
+      lastname='Schroeder',
+    )
+    mock_stats.return_value = stravalib.model.AthleteStats(
+      all_run_totals=stravalib.model.ActivityTotals(count=10)
+    )
 
-  def test_no_next_arrow_if_no_next_page(self):
-    # Currently would fail.
-    # The idea is, if we are at the end of the strava activities,
-    # don't provide an option to click over to the next page.
-    pass
+    db.session.add(StravaAccount(strava_id=1, expires_at=0))
+    db.session.commit()
+    self.client.get(url_for('strava_api.manage'))
 
-  def test_token_refreshed_if_expired(self):
-    # Might want to just verify that token is passed to refresh_token,
-    # and then test refresh_token behavior in test_stravatalk.py
+    # TODO: Finish this test
+  
+  def test_displays_multiple_accounts(self):
     pass
 
 
-class TestLogout(FlaskTestCase):
-  def test(self):
-    with self.client.session_transaction() as sess:
-      self.assertIsNone(sess.get('token', None))
-      sess['token'] = MOCK_TOKEN
+class TestRevoke(AuthenticatedFlaskTestCase):
+  @patch('stravalib.Client.get_athlete')
+  @patch('stravalib.Client.refresh_access_token')
+  def test_revoke(self, mock_refresh_access_token, mock_get_athlete):
+    mock_get_athlete.return_value = stravalib.model.Athlete(
+      firstname='Aaron', lastname='Schroeder')
+    mock_refresh_access_token.return_value = MOCK_TOKEN
 
-    response = self.client.get('/strava/logout')
+    strava_accts = AdminUser().strava_accounts
+    self.assertEqual(len(strava_accts), 1)
+
+    response = self.client.get(url_for('strava_api.revoke', id=strava_accts[0].strava_id))
 
     self.assertEqual(response.status_code, 302)
-    self.assertEqual(response.location, '/strava/authorize')
+    self.assertEqual(response.location, url_for('strava_api.manage'))
 
-    with self.client.session_transaction() as sess:
-      self.assertIsNone(sess.get('token', None))
+    self.assertFalse(len(AdminUser().strava_accounts), 0)
+
+  def test_revoke_on_strava(self):
+    """The user revokes app access at https://www.strava.com/settings/apps"""
+    pass

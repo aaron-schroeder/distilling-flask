@@ -13,12 +13,17 @@ from .base import LoggedInFunctionalTest
   settings.SKIP_STRAVA_OAUTH,
   'Skipping tests that actually authenticate with Strava'
 )
+@skipIf(
+  settings.SKIP_STRAVA_API,
+  'Incompatible settings: dummy api + real auth flow'
+)
 class StravaAuthTest(LoggedInFunctionalTest):
 
   def test_can_authorize(self):
     # A new user arrives on the app's admin page and clicks a link to
-    # view their strava activities.
-    self.browser.find_element(By.LINK_TEXT, 'Authorize with Strava').click()
+    # authorize the app to access their strava data.
+    self.wait_for_element(By.LINK_TEXT, 'Manage Strava Connections').click()
+    self.wait_for_element(By.PARTIAL_LINK_TEXT, 'Another Strava').click()
     
     # Since they haven't yet granted permissions to Strava, they are
     # redirected to an authorization screen on strava's website, which
@@ -29,10 +34,12 @@ class StravaAuthTest(LoggedInFunctionalTest):
     # redirected back to the main admin page, and notice it has more options:
 
     # They see links inviting them to visit a list of their Strava activities.
-    self.check_for_link_text('Strava activities')
+    # self.check_for_link_text('Strava activities')
+    # self.browser.find_element(By.LINK_TEXT, 'Manage Strava Connections').click()
+    self.wait_for_element(By.PARTIAL_LINK_TEXT, 'Activities').click()
 
     # In the navbar, they see an indication that they have authorized with
-    # Strava.
+    # Strava, as well as some info about that account.
     navbar = self.browser.find_element(By.TAG_NAME, 'nav')
     self.assertIn('Authorized with Strava as', navbar.get_attribute('innerHTML'))
 

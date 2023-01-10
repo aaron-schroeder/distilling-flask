@@ -3,12 +3,16 @@ import os
 from urllib.parse import urljoin
 
 import dateutil
-from flask import redirect, render_template, request, url_for
+from flask import flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
+import pandas as pd
+from scipy.interpolate import interp1d
+from sqlalchemy.exc import IntegrityError
 
 from . import strava_api, tasks
-from application import stravatalk
-from application.models import db, StravaAccount
+from application import converters, util
+from application.models import db, StravaAccount, Activity
+from application.plotlydash.dashboard_activity import calc_power
 from application.strava_api.forms import BatchForm
 
 
@@ -25,16 +29,14 @@ def authorize():
     'http://localhost:5000'
   )
 
-  redirect_uri = urljoin(
-    server_url,
-    url_for('strava_api.handle_code')
-  )
-
-  return redirect(
-    f'https://www.strava.com/oauth/authorize?'  
-    f'client_id={CLIENT_ID}&redirect_uri={redirect_uri}'
-    f'&approval_prompt=auto&response_type=code&scope=activity:read_all'
-  )
+  return redirect(StravaAccount.get_client().authorization_url(
+    CLIENT_ID,
+    scope=['activity:read_all'],
+    redirect_uri=urljoin(
+      server_url,
+      url_for('strava_api.handle_code')
+    )
+  ))
 
 
 @strava_api.route('/callback')
@@ -70,76 +72,69 @@ def handle_code():
       error=error
     )
 
-  token = stravatalk.get_token(
-    request.args.get('code'),
-    CLIENT_ID, 
-    CLIENT_SECRET
+  token = StravaAccount.get_client().exchange_code_for_token(
+    client_id=CLIENT_ID,
+    client_secret=CLIENT_SECRET,
+    code=request.args.get('code'),
   )
 
-  strava_acct = StravaAccount(
-    strava_id=token['athlete']['id'],
-    access_token=token['access_token'],
-    refresh_token=token['refresh_token'],
-    expires_at=token['expires_at'],
-    # _=token['athlete']['firstname'],
-    # _=token['athlete']['lastname'],
-    # _=token['athlete']['profile_medium'],
-    # _=token['athlete']['profile'],
-  )
-  db.session.add(strava_acct)
+  athlete = StravaAccount.get_client(access_token=token['access_token']).get_athlete()
+
+  strava_acct = StravaAccount.query.get(athlete.id)
+
+  if strava_acct:
+    strava_acct.access_token = token['access_token']
+    strava_acct.refresh_token = token['refresh_token']
+    strava_acct.expires_at = token['expires_at']
+    action = 'updated'
+  else:
+    strava_acct = StravaAccount(
+      strava_id=athlete.id,
+      access_token=token['access_token'],
+      refresh_token=token['refresh_token'],
+      expires_at=token['expires_at'],
+      # _=token['athlete']['firstname'],
+      # _=token['athlete']['lastname'],
+      # _=token['athlete']['profile_medium'],
+      # _=token['athlete']['profile'],
+    )
+    db.session.add(strava_acct)
+    action = 'added'
+
   db.session.commit()
 
   # Redirect them to the main admin
-  return redirect(url_for('route_blueprint.admin_landing'))
+  flash(f'Strava account for {strava_acct.firstname} {strava_acct.lastname} '
+        f'successfully {action}!')
+  return redirect(url_for('strava_api.manage'))
 
 
-@strava_api.route('/activities', methods=['GET', 'POST'])
+@strava_api.route('/manage')
 @login_required
-def display_activity_list():
-  """Display list of strava activities to view in their own Dashboard."""
-  if not current_user.has_authorized:
-    return redirect(url_for('strava_api.authorize'))
-    # '?after="/strava/activities"'
-
-  token = current_user.strava_account.get_token()
-
-  activity_json = stravatalk.get_activities_json(
-    token['access_token'],
-    page=request.args.get('page'),
-    limit=request.args.get('limit')
-  )
-
-  form = BatchForm()
-  if form.validate_on_submit():
-    # flash('Activities will be added in the background.')
-    # take a moment
-    
-    # Desired: do the following in the background!
-    # And redirect immediately w/ message.
-    tasks.async_save_all_activities.delay(token)
-    # result = tasks.async_save_all_activities.delay(token)
-    # result.wait()
-
-    return redirect('/')
-
+def manage():
   return render_template(
-    'strava_api/activity_list.html',
-    resp_json=activity_json,
-    last_page=(len(activity_json) != request.args.get('limit')),
-    form=form
+    'strava_api/manage.html',
+    strava_accounts=StravaAccount.query.all()
   )
 
 
 @strava_api.route('/revoke')
 @login_required
 def revoke():
-  if current_user.has_authorized:
-    db.session.delete(current_user.strava_account)
+  
+  strava_account = StravaAccount.query.get(request.args.get('id'))
+  
+  if strava_account is None:
+    flash(f'No strava account was found with id {request.args.get("id")}')
+    return redirect(url_for('strava_api.manage'))
+
+  msg_success = (
+    f'Strava account {strava_account.firstname} {strava_account.lastname} '
+     'successfully removed!'
+  )
+
+  db.session.delete(strava_account)
   db.session.commit()
 
-  return redirect(url_for('route_blueprint.admin_landing'))
-
-
-@strava_api.route('/add_activities', methods=['POST'])
-def batch_add_activities():
-  print('adding those activities!')
+  flash(msg_success)
+  return redirect(url_for('strava_api.manage'))

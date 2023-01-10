@@ -51,3 +51,22 @@ i {
 i.fa-2 {
   padding: 15px 0px 0px 5px; 
 }
+
+.dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner table {
+  /* font-family: 'Liberation Mono' !important; */
+  font-family: inherit !important;
+  font-size: 16px !important;
+}
+
+@media (max-width: 992px) {
+  .dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner table {
+    font-size: 14px !important;
+  }
+}
+
+@media (max-width: 576px) {
+
+  [data-dash-column="Time"], [data-dash-column="Distance"], [data-dash-column="Elevation"] {
+    display: none;
+  }
+}

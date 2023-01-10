@@ -1,9 +1,13 @@
+import datetime
+from functools import cached_property
+from importlib import import_module
 import os
+import sys
 
+from flask import current_app
 from flask_login import UserMixin
 
 from application import db, login
-from application import stravatalk
 
 
 CLIENT_ID = os.environ.get('STRAVA_CLIENT_ID')
@@ -58,6 +62,12 @@ class Activity(db.Model):
     db.BigInteger,
     unique=True,
     nullable=True,
+  )
+
+  # CAN link to strava acct, but does not have to.
+  strava_acct_id = db.Column(
+    db.Integer,
+    db.ForeignKey('strava_account.strava_id')
   )
 
   # Maybe (strava, file upload, etc)
@@ -135,15 +145,8 @@ class AdminUser(UserMixin):
       return password == password_correct
 
   @property
-  def strava_account(self):
-    accounts = StravaAccount.query.all()
-    if len(accounts) == 0:
-      return None
-    return accounts[0]
-
-  @property
-  def has_authorized(self):
-    return self.strava_account is not None
+  def strava_accounts(self):
+    return StravaAccount.query.all()
 
   def __repr__(self):
     return '<Admin User>'
@@ -152,6 +155,42 @@ class AdminUser(UserMixin):
 @login.user_loader
 def load_user(id):
   return AdminUser()
+
+
+def cached_import(module_path, class_name):
+  """
+  based on `django.utils.module_loading.import_string`
+  """
+
+  # Check whether module is loaded and fully initialized.
+  if not (
+    (module := sys.modules.get(module_path))
+    and (spec := getattr(module, "__spec__", None))
+    and getattr(spec, "_initializing", False) is False
+  ):
+    module = import_module(module_path)
+  return getattr(module, class_name)
+
+
+def import_string(dotted_path):
+  """
+  Import a dotted module path and return the attribute/class designated by the
+  last name in the path. Raise ImportError if the import failed.
+
+  based on `django.utils.module_loading.import_string`
+  """
+  try:
+    module_path, class_name = dotted_path.rsplit(".", 1)
+  except ValueError as err:
+    raise ImportError("%s doesn't look like a module path" % dotted_path) from err
+
+  try:
+    return cached_import(module_path, class_name)
+  except AttributeError as err:
+    raise ImportError(
+      'Module "%s" does not define a "%s" attribute/class'
+      % (module_path, class_name)
+    ) from err
 
 
 class StravaAccount(db.Model):
@@ -169,26 +208,79 @@ class StravaAccount(db.Model):
   refresh_token = db.Column(db.String())
   expires_at = db.Column(db.Integer)
   # email = db.Column(db.String)
+  # token = db.Column(db.PickleType)
+  activities = db.relationship('Activity', backref='strava_acct', lazy='dynamic')
 
+  # @property
   def get_token(self):
 
-    # reconstruct the required elements of strava's access token
-    token = dict(
-      access_token=self.access_token,
-      refresh_token=self.refresh_token,
-      expires_at=self.expires_at,
+    if datetime.datetime.utcnow() < datetime.datetime.utcfromtimestamp(self.expires_at):
+      return dict(
+        access_token=self.access_token,
+        refresh_token=self.refresh_token,
+        expires_at=self.expires_at,
+      )
+
+    print('refreshing expired token')
+    token = self.get_client().refresh_access_token(
+      client_id=CLIENT_ID,
+      client_secret=CLIENT_SECRET,
+      refresh_token=self.refresh_token
     )
 
-    # refresh if necessary
-    fresh_token = stravatalk.refresh_token(token, CLIENT_ID, CLIENT_SECRET)
+    self.access_token = token['access_token']
+    self.refresh_token = token['refresh_token']
+    self.expires_at = token['expires_at']
+    db.session.commit()
 
-    if token != fresh_token:
-      self.access_token = token['access_token']
-      self.refresh_token = token['refresh_token']
-      self.expires_at = token['expires_at']
-      db.session.commit()
+    return token
 
-    return fresh_token
+  @property
+  def has_authorized(self):
+    return self.access_token is not None
+
+  @property
+  def client(self):
+    token = self.get_token()
+    return self.get_client(access_token=token['access_token'])
+
+  @staticmethod
+  def get_client(backend=None, access_token=None):
+    """Load a strava connection backend and return an instance of it.
+    If backend is None (default), use `config.STRAVA_API_BACKEND`, or
+    finally default to stravalib.
+    """
+    backend = backend or current_app.config.get('STRAVA_API_BACKEND')
+    klass = import_string(backend or 'stravalib.Client')
+    return klass(access_token=access_token)
+
+  @cached_property
+  def athlete(self):
+    return self.client.get_athlete()
+
+  @property
+  def profile_picture_url(self):
+    return self.athlete.profile
+
+  @property
+  def firstname(self):
+    return self.athlete.firstname
+
+  @property
+  def lastname(self):
+    return self.athlete.lastname
+
+  @property
+  def run_count(self):
+    return self.athlete.stats.all_run_totals.count
+
+  @property
+  def follower_count(self):
+    return self.athlete.follower_count
+
+  @property
+  def email(self):
+    return self.athlete.email
 
   @property
   def url(self):

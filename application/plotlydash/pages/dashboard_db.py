@@ -5,7 +5,7 @@ from dash import dcc, html, callback, Input, Output
 from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
 
-from application import converters, stravatalk, util
+from application import converters, util
 from application.models import db, Activity, AdminUser
 from application.plotlydash import dashboard_activity
 from application.plotlydash.aio_components import FigureDivAIO, StatsDivAIO
@@ -19,26 +19,22 @@ def layout(activity_id=None):
   if activity_id is None:
     return html.Div([])
 
-  admin_user = AdminUser()
-  if not admin_user.has_authorized:
+  activity = Activity.query.get(activity_id)
+
+  strava_account = activity.strava_acct
+  if not strava_account or not strava_account.has_authorized:
     return dbc.Container('This app\'s administrator is not currently granting '
                          'permission to access their Strava activities.')
   
-  token = AdminUser().strava_account.get_token()
+  client = strava_account.client
 
-  activity = Activity.query.get(activity_id)
-
-  stream_json = stravatalk.get_activity_streams_json(
-    activity.strava_id, 
-    token['access_token']
-  )
-
-  # Likely to be added
-  # activity_json = stravatalk.get_activity_json(activity_id, token['access_token'])
-
-  # Read the Strava json response into a DataFrame and perform
+  # Read the Strava response into a DataFrame and perform
   # additional calculations on it.
-  df = converters.from_strava_streams(stream_json)
+  df = converters.from_strava_streams(client.get_activity_streams(
+    activity.strava_id,
+    types=['time', 'latlng', 'distance', 'altitude', 'velocity_smooth',
+      'heartrate', 'cadence', 'watts', 'temp', 'moving', 'grade_smooth']
+  ))
   dashboard_activity.calc_power(df)
 
   activity_dict = {
