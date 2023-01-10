@@ -36,9 +36,11 @@ class TestStravaSave(AuthenticatedUserFunctionalTest):
 
     # They are redirected to their list of strava activities.
     # They click the link for the first activity presented.
-    section = self.wait_for_element(By.CLASS_NAME, 'content')
-    links = section.find_elements(By.TAG_NAME, 'a')
-    links[0].click()
+    datatable = self.wait_for_element(By.ID, 'datatable-activity')
+    datatable.find_elements(
+      By.XPATH, 
+      '//td[@data-dash-column="Title"]//a'
+    )[0].click()
 
     # They wait for the appearance of a button that
     # allows them to save the activity to the database.

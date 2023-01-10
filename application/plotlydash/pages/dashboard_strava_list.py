@@ -35,6 +35,7 @@ def layout(**url_queries):
   out = dbc.Container(
     [
       dcc.Location(id='url'),
+      html.H2('Your Strava Activities'),
       dbc.Form(
         [
           dbc.Checklist(
@@ -115,6 +116,7 @@ def layout(**url_queries):
           # },
         ],
         style_as_list_view=True,
+        markdown_options={'link_target': '_self'}
       ),
       dcc.Store(id='strava-id', data=strava_id)
     ],
