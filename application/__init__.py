@@ -4,24 +4,16 @@ from celery import Celery
 import dash
 from flask import Flask
 from flask_login import LoginManager
+from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
-<<<<<<< HEAD
 
 from application.config import config, Config
-=======
-from flask_migrate import Migrate
-
-from application.config import config
->>>>>>> master
 
 
 db = SQLAlchemy()
 login = LoginManager()
-<<<<<<< HEAD
 celery = Celery(__name__, broker=Config.CELERY_BROKER_URL)
-=======
 migrate = Migrate()
->>>>>>> master
 
 
 def create_app(config_name='dev'):
@@ -45,14 +37,10 @@ def create_app(config_name='dev'):
   # SQLAlchemy
   db.init_app(app)
 
-<<<<<<< HEAD
   # Celery
   celery.conf.update(app.config)
 
-  from application.routes import route_blueprint
-=======
   from application.routes import route_blueprint  # ... as route_blueprint
->>>>>>> master
   app.register_blueprint(route_blueprint)
 
   from application.strava_api import strava_api as strava_api_blueprint
