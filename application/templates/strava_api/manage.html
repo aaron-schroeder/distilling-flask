@@ -50,7 +50,7 @@
                   </div>
                 </div>
                 <div class="d-flex pt-1">
-                  <a href= "{{ url_for('strava_api.display_activity_list', id=strava_account.strava_id) }}"class="btn btn-primary mr-1 flex-grow-1">View Strava Activities</a>
+                  <a href= "/strava/activities?id={{ strava_account.strava_id }}"class="btn btn-primary mr-1 flex-grow-1">View Strava Activities</a>
                   <a href="{{ url_for('strava_api.revoke', id=strava_account.strava_id) }}" class="btn btn-danger flex-grow-1">Revoke Access</a>
                 </div>
               </div>

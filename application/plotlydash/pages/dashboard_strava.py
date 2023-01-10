@@ -17,7 +17,7 @@ from application.plotlydash.aio_components import FigureDivAIO, StatsDivAIO
 from application.plotlydash.util import layout_login_required
 
 
-dash.register_page(__name__, path_template='/strava/<activity_id>',
+dash.register_page(__name__, path_template='/strava/activity/<activity_id>',
   title='Strava Activity Dashboard', name='Strava Activity Dashboard')
 
 

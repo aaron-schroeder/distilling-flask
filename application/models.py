@@ -245,15 +245,12 @@ class StravaAccount(db.Model):
     return self.get_client(access_token=token['access_token'])
 
   @staticmethod
-  def get_client(backend=None, access_token=None):  # , fail_silently=False, **kwds):
+  def get_client(backend=None, access_token=None):
     """Load a strava connection backend and return an instance of it.
-    If backend is None (default), use stravalib.
-    (later, use settings.STRAVA_BACKEND.)
-    Both fail_silently and other keyword arguments are used in the
-    constructor of the backend.
+    If backend is None (default), use `config.STRAVA_API_BACKEND`, or
+    finally default to stravalib.
     """
-    print(current_app.config['STRAVA_API_BACKEND'])
-    backend = backend or current_app.config['STRAVA_API_BACKEND']
+    backend = backend or current_app.config.get('STRAVA_API_BACKEND')
     klass = import_string(backend or 'stravalib.Client')
     return klass(access_token=access_token)
 

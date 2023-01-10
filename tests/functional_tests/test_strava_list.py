@@ -9,7 +9,7 @@ class StravaListTest(AuthenticatedUserFunctionalTest):
     self.wait_for_element(By.PARTIAL_LINK_TEXT, 'Activities').click()
 
     # They see a list of their strava activities.
-    header = self.browser.find_element(By.TAG_NAME, 'h2')
+    header = self.wait_for_element(By.TAG_NAME, 'h2')
     self.assertIn('strava activities', header.text.lower())
 
     # ...

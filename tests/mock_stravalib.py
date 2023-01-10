@@ -72,8 +72,10 @@ class BatchedResultsIterator:
       result = stravalib.model.Activity(
         id=self._counter + 1,
         name=f'Activity {self._counter + 1}',
+        type='Run',
         start_date_local='2018-02-20T10:02:13Z',
         distance=10000,
+        moving_time=3000,
         total_elevation_gain=100,
       )
       self._counter += 1

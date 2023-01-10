@@ -22,7 +22,7 @@ class StravaAuthTest(LoggedInFunctionalTest):
   def test_can_authorize(self):
     # A new user arrives on the app's admin page and clicks a link to
     # authorize the app to access their strava data.
-    self.browser.find_element(By.LINK_TEXT, 'Manage Strava Connections').click()
+    self.wait_for_element(By.LINK_TEXT, 'Manage Strava Connections').click()
     self.wait_for_element(By.PARTIAL_LINK_TEXT, 'Another Strava').click()
     
     # Since they haven't yet granted permissions to Strava, they are
@@ -35,7 +35,7 @@ class StravaAuthTest(LoggedInFunctionalTest):
 
     # They see links inviting them to visit a list of their Strava activities.
     # self.check_for_link_text('Strava activities')
-    self.browser.find_element(By.LINK_TEXT, 'Manage Strava Connections').click()
+    # self.browser.find_element(By.LINK_TEXT, 'Manage Strava Connections').click()
     self.wait_for_element(By.PARTIAL_LINK_TEXT, 'Activities').click()
 
     # In the navbar, they see an indication that they have authorized with
