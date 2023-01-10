@@ -75,6 +75,7 @@ def layout(**url_queries):
       dash_table.DataTable(
         id='datatable-activity',
         row_selectable='multi',
+        cell_selectable=False,
         page_current=0,
         page_size=int(url_queries.get('limit', PAGE_SIZE)),
         # page_count=math.ceiling(activity_count/page_size),
@@ -83,16 +84,37 @@ def layout(**url_queries):
         # filter_query='',
         sort_action='custom',
         # sort_mode='multi',
+        style_table={
+          'overflowX': 'auto'
+        },
+        css=[dict(selector= 'p', rule= 'margin: 0')],
+        style_cell={
+          'textAlign': 'right',
+          'padding-right': '30px', 
+        },
+        style_cell_conditional=[
+          {
+            'if': {'column_id': ['Sport', 'Date', 'Title']},
+            'textAlign': 'left'
+          },
+        ],
+        style_data={
+          'whiteSpace': 'normal',
+          'height': 'auto',
+        },
         style_data_conditional=[
           {
-            'if': {
-              'filter_query': '{Saved} = "True"',
-              # 'column_id': 'Sport',
-            },
-            'backgroundColor': 'gray',
-            # 'color': 'gray'
+            'if': {'row_index': 'odd'},
+            'backgroundColor': 'rgb(220, 220, 220)',
           },
-        ]
+          # {
+          #   'if': {
+          #     'filter_query': '{Saved} = "True"',
+          #   },
+          #   'backgroundColor': 'gray',
+          # },
+        ],
+        style_as_list_view=True,
       ),
       dcc.Store(id='strava-id', data=strava_id)
     ],
