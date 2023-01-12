@@ -14,7 +14,7 @@ from application.plotlydash.figure_layout import (
   AXIS_LAYOUT, TRACE_LAYOUT
 )
 from application.plotlydash.plots import Plotter
-from application import labels, util
+from application.util import labels, units
 import power.util as putil
 
 
@@ -380,7 +380,7 @@ class FigureRowsAIO(html.Div):
 
       plotter.add_yaxis(SPEED_ID, SPEED, **AXIS_LAYOUT[SPEED])
 
-      speed_text = df[SPEED].apply(util.speed_to_pace)
+      speed_text = df[SPEED].apply(units.speed_to_pace)
       plotter.add_trace(SPEED_ID, SPEED,
         text=speed_text, 
         visible=True,
@@ -391,7 +391,7 @@ class FigureRowsAIO(html.Div):
       for stream in ['GAP', 'NGP']:
         if df.fld.has(stream):
           plotter.add_trace(SPEED_ID, stream,
-            text=df[stream].apply(util.speed_to_pace),
+            text=df[stream].apply(units.speed_to_pace),
             visible=True,
             **TRACE_LAYOUT[SPEED]
           )
@@ -558,7 +558,7 @@ class TssDivAIO(html.Div):
     if aio_id is None:
       aio_id = str(uuid.uuid4())
 
-    ngp_td = util.speed_to_timedelta(ngp)
+    ngp_td = units.speed_to_timedelta(ngp)
     ngp_total_secs = ngp_td.total_seconds()
 
     super().__init__([
@@ -665,8 +665,8 @@ class TssDivAIO(html.Div):
     if not validate_time_str(ngp_str) or not validate_time_str(cp_str):
       raise PreventUpdate
 
-    ngp_secs_per_mile = util.string_to_seconds(ngp_str)
-    cp_secs_per_mile = util.string_to_seconds(cp_str)
+    ngp_secs_per_mile = units.string_to_seconds(ngp_str)
+    cp_secs_per_mile = units.string_to_seconds(cp_str)
 
     intensity_factor = cp_secs_per_mile / ngp_secs_per_mile
     
@@ -687,7 +687,7 @@ class TssDivAIO(html.Div):
     ):
       raise PreventUpdate
 
-    total_hours = util.string_to_seconds(total_time_str) / 3600
+    total_hours = units.string_to_seconds(total_time_str) / 3600
 
     tss = tss_per_cp_hr * total_hours * intensity_factor ** 2
 
@@ -786,9 +786,9 @@ class StatsDivAIO(dbc.Accordion):
         df_stats.loc['Moving (Strava)', 'Distance (m)'] = df_stats.loc['Total', 'Distance (m)']
 
       df_stats['Speed (m/s)'] = df_stats['Distance (m)'] / df_stats['Time (s)']
-      df_stats['Pace'] = df_stats['Speed (m/s)'].apply(util.speed_to_pace)
-      df_stats['Time'] = df_stats['Time (s)'].apply(util.seconds_to_string)
-      df_stats['Distance (mi)'] = df_stats['Distance (m)'].astype('float') / util.M_PER_MI
+      df_stats['Pace'] = df_stats['Speed (m/s)'].apply(units.speed_to_pace)
+      df_stats['Time'] = df_stats['Time (s)'].apply(units.seconds_to_string)
+      df_stats['Distance (mi)'] = df_stats['Distance (m)'].astype('float') / units.M_PER_MI
 
       return df_stats
 

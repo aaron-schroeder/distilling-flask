@@ -3,7 +3,7 @@ from dash import Dash, html
 import dash_bootstrap_components as dbc
 
 
-def add_dashboard_to_flask(server):
+def add_dash_app_to_flask(server):
   """Create a Plotly Dash dashboard with the specified server.
 
   This is actually used to create a dashboard that piggybacks on a

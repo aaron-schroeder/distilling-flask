@@ -40,16 +40,16 @@ def create_app(config_name='dev'):
   # Celery
   celery.conf.update(app.config)
 
-  from application.routes import route_blueprint  # ... as route_blueprint
-  app.register_blueprint(route_blueprint)
+  from application.main import main as main_blueprint
+  app.register_blueprint(main_blueprint)
 
   from application.strava_api import strava_api as strava_api_blueprint
   app.register_blueprint(strava_api_blueprint, url_prefix='/strava')
 
   with app.app_context():
     # Add various dashboards using this Flask app as a server.
-    from application.plotlydash.app import add_dashboard_to_flask
-    dash_app = add_dashboard_to_flask(app)
+    from application.plotlydash.app import add_dash_app_to_flask
+    dash_app = add_dash_app_to_flask(app)
 
     if app.config.get('DEBUG'):
       dash_app.enable_dev_tools(debug=True)

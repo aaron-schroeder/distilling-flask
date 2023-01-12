@@ -1,20 +1,17 @@
 import datetime
-import json
 import math
-import os
 
 import dash
 from dash import dcc, html, callback, Input, Output, State, ALL
 import dash_bootstrap_components as dbc
-from dash.exceptions import PreventUpdate
 from dateutil import tz
 import numpy as np
 import pandas as pd
 import plotly.graph_objs as go
 
-from application import util
-from application.models import db, Activity
+from application.models import Activity
 from application.plotlydash.layout import COLORS
+from application.util import units
 
 
 dash.register_page(__name__, path_template='/',
@@ -351,7 +348,7 @@ def create_week_sum(df_week, date_start):
       [
         time_str,
         html.Span(
-          f'{round(df_week["elevation_m"].sum() * util.FT_PER_M)} ft',
+          f'{round(df_week["elevation_m"].sum() * units.FT_PER_M)} ft',
           style={'float': 'right'}
         ),
       ],
@@ -362,7 +359,7 @@ def create_week_sum(df_week, date_start):
       }
     ),
     html.Div(
-      f'{df_week["distance_m"].sum() / util.M_PER_MI:.1f} mi',
+      f'{df_week["distance_m"].sum() / units.M_PER_MI:.1f} mi',
       style={
         'font-size': '31px',
         'margin-top': '10px',
@@ -427,7 +424,7 @@ def create_week_cal(df_week):
   fig.add_trace(dict(
     x=df_week['weekday'],
     y=[2 for d in df_week['weekday']],
-    text=[f'<a href="/saved/{id}">{d / util.M_PER_MI:.1f}</a>' for id, d in zip(df_week['id'], df_week['distance_m'])],
+    text=[f'<a href="/saved/{id}">{d / units.M_PER_MI:.1f}</a>' for id, d in zip(df_week['id'], df_week['distance_m'])],
     name='easy', # they are all easy right now
     mode='markers+text',
     marker=dict(
@@ -449,11 +446,11 @@ def create_week_cal(df_week):
       df_week['id'],
       df_week['title'], 
       df_week['description'].astype(str).str.slice(0, 50) + ' ...',
-      df_week['distance_m'] / util.M_PER_MI,
-      df_week['moving_time_s'].apply(util.seconds_to_string),
-      (df_week['distance_m'] / df_week['moving_time_s']).apply(util.speed_to_pace),
-      (df_week['distance_m'] / df_week['elapsed_time_s']).apply(util.speed_to_pace),
-      df_week['elevation_m'] * util.FT_PER_M,
+      df_week['distance_m'] / units.M_PER_MI,
+      df_week['moving_time_s'].apply(units.seconds_to_string),
+      (df_week['distance_m'] / df_week['moving_time_s']).apply(units.speed_to_pace),
+      (df_week['distance_m'] / df_week['elapsed_time_s']).apply(units.speed_to_pace),
+      df_week['elevation_m'] * units.FT_PER_M,
       df_week['tss'],
     ])),
     hovertemplate=
@@ -483,7 +480,7 @@ def update_week_cal(fig, bubble_type):
 
   if bubble_type == 'Time':
     time_strs = [cdata[5] for cdata in fig.data[0].customdata]
-    secs = [util.string_to_seconds(t) for t in time_strs]
+    secs = [units.string_to_seconds(t) for t in time_strs]
 
     fig.data[0].text = [f'{a}{math.floor(s/3600)}hr{round((s % 3600) / 60)}m</a>' for a, s in zip(hrefs, secs)]
     
