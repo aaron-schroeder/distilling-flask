@@ -18,25 +18,22 @@
 
 ## Introduction
 
-Given a valid strava access token, the Flask app talks to Strava's API and 
-displays running activities in a dashboard using plotly Dash.
+Given a valid client id and client secret for your Strava API app,
+this app talks to Strava's API and displays running activities in a
+variety of dashboards using plotly Dash.
 
 I built this app so I could pick apart my raw Strava data, which includes
-data streams for elevation, grade, and moving/stopped periods. In short,
-I think Strava presents data in an unrealistically favorable way in its apps,
+data streams for elevation, grade, and moving/stopped periods. I think Strava
+presents data in an unrealistically favorable way in its app ecosystem,
 and I wanted to work with the raw feeds. There is power in looking at the
 reality of things.
 
-Over time, I generalized the Dash app to accept `pandas.DataFrame` as input. 
-This means you can view any activity data you want, as long as it is formatted
-correctly, using the `create_dash_app` function.
-
-If you have a valid Strava access token, you can view any of your Strava
+If you have a [ersponal Strava API application, you can view any of your Strava
 runs in a dashboard powered by Plotly Dash. From there, you can save each
-run to a local database, and view the long-term effects of training in a
+run to a database, and view the long-term effects of training in a
 training log dashboard.
 
-See the [Examples](#examples) section below to see how everything works.
+See the [Running the App](#running-the-app) below to see how everything works.
 
 ---
 
@@ -80,7 +77,7 @@ docker run --name distillingflask  \
     distillingflask:latest
 ```
 
-## Running the app
+## Running the App
 
 ### Locally
 
