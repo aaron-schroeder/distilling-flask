@@ -73,7 +73,7 @@ class NewVisitorTest(FunctionalTest):
 
     for relative_url in [
       '/admin',
-      '/upload',
+      '/analyze-file',
       '/strava/authorize',
       '/strava/activities',
       '/strava/callback',

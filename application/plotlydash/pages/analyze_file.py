@@ -29,7 +29,7 @@ from application.util import readers
 from application.util.dataframe import calc_power
 
 
-dash.register_page(__name__, path_template='/upload',
+dash.register_page(__name__, path_template='/analyze-file',
   title='Analyze an activity file', name='Analyze an activity file')
 
 
@@ -180,13 +180,7 @@ def parse_contents(contents, filename):
 
   decoded = base64.b64decode(content_string)
 
-  if filename.lower().endswith('json'):
-    data_json = json.loads(decoded.decode('utf-8'))
-
-    # Assume the user uploaded strava stream json output
-    return readers.from_strava_streams(data_json)
-
-  elif filename.lower().endswith('fit'):
+  if filename.lower().endswith('fit'):
     return readers.from_fit(decoded)
   
   elif filename.lower().endswith('csv'):
@@ -197,3 +191,14 @@ def parse_contents(contents, filename):
 
   elif filename.lower().endswith('gpx'):
     return readers.from_gpx(decoded)
+
+  # elif filename.lower().endswith('json'):
+  #   data_json = json.loads(decoded.decode('utf-8'))
+  #   # Assume the user uploaded strava stream json output
+  #   return readers.from_strava_streams(data_json)
+
+  else:
+    raise TypeError(
+      f'{filename} does not seem to be a file type that is accepted '
+      'at this time (.fit, .tcx, .gpx)'
+    )
