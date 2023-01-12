@@ -9,7 +9,7 @@
 ## Table of Contents                                                                    
 - [Introduction](#introduction)
 - [Dependencies and Installation](#dependencies-and-installation)
-- [Examples](#example)<!-- - [Project Status](#project-status) -->
+- [Running the App](#running-the-app)<!-- - [Project Status](#project-status) -->
 - [Testing](#testing)
 - [Contact](#contact)
 - [License](#license)
@@ -42,7 +42,22 @@ See the [Examples](#examples) section below to see how everything works.
 
 ## Dependencies and Installation
 
-Flask, Dash, Dash Bootstrap Components, pandas, and requests are required.
+Check out [the requirements file](requirements.txt) to see all dependencies.
+
+### Python IDE
+
+Clone the repo:
+```
+git clone https://github.com/aaron-schroeder/distilling-flask.git
+```
+
+Change into the new directory and start a virtual environment. Then, install
+the requirements:
+```
+pip install -r requirements.txt
+```
+
+You should be able to run the app now. See [Examples](#examples) below for more info.
 
 ### Docker container
 
@@ -65,94 +80,111 @@ docker run --name distillingflask  \
     distillingflask:latest
 ```
 
-### Python IDE
+## Running the app
 
-Clone the repo:
-```
-git clone https://github.com/aaron-schroeder/distilling-flask.git
-```
+### Locally
 
-Change into the new directory and start a virtual environment. Then, install
-the requirements:
-```
-pip install -r requirements.txt
-```
+#### Strava-connected, with your Strava app client id and client secret
 
-You should be able to run the app now. See [Examples](#examples) below for more info.
+This option pretty much gets you the full-blown app running on your local machine.
+You can now authorize the app to use the data from your Strava account.
 
----
+To do this, you must:
+- Create your own API application [on Strava's website](https://www.strava.com/settings/api)
+- Within the ["My API application"](https://www.strava.com/settings/api)
+  section of your Strava settings:
+  - Set the authorization callback domain for your app to `localhost`
+  - Copy your app's "client ID" and "client secret" somewhere secure
 
-## Examples
-
-### Run the Flask app locally with a Strava app client id and client secret
-
+To run the app from a python script:
 ```python
 import os
 
-# Get ahold of your the credentials for your Strava app
-# (sorry, you are on your own for now)
+import application
+
+
+# Get ahold of the credentials for your Strava app
 # ...
 os.environ['STRAVA_CLIENT_ID'] = client_id
 os.environ['STRAVA_CLIENT_SECRET'] = client_secret
 
-# Choose the password for this app. Don't put your Strava password.
+# Choose the password for this app. Ideally don't use your Strava password.
 os.environ['PASSWORD'] = 'super_secret_password'
-
-import application
 app = application.create_app()
 app.run()
 ```
+To run the app from the command line:
+```
+STRAVA_CLIENT_ID=${STRAVA_CLIENT_ID}  \
+STRAVA_CLIENT_SECRET=${STRAVA_CLIENT_SECRET}  \
+PASSWORD=super_secret_password  \
+flask --app application
+```
+
 ![List of activities](https://github.com/aaron-schroeder/distilling-flask/blob/master/images/activity_list_screenshot.jpg?raw=true)
 
 ![Saved activities in training log dashboard](https://github.com/aaron-schroeder/distilling-flask/blob/master/images/training_log_screenshot.jpg?raw=true)
 
-### Run the Dash app with an uploaded file
+#### Strava-disconnected, allowing a subset of features.
 
-Options:
-  - `json` file containing response from `https://www.strava.com/api/v3/activities/${athlete_id}/streams/${fields}`
+You don't need to set your app up with Strava to access some of
+its features like the file upload analysis dashboard.
+The command to run this configuration of the app is simpler.
+
+Python script:
+```python
+import os
+
+import application
+
+
+# Choose the password for this app. Ideally don't use your Strava password.
+os.environ['PASSWORD'] = 'super_secret_password'
+app = application.create_app()
+app.run()
+```
+Command line:
+```sh
+PASSWORD=super_secret_password  \
+flask --app application
+```
+
+Filetypes accepted by the upload-to-analyze dashboard:
   - `fit` file (requires [`fitparse`](https://github.com/dtcooper/python-fitparse) and [`dateutil`](https://dateutil.readthedocs.io/en/stable/))
-  - `csv` file (requires expected column naming convention, see below)
   - `tcx` file (requires [`activereader`](https://github.com/aaron-schroeder/activereader))
   - `gpx` file (requires [`activereader`](https://github.com/aaron-schroeder/activereader))
+  - `csv` file (requires that headers adhere to [the naming convention defined
+    by the application](application/plotlydash/figure_layout.py#L4-L11))
   <!--
   - `csv` file from Wahoo Fitness (WIP) 
   -->
-```python
-from application.plotlydash.dashboard_upload import create_dash_app
-
-app = create_dash_app()
-app.run_server()
-```
-
-From a `pandas.DataFrame` (use these exact column names):
-```python
-import math
-import pandas as pd
-
-from application.plotlydash.dashboard_activity import create_dash_app
-
-time = range(600)
-df = pd.DataFrame.from_dict(dict(
-    time=time,
-    lat=[40.0 + 0.00001 * t for t in time],
-    lon=[-105.0 + 0.00001 * t for t in time],
-    elevation=[1609.0 + 40 * math.cos(0.01 * t) for t in time],
-    grade=[-4 * math.sin(0.01 * t) for t in time],
-    speed=[3.0 + math.sin(0.1 * t) for t in time],
-    distance=[3.0 * t + 10 * math.cos(0.1 * t) for t in time],
-    heartrate=[140 + 15 * math.cos(0.1 * t) for t in time],
-    cadence=[160 + 5 * math.sin(0.1 * t) for t in time],
-))
-
-# (if needed) Drop any columns that lack data.
-df = df.dropna(axis=1, how='all')
-
-app = create_dash_app(df)
-
-app.run_server()
-```
 
 ![The dashboard in action](https://github.com/aaron-schroeder/distilling-flask/blob/master/images/db_screenshot.jpg?raw=true)
+
+### Production
+
+To create an instance of the app with production-oriented settings, pass
+the value `prod` to the `config_name` keyword of `create_app()`.
+
+Like the development configuration, the production configuration of 
+defaults to using an on-disk SQLite database, or any database 
+specified by the `DATABASE_URL` environment variable
+(including in-memory SQLite with the url `sqlite://`)
+
+The production configuration also allows for the use of a PostgreSQL database
+if the right environment variables (starting with `POSTGRES_`) are set.
+
+```
+SECRET_KEY=random_secret_key  \
+STRAVA_CLIENT_ID=00000  \
+STRAVA_CLIENT_SECRET=gobbledygoop  \
+POSTGRES_DB=db_name  \
+POSTGRES_PORT=5432  \
+POSTGRES_USER=user  \
+POSTGRES_PW=password  \
+POSTGRES_URL=dburl.example.com  \
+flask --app "application:create_app('prod')"
+```
 
 ### `StreamLabel` and custom accessors for `pandas` objects
 
