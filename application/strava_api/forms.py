@@ -3,4 +3,4 @@ from wtforms import SubmitField
 
 
 class BatchForm(FlaskForm):
-  submit = SubmitField('Save all Strava Activities')
+  submit = SubmitField('Save All Strava Activities')

@@ -17,7 +17,7 @@ from selenium.webdriver.common.by import By
 
 from application import create_app
 from application.models import db, StravaAccount
-from tests.util import get_chromedriver, strava_auth_flow
+from tests.util import get_chromedriver, strava_auth_flow, wait_for_element
 from tests import mock_stravalib, settings
 
 
@@ -178,16 +178,7 @@ class FunctionalTest(LiveServerTestCase):
     db.session.remove()
 
   def wait_for_element(self, by, value):
-    start_time = time.time()
-    while True:
-      try:
-        return self.browser.find_element(by, value)
-      except WebDriverException as e:
-        if time.time() - start_time > MAX_WAIT:
-          with open('out.html', 'w') as f:
-            f.write(self.browser.page_source)
-          raise e
-        time.sleep(0.5)
+    return wait_for_element(self.browser, by, value)
 
   def check_for_link_text(self, link_text):
     link = self.browser.find_element(By.LINK_TEXT, link_text)

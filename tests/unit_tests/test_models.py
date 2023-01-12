@@ -1,5 +1,6 @@
 import datetime
 
+import pytz
 from sqlalchemy import exc
 
 from application import db
@@ -50,6 +51,86 @@ class ActivityModelTest(FlaskTestCase):
     db.session.add_all((act_1, act_2))
     with self.assertRaisesRegex(exc.IntegrityError, 'UNIQUE constraint failed: activity.strava_id'):
       db.session.commit()
+
+  def test_find_overlap_ids(self):
+
+    saved_8_9 = self.create_activity(
+      recorded=datetime.datetime(2019, 12, 4, hour=8),
+      elapsed_time_s=3600,
+    )
+
+    saved_11_12 = self.create_activity(
+      recorded=datetime.datetime(2019, 12, 4, hour=11),
+      elapsed_time_s=3600,
+    )
+
+    # ---------------------------------------------------------------------
+    # Single-overlap cases
+
+    # Prospective: |______|
+    # Saved:            |______|      |______| 
+    self.assertTrue(len(Activity.find_overlap_ids(
+      datetime.datetime(2019, 12, 4, hour=7, minute=30, tzinfo=pytz.UTC),
+      datetime.datetime(2019, 12, 4, hour=8, minute=30, tzinfo=pytz.UTC),
+    )))
+
+    # Prospective:     |______|
+    # Saved:       |______|      |______| 
+    self.assertTrue(len(Activity.find_overlap_ids(
+      datetime.datetime(2019, 12, 4, hour=8, minute=30, tzinfo=pytz.UTC),
+      datetime.datetime(2019, 12, 4, hour=9, minute=30, tzinfo=pytz.UTC),
+    )))
+
+    # Prospective:   |__|
+    # Saved:       |______|      |______| 
+    self.assertTrue(len(Activity.find_overlap_ids(
+      datetime.datetime(2019, 12, 4, hour=8, minute=15, tzinfo=pytz.UTC),
+      datetime.datetime(2019, 12, 4, hour=8, minute=45, tzinfo=pytz.UTC),
+    )))
+
+    # Prospective: |__________|
+    # Saved:         |______|      |______| 
+    self.assertTrue(len(Activity.find_overlap_ids(
+      datetime.datetime(2019, 12, 4, hour=7, minute=45, tzinfo=pytz.UTC),
+      datetime.datetime(2019, 12, 4, hour=9, minute=15, tzinfo=pytz.UTC),
+    )))
+
+    # ---------------------------------------------------------------------
+    # Non-overlap cases
+
+    # Prospective: |______|
+    # Saved:                |______|          |______|
+    self.assertFalse(len(Activity.find_overlap_ids(
+      datetime.datetime(2019, 12, 4, hour=6, minute=30, tzinfo=pytz.UTC),
+      datetime.datetime(2019, 12, 4, hour=7, minute=30, tzinfo=pytz.UTC),
+    )))
+
+    # Prospective:                            |______|
+    # Saved:       |______|          |______| 
+    self.assertFalse(len(Activity.find_overlap_ids(
+      datetime.datetime(2019, 12, 4, hour=12, minute=30, tzinfo=pytz.UTC),
+      datetime.datetime(2019, 12, 4, hour=13, minute=30, tzinfo=pytz.UTC),
+    )))
+
+    # Prospective:          |______|
+    # Saved:       |______|          |______| 
+    self.assertFalse(len(Activity.find_overlap_ids(
+      datetime.datetime(2019, 12, 4, hour=9, minute=30, tzinfo=pytz.UTC),
+      datetime.datetime(2019, 12, 4, hour=10, minute=30, tzinfo=pytz.UTC),
+    )))
+
+    # ---------------------------------------------------------------------
+    # Double-overlap cases
+
+    # Prospective:          |__________|
+    # Saved:           |______|      |______| 
+    self.assertEqual(
+      len(Activity.find_overlap_ids(
+        datetime.datetime(2019, 12, 4, hour=8, minute=45, tzinfo=pytz.UTC),
+        datetime.datetime(2019, 12, 4, hour=12, minute=15, tzinfo=pytz.UTC),
+      )),
+      2
+    )
 
 
 class AdminUserModelTest(FlaskTestCase):

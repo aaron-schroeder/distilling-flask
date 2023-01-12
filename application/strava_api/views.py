@@ -1,20 +1,11 @@
-import datetime
 import os
 from urllib.parse import urljoin
 
-import dateutil
 from flask import flash, redirect, render_template, request, url_for
-from flask_login import current_user, login_required
-import pandas as pd
-from scipy.interpolate import interp1d
-from sqlalchemy.exc import IntegrityError
+from flask_login import login_required
 
+from application.models import db, StravaAccount
 from . import strava_api
-from application import converters, util
-from application.models import db, StravaAccount, Activity
-from application.plotlydash.dashboard_activity import calc_power
-from application.strava_api.forms import BatchForm
-import power.util as putil
 
 
 CLIENT_ID = os.environ.get('STRAVA_CLIENT_ID')

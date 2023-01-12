@@ -1,5 +1,5 @@
 import dash
-from dash import Dash, dcc, html
+from dash import Dash, html
 import dash_bootstrap_components as dbc
 
 
@@ -40,7 +40,7 @@ def add_dashboard_to_flask(server):
       ],
       brand='Training Zealot Analysis Platform',
       brand_href='/',
-      expand='xs',
+      expand='md',
       # color='primary',
       # dark=True,
       # className='navbar navbar-light bg-light'
@@ -48,4 +48,4 @@ def add_dashboard_to_flask(server):
     dash.page_container
   ])
 
-  return dash_app.server
+  return dash_app

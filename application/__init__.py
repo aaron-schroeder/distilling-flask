@@ -1,15 +1,18 @@
 import os
+
+from celery import Celery
 import dash
 from flask import Flask
 from flask_login import LoginManager
-from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
+from flask_sqlalchemy import SQLAlchemy
 
-from application.config import config
+from application.config import config, Config
 
 
 db = SQLAlchemy()
 login = LoginManager()
+celery = Celery(__name__, broker=Config.CELERY_BROKER_URL)
 migrate = Migrate()
 
 
@@ -34,6 +37,9 @@ def create_app(config_name='dev'):
   # SQLAlchemy
   db.init_app(app)
 
+  # Celery
+  celery.conf.update(app.config)
+
   from application.routes import route_blueprint  # ... as route_blueprint
   app.register_blueprint(route_blueprint)
 
@@ -43,15 +49,13 @@ def create_app(config_name='dev'):
   with app.app_context():
     # Add various dashboards using this Flask app as a server.
     from application.plotlydash.app import add_dashboard_to_flask
-    add_dashboard_to_flask(app)
+    dash_app = add_dashboard_to_flask(app)
+
+    if app.config.get('DEBUG'):
+      dash_app.enable_dev_tools(debug=True)
     
     # SQLAlchemy
     from application import models
-    # temporary - start with a fresh db since I haven't got migrations
-    # set up yet.
-    # db.drop_all()
-    
-    # db.create_all()  # Create sql tables for our data models
 
   # Flask-Login
   login.init_app(app)

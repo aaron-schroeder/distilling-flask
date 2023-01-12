@@ -12,6 +12,7 @@ from .base import AuthenticatedUserFunctionalTest
   settings.SKIP_STRAVA_OAUTH,
   'This test would pass were I not locked out of my Strava acct. Skipping.'
 )
+
 @skip('This is a huge operation depending on the linked strava acct.')
 class TestBatchSave(AuthenticatedUserFunctionalTest):
   def test_can_save_activity(self):

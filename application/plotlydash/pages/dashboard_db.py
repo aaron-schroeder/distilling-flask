@@ -39,7 +39,8 @@ def layout(activity_id=None):
 
   activity_dict = {
     k: f if not isinstance(f, datetime.date) else f.isoformat()
-    for k, f in activity.__dict__.items() if not k.startswith('_')
+    for k, f in activity.__dict__.items() 
+    if not k.startswith('_') and not k == 'strava_acct'
   }
 
   return dbc.Container(
