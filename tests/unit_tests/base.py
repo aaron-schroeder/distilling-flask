@@ -37,15 +37,15 @@ class FlaskTestCase(unittest.TestCase):
     self.app_context.pop()
     self.test_request_context.pop()
 
-  def create_activity(self, title='title'):
+  def create_activity(self, **kwargs):
     act = Activity(
-      title=title,
-      description='description',
-      created=datetime.datetime.utcnow(),
-      recorded=datetime.datetime.utcnow(),
-      tz_local='UTC',
-      moving_time_s=3600,
-      elapsed_time_s=3660,
+      title=kwargs.get('title', 'title'),
+      description=kwargs.get('description', 'description'),
+      created=kwargs.get('created', datetime.datetime.utcnow()),
+      recorded=kwargs.get('recorded', datetime.datetime.utcnow()),
+      tz_local=kwargs.get('tz_local', 'UTC'),
+      moving_time_s=kwargs.get('moving_time_s', 3600),
+      elapsed_time_s=kwargs.get('elapsed_time_s', 3660),
       # Fields below here not required
       # strava_id=activity_data['id'],
       # distance_m=activity_data['distance'],

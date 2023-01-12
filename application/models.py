@@ -6,6 +6,8 @@ import sys
 
 from flask import current_app
 from flask_login import UserMixin
+import pytz
+from stravalib.exc import RateLimitExceeded
 
 from application import db, login
 
@@ -125,6 +127,22 @@ class Activity(db.Model):
     unique=False,
     nullable=True,
   )
+
+  @property
+  def relative_url(self):
+    return f'/saved/{self.id}'
+
+  @classmethod
+  def find_overlap_ids(cls, datetime_st, datetime_ed):
+    return [
+      activity.id
+      for activity in cls.query.all()
+      if (
+        datetime_st < pytz.utc.localize(activity.recorded)
+          + datetime.timedelta(seconds=activity.elapsed_time_s)
+        and pytz.utc.localize(activity.recorded) < datetime_ed
+      )
+    ]
 
   def __repr__(self):
       return '<Activity {}>'.format(self.id)
@@ -254,9 +272,27 @@ class StravaAccount(db.Model):
     klass = import_string(backend or 'stravalib.Client')
     return klass(access_token=access_token)
 
-  @cached_property
+  @property
   def athlete(self):
-    return self.client.get_athlete()
+    try:
+      _athlete = self.client.get_athlete()
+    except RateLimitExceeded:
+      # HACK
+      class AthUhLete(object):
+        def __init__(zelf, *args, **kwargs):
+          for attr_nm, attr in kwargs.items():
+            setattr(zelf, attr_nm, attr)
+      
+      _athlete = AthUhLete(
+        profile=None,
+        firstname='Rate',
+        lastname='Limit',
+        run_count=None,
+        follower_count=None,
+        email=None,
+      )
+    
+    return _athlete
 
   @property
   def profile_picture_url(self):

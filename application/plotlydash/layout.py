@@ -8,6 +8,15 @@ SPEED_ID = 'speed'
 POWER_ID = 'power'
 
 
+COLORWAY = ['#636efa', '#EF553B', '#00cc96', '#ab63fa', '#FFA15A', '#19d3f3',
+            '#FF6692', '#B6E880', '#FF97FF', '#FECB52']
+COLORS = {
+  'ATL': COLORWAY[1],
+  'CTL': COLORWAY[0],
+  'USERS': COLORWAY[2:]
+}
+
+
 def create_x_stream_radiogroup(opts, value=None):
   value = value or opts[0]
 

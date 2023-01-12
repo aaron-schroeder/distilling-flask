@@ -5,7 +5,7 @@ import dash_bootstrap_components as dbc
 import pandas as pd
 
 from application import tasks, util
-from application.models import StravaAccount
+from application.models import Activity, StravaAccount
 from application.plotlydash.util import layout_login_required
 
 
@@ -31,14 +31,20 @@ def layout(**url_queries):
       html.H2('Your Strava Activities'),
       dbc.Form(
         [
+          dbc.Label('Which activities to keep in the case of overlap?'),
+          dbc.RadioItems(
+            id='overlap-choice',
+            options=[
+              {'label': 'Existing', 'value': 'existing'},
+              {'label': 'Incoming', 'value': 'incoming'},
+              {'label': 'Both', 'value': 'both', 'disabled': True}
+            ],
+            value='existing',
+            inline=True
+          ),
           dbc.Checklist(
             id='save-options',
             options=[
-              {
-                'label': 'Add strava activities whose times overlap with saved activities?',
-                'value': 'add-overlap',
-                'disabled': True,
-              },
               {
                 'label': 'Save walks and hikes as runs?',
                 'value': 'add-walks',
@@ -50,13 +56,14 @@ def layout(**url_queries):
                 'disabled': True,
               },
             ],
-            value=['add-overlap', 'add-walks'],
+            value=['add-walks'],
           ),
           dbc.Button(
             'Save All Strava Activities',
             id='save-all',
             type='submit',
-            class_name='me-2'
+            class_name='me-2',
+            disabled=True,
           ),
           dbc.Button(
             'Save Selected Strava Activities',
@@ -70,7 +77,7 @@ def layout(**url_queries):
         id='datatable-activity',
         row_selectable='multi',
         cell_selectable=False,
-        page_current=0,
+        page_current=int(url_queries.get('page', 1))-1,
         page_size=int(url_queries.get('limit', PAGE_SIZE)),
         # page_count=math.ceiling(activity_count/page_size),
         page_action='custom',
@@ -139,7 +146,6 @@ def update_table(page_current, page_size, sort_by, strava_id):
   activities._page = page_current + 1
 
   saved_activity_id_list = [a.strava_id for a in strava_acct.activities.all()]
-
   df = pd.DataFrame([
     {
       'Sport': activity.type,
@@ -149,7 +155,11 @@ def update_table(page_current, page_size, sort_by, strava_id):
       'Distance': activity.distance.to("mile").magnitude,
       'Elevation': activity.total_elevation_gain.to("foot").magnitude,
       'Saved': str(activity.id in saved_activity_id_list),
-      'Id': activity.id
+      'Id': activity.id,
+      'Overlap': str(Activity.find_overlap_ids(
+        activity.start_date,
+        activity.start_date + activity.elapsed_time,
+      ))
       # 'Map': activity.map,  # stravalib.model.Map
     }
     for activity in activities
@@ -176,7 +186,6 @@ def update_table(page_current, page_size, sort_by, strava_id):
       else {'name': c, 'id': c}
       for c in dfs.columns
       if c not in ['Id', 'Saved']
-      # if c not in ['Id']
     ],
     dfs.to_dict('records')
   )
@@ -188,9 +197,17 @@ def update_table(page_current, page_size, sort_by, strava_id):
   Input('save-all', 'n_clicks'),
   State('strava-id', 'data'),
   State('datatable-activity', 'data'),
-  State('datatable-activity', 'selected_rows')
+  State('datatable-activity', 'selected_rows'),
+  State('overlap-choice', 'value')
 )
-def save_strava_activities(n_clicks_selected, n_clicks_all, strava_id, activity_data, selected_rows):
+def save_strava_activities(
+  n_clicks_selected,
+  n_clicks_all, 
+  strava_account_id,
+  activity_data,
+  selected_rows,
+  overlap_choice
+):
   if (
     (not n_clicks_all and not n_clicks_selected)
     or activity_data is None
@@ -200,11 +217,17 @@ def save_strava_activities(n_clicks_selected, n_clicks_all, strava_id, activity_
   # Flash a message before/during/after redirecting like:
   # flash('Activities will be added in the background.')
   if n_clicks_all:
-    strava_ids='all'
+    client = StravaAccount.query.get(strava_account_id).client
+    strava_ids = [activity.id for activity in client.get_activities()]
   elif n_clicks_selected:
     df = pd.DataFrame.from_records(activity_data)
     strava_ids = df.iloc[selected_rows, :]['Id'].to_list()
 
-  tasks.async_save_strava_activities.delay(strava_id, activity_ids=strava_ids)
+  for strava_activity_id in strava_ids:
+    tasks.async_save_strava_activity.delay(
+      strava_account_id,
+      strava_activity_id,
+      handle_overlap=overlap_choice
+    )
 
   return '/strava/manage'
