@@ -4,9 +4,10 @@ from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
 import pandas as pd
 
-from application import tasks, util
+from application import tasks
 from application.models import Activity, StravaAccount
 from application.plotlydash.util import layout_login_required
+from application.util import units
 
 
 dash.register_page(__name__, path_template='/strava/activities',
@@ -151,7 +152,7 @@ def update_table(page_current, page_size, sort_by, strava_id):
       'Sport': activity.type,
       'Date': activity.start_date_local,
       'Title': f'[{activity.name}](/strava/activity/{activity.id}?id={strava_acct.strava_id})',
-      'Time': f'{util.seconds_to_string(activity.moving_time.total_seconds(), show_hour=True)}',
+      'Time': f'{units.seconds_to_string(activity.moving_time.total_seconds(), show_hour=True)}',
       'Distance': activity.distance.to("mile").magnitude,
       'Elevation': activity.total_elevation_gain.to("foot").magnitude,
       'Saved': str(activity.id in saved_activity_id_list),

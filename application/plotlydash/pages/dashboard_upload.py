@@ -16,19 +16,17 @@ import base64
 import datetime
 import io
 import json
-import os
 
 import dash
 from dash import dcc, html, callback, Input, Output, State
 from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
-from flask_login import current_user
 import pandas as pd
 
-from application import converters
-from application.plotlydash import dashboard_activity
 from application.plotlydash.aio_components import FigureDivAIO, StatsDivAIO
 from application.plotlydash.util import layout_login_required
+from application.util import readers
+from application.util.dataframe import calc_power
 
 
 dash.register_page(__name__, path_template='/upload',
@@ -150,7 +148,7 @@ def get_file_data(contents, fname):
     raise PreventUpdate
 
   # Add calcd fields to the DataFrame.
-  dashboard_activity.calc_power(df)
+  calc_power(df)
 
   return (
     StatsDivAIO(df=df, aio_id='upload'),
@@ -186,16 +184,16 @@ def parse_contents(contents, filename):
     data_json = json.loads(decoded.decode('utf-8'))
 
     # Assume the user uploaded strava stream json output
-    return converters.from_strava_streams(data_json)
+    return readers.from_strava_streams(data_json)
 
   elif filename.lower().endswith('fit'):
-    return converters.from_fit(decoded)
+    return readers.from_fit(decoded)
   
   elif filename.lower().endswith('csv'):
     return pd.read_csv(io.StringIO(decoded.decode('utf-8')))
 
   elif filename.lower().endswith('tcx'):
-    return converters.from_tcx(decoded)
+    return readers.from_tcx(decoded)
 
   elif filename.lower().endswith('gpx'):
-    return converters.from_gpx(decoded)
+    return readers.from_gpx(decoded)

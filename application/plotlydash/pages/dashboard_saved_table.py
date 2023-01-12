@@ -1,13 +1,12 @@
 import dash
-from dash import dash_table, dcc, html, Input, Output, State
-from dash.exceptions import PreventUpdate
+from dash import dash_table, html, Input, Output
 import dash_bootstrap_components as dbc
 import pandas as pd
 
-from application import tasks, util
 from application.models import db, Activity, StravaAccount
 from application.plotlydash.layout import COLORS
 from application.plotlydash.util import layout_login_required
+from application.util import units
 
 
 dash.register_page(__name__, path_template='/saved-list',
@@ -120,7 +119,7 @@ def update_table(page_current, page_size, sort_by):
       'Sport': 'Run*',
       'Date': activity.recorded,
       'Title': f'[{activity.title}]({activity.relative_url})',
-      'Time': f'{util.seconds_to_string(activity.moving_time_s, show_hour=True)}',
+      'Time': f'{units.seconds_to_string(activity.moving_time_s, show_hour=True)}',
       'Distance': activity.distance_m,
       'Elevation': activity.elevation_m,
       'TSS': activity.tss,
@@ -134,8 +133,8 @@ def update_table(page_current, page_size, sort_by):
     for activity in page
   ])
 
-  dfs['Distance'] = dfs['Distance'].apply(lambda meters: f'{meters/util.M_PER_MI:.2f} mi')
-  dfs['Elevation'] = dfs['Elevation'].apply(lambda meters: f'{meters*util.FT_PER_M:.0f} ft')
+  dfs['Distance'] = dfs['Distance'].apply(lambda meters: f'{meters/units.M_PER_MI:.2f} mi')
+  dfs['Elevation'] = dfs['Elevation'].apply(lambda meters: f'{meters*units.FT_PER_M:.0f} ft')
   dfs['TSS'] = dfs['TSS'].apply(lambda tss: f'{tss:.1f}')
   # eg "Sat, 12/31/2022 20:10:00"
   dfs['Date'] = dfs['Date'].dt.strftime(date_format='%a, %m/%d/%Y %H:%M:%S')

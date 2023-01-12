@@ -190,13 +190,7 @@ class FunctionalTest(LiveServerTestCase):
 
   def navigate_to_admin(self):
     self.browser_get_relative('/')
-    try:
-      self.wait_for_element(
-        By.XPATH, 
-        '//button[contains(@class, "toggler")]'
-      ).click()
-    except ElementClickInterceptedException:
-      print(self.browser.page_source)
+    
     self.wait_for_element(By.LINK_TEXT, 'Admin').click()
 
 

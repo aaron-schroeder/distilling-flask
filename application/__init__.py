@@ -40,8 +40,8 @@ def create_app(config_name='dev'):
   # Celery
   celery.conf.update(app.config)
 
-  from application.routes import route_blueprint  # ... as route_blueprint
-  app.register_blueprint(route_blueprint)
+  from application.main import main as main_blueprint
+  app.register_blueprint(main_blueprint)
 
   from application.strava_api import strava_api as strava_api_blueprint
   app.register_blueprint(strava_api_blueprint, url_prefix='/strava')

@@ -1,4 +1,4 @@
-"""Methods to convert data into ready-to-digest DataFrames."""
+"""Methods to convert data into easy-to-digest DataFrames."""
 import io
 
 import pandas as pd
@@ -47,6 +47,7 @@ def from_strava_streams(streams):
     df[CADENCE] = df[CADENCE] * 2
 
   return df
+
 
 def from_tcx(file_obj):
   """Read a file object representing a .tcx file into a DataFrame.

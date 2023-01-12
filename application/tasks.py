@@ -6,9 +6,10 @@ from scipy.interpolate import interp1d
 from sqlalchemy.exc import IntegrityError
 from stravalib.exc import RateLimitExceeded
 
-from application import celery, converters
+from application import celery
 from application.models import db, Activity, StravaAccount
-from application.plotlydash.dashboard_activity import calc_power
+from application.util.dataframe import calc_power
+from application.util import readers
 import power.util as putil
 
 
@@ -78,7 +79,7 @@ def async_save_strava_activity(self, account_id, activity_id, handle_overlap='ex
   tss = None
 
   if activity_streams:
-    df = converters.from_strava_streams(activity_streams)
+    df = readers.from_strava_streams(activity_streams)
     calc_power(df)
 
     if 'NGP' in df.columns:

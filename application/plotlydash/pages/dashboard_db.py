@@ -5,10 +5,9 @@ from dash import dcc, html, callback, Input, Output
 from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
 
-from application import converters, util
-from application.models import db, Activity, AdminUser
-from application.plotlydash import dashboard_activity
+from application.models import Activity
 from application.plotlydash.aio_components import FigureDivAIO, StatsDivAIO
+from application.util import dataframe, readers, units
 
 
 dash.register_page(__name__, path_template='/saved/<activity_id>',
@@ -30,12 +29,12 @@ def layout(activity_id=None):
 
   # Read the Strava response into a DataFrame and perform
   # additional calculations on it.
-  df = converters.from_strava_streams(client.get_activity_streams(
+  df = readers.from_strava_streams(client.get_activity_streams(
     activity.strava_id,
     types=['time', 'latlng', 'distance', 'altitude', 'velocity_smooth',
       'heartrate', 'cadence', 'watts', 'temp', 'moving', 'grade_smooth']
   ))
-  dashboard_activity.calc_power(df)
+  dataframe.calc_power(df)
 
   activity_dict = {
     k: f if not isinstance(f, datetime.date) else f.isoformat()
@@ -67,8 +66,8 @@ def update_stats(activity_data):
     html.H2(f"{activity_data['title']} ({activity_data['recorded']})"),
     dbc.Row([
       # dbc.Col(f"{activity_data['distance'] / 1609.34:.2f} mi"),
-      dbc.Col(f"Elapsed time: {util.seconds_to_string(activity_data['elapsed_time_s'])}"),
-      dbc.Col(f"Gain: {activity_data['elevation_m'] * util.FT_PER_M:.0f} ft"),
+      dbc.Col(f"Elapsed time: {units.seconds_to_string(activity_data['elapsed_time_s'])}"),
+      dbc.Col(f"Gain: {activity_data['elevation_m'] * units.FT_PER_M:.0f} ft"),
       # dbc.Col(f"{activity_data['moving_time']} sec (moving)"),
       dbc.Col(f"TSS: {activity_data['tss']:.0f} (IF: {activity_data['intensity_factor']:.2f})"),
     ]),

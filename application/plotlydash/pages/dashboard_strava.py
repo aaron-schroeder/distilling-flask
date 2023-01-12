@@ -5,16 +5,15 @@ import dash
 from dash import dcc, html, callback, Input, Output, State
 from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
-from flask_login import current_user
 import dateutil
 import pandas as pd
-
-from application import converters, util
-from application.models import db, Activity, StravaAccount
 from sqlalchemy.exc import IntegrityError
-from application.plotlydash import dashboard_activity
+
+from application.models import db, Activity, StravaAccount
 from application.plotlydash.aio_components import FigureDivAIO, StatsDivAIO
 from application.plotlydash.util import layout_login_required
+from application.util import readers, units
+from application.util.dataframe import calc_power
 
 
 dash.register_page(__name__, path_template='/strava/activity/<activity_id>',
@@ -34,12 +33,12 @@ def layout(activity_id=None, **queries):
 
   # Read the Strava json response into a DataFrame and perform
   # additional calculations on it.
-  df = converters.from_strava_streams(client.get_activity_streams(
+  df = readers.from_strava_streams(client.get_activity_streams(
     activity_id,
     types=['time', 'latlng', 'distance', 'altitude', 'velocity_smooth',
       'heartrate', 'cadence', 'watts', 'temp', 'moving', 'grade_smooth']
   ))
-  dashboard_activity.calc_power(df)
+  calc_power(df)
 
   out = dbc.Container(
     [
@@ -124,7 +123,7 @@ def update_stats(activity_data):
     dbc.Row([
       # dbc.Col(f"{activity_data['distance'] / 1609.34:.2f} mi"),
       dbc.Col(f"{activity_data['elapsed_time']} sec (total)"),
-      dbc.Col(f"{activity_data['total_elevation_gain'] * util.FT_PER_M:.0f} ft (gain)"),
+      dbc.Col(f"{activity_data['total_elevation_gain'] * units.FT_PER_M:.0f} ft (gain)"),
       # dbc.Col(f"{activity_data['moving_time']} sec (moving)"),
     ]),
     html.Div(activity_data['description']),
@@ -156,9 +155,9 @@ def add_strava_stats_to_table(activity_data, table_records):
   strava_row['Distance (m)'] = activity_data['distance']
   strava_row['Time (s)'] = activity_data['moving_time']
   strava_row['Speed (m/s)'] = activity_data['average_speed']
-  strava_row['Pace'] = util.speed_to_pace(activity_data['average_speed'])
-  strava_row['Time'] = util.seconds_to_string(activity_data['moving_time'])
-  strava_row['Distance (mi)'] = activity_data['distance'] / util.M_PER_MI
+  strava_row['Pace'] = units.speed_to_pace(activity_data['average_speed'])
+  strava_row['Time'] = units.seconds_to_string(activity_data['moving_time'])
+  strava_row['Distance (mi)'] = activity_data['distance'] / units.M_PER_MI
   
   df_stats = df_stats.append(strava_row, ignore_index=True)
 
