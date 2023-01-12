@@ -36,7 +36,7 @@ runs in a dashboard powered by Plotly Dash. From there, you can save each
 run to a local database, and view the long-term effects of training in a
 training log dashboard.
 
-See the [Examples](#examples) section below to see how everything works.
+See the [Running the App](#running-the-app) below to see how everything works.
 
 ---
 
@@ -80,7 +80,7 @@ docker run --name distillingflask  \
     distillingflask:latest
 ```
 
-## Running the app
+## Running the App
 
 ### Locally
 
