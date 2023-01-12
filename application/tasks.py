@@ -12,12 +12,7 @@ from application.plotlydash.dashboard_activity import calc_power
 import power.util as putil
 
 
-@celery.task(
-  bind=True,
-  # autoretry_for=(RateLimitExceeded,),
-  # retry_backoff=True,
-  # retry_kwargs={'countdown': 5}
-)
+@celery.task(bind=True)
 def async_save_strava_activity(self, account_id, activity_id, handle_overlap='existing'):
 
   strava_acct = StravaAccount.query.get(account_id)
@@ -26,7 +21,13 @@ def async_save_strava_activity(self, account_id, activity_id, handle_overlap='ex
   try:
     activity = client.get_activity(activity_id)
   except RateLimitExceeded:
-    self.retry()
+    # This generates retries in 1, 3, and 9 minutes.
+    # TODO: Print/pickle the exception to see if it contains useful 
+    #       information for smarter retrying.
+    self.retry(
+      countdown=60 * 3 ** self.request.retries,
+      max_retries=3,
+    )
 
   if activity.type not in ('Run', 'Walk', 'Hike'):
     print(f"Throwing out a {activity_data['type']}")
@@ -68,7 +69,10 @@ def async_save_strava_activity(self, account_id, activity_id, handle_overlap='ex
           'grade_smooth']
     )
   except RateLimitExceeded:
-    self.retry()
+    self.retry(
+      countdown=60 * 3 ** self.request.retries,
+      max_retries=3,
+    )
 
   intensity_factor = None
   tss = None
