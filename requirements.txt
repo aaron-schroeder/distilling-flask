@@ -8,11 +8,11 @@ flask-sqlalchemy>=2.5.1
 scipy
 fitparse>=1.2.0
 activereader>=0.0.1
-greenlet<0.5,>=0.4.5
+greenlet<0.4.17,>=0.4.5
 flask-login==0.6.2
 specialsauce>=0.0.2
 gunicorn
-psycopg2
+psycopg2-binary
 flask-wtf
 flask-migrate>=4.0.1
 stravalib>=1.1.0
