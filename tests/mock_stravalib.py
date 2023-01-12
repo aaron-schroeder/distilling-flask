@@ -36,9 +36,10 @@ class Client:
 
     return sample_athlete
 
-  def get_activities(self, limit=None, page=None):
-    # TODO: Handle different inputs for `limit` and `page`
-    return BatchedResultsIterator()
+  def get_activities(self, limit=None):
+    o = BatchedResultsIterator()
+    o._num_results = limit or 20
+    return o
 
   def get_activity(self, activity_id):
     with open('tests/unit_tests/sample_data/get_activity.json', 'r') as f:
@@ -74,8 +75,10 @@ class BatchedResultsIterator:
         name=f'Activity {self._counter + 1}',
         type='Run',
         start_date_local='2018-02-20T10:02:13Z',
+        start_date='2018-02-20T10:02:02',
         distance=10000,
         moving_time=3000,
+        elapsed_time=3600,
         total_elevation_gain=100,
       )
       self._counter += 1
