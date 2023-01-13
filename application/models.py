@@ -29,7 +29,7 @@ class Activity(db.Model):
   )
 
   title = db.Column(
-    db.String(100),
+    db.String(255),
     unique=False,
     nullable=True,  # Why force it?
   )
