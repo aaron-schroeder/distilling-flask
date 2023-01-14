@@ -4,23 +4,8 @@ from flask import url_for
 import stravalib
 
 from application.models import db, AdminUser, StravaAccount
-from tests.mock_stravalib import BatchedResultsIterator as MockBatchIterator
+from application.util.mock_stravalib import MOCK_TOKEN
 from .base import LoggedInFlaskTestCase, AuthenticatedFlaskTestCase
-
-
-# TODO: Use dummy values instsead
-MOCK_TOKEN = {
-  "token_type": "Bearer",
-  "access_token": "720e40342a74ec60554ac0c67c2eea15d0b83f61",
-  "expires_at": 1669278614,
-  "expires_in": 21600,
-  "refresh_token": "88580d9668f0934546af193d4b3f8214e99f78d9",
-  "athlete": {
-    "firstname": "Aaron",
-    "lastname": "Schroeder",
-    "id": 1,
-  }
-}
 
 
 class TestAuthorize(LoggedInFlaskTestCase):
@@ -40,11 +25,17 @@ class TestAuthorize(LoggedInFlaskTestCase):
 
 class TestHandleCode(LoggedInFlaskTestCase):
 
+  # def setUp(self):
+  #   self.mock_stravalib_client = mock_stravalib.Client()
+  
+  # @patch('stravalib.Client', mock_stravalib.Client)
   @patch('stravalib.Client.get_athlete')
   @patch('stravalib.Client.exchange_code_for_token')
   @patch('stravalib.Client.refresh_access_token')
-  def test_strava_oauth_callback(self, mock_get_token, mock_exchange_code_for_token, mock_get_athlete):
-    mock_get_token.return_value = MOCK_TOKEN
+  def test_strava_oauth_callback(self, mock_refresh_access_token, mock_exchange_code_for_token, mock_get_athlete):
+    # mock_strava_api.get('/activities/{id}', response_update={'id': test_activity_id})
+    # self.mock_stravalib_client.get_token(response_update={''})
+    mock_refresh_access_token.return_value = MOCK_TOKEN
     mock_exchange_code_for_token.return_value = MOCK_TOKEN
     mock_get_athlete.return_value = Mock(id=1)
 

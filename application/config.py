@@ -54,6 +54,13 @@ class TestingConfig(Config):
   SECRET_KEY = 'super secret key'
 
 
+class DummyConfig(Config):
+  SQLALCHEMY_DATABASE_URI = 'sqlite:///dummy.db'
+  # STRAVA_API_BACKEND = 'application.util.mock_stravalib.Client'
+  # STRAVA_API_BACKEND = 'application.util.mock_stravalib.LowLimitClient'
+  STRAVA_API_BACKEND = 'application.util.mock_stravalib.SimProdClient'
+
+
 class ProductionConfig(Config):
   DEBUG = False  # just in case
   SECRET_KEY = os.environ.get('SECRET_KEY') # don't set a default value
@@ -78,5 +85,6 @@ class ProductionConfig(Config):
 config = {
   'dev': Config,
   'test': TestingConfig,
+  'dummy': DummyConfig,
   'prod': ProductionConfig
 }

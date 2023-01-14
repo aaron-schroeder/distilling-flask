@@ -17,8 +17,9 @@ from selenium.webdriver.common.by import By
 
 from application import create_app
 from application.models import db, StravaAccount
+from application.util import mock_stravalib
 from tests.util import get_chromedriver, strava_auth_flow, wait_for_element
-from tests import mock_stravalib, settings
+from tests import settings
 
 
 MAX_WAIT = 20
@@ -50,7 +51,7 @@ class LiveServerTestCase(unittest.TestCase):
 
     self.app = self.create_app()
     self.app.config['STRAVA_API_BACKEND'] = (
-      'tests.mock_stravalib.Client' if settings.SKIP_STRAVA_API 
+      'application.util.mock_stravalib.Client' if settings.SKIP_STRAVA_API 
       else 'stravalib.Client'
     )
     

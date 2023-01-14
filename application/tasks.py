@@ -1,5 +1,7 @@
 import datetime
+import math
 
+from celery import group
 import dateutil
 import pandas as pd
 from scipy.interpolate import interp1d
@@ -13,6 +15,82 @@ from application.util import readers
 import power.util as putil
 
 
+def est_15_min_rate(strava_client):
+  # Whether we are rate-limited or not, we just got current info
+  # on the rate limit status.
+  rate_limit_status = strava_client.protocol.rate_limiter.rules[0].rate_limits
+
+  # Create groups of activities to be added. 
+  # Split into 15-minute waves (because of 15-min limit),
+  # but ultimately decide the rate based on the daily limit.
+  # (In the future, we can be smarter about which limit will
+  # be hit first.)
+  rate_hourly_max = min(
+    (rate_limit_status['long']['limit'] - 5) / (24 * 3),
+    (rate_limit_status['short']['limit']- 5) / (0.25 * 3)
+  )
+  
+  return math.floor(rate_hourly_max * 0.25)
+
+
+@celery.task(bind=True)
+def async_save_all_strava_activities(self, strava_account_id, handle_overlap='existing'):
+  """Master task that (hopefully) spawns a task for each activity."""
+  strava_acct = StravaAccount.query.get(strava_account_id)
+  saved_strava_activity_ids = [saved_activity.strava_id for saved_activity in strava_acct.activities.all()]
+  client = strava_acct.client
+
+  try:
+    # activity_ids = [activity.id for activity in client.get_activities()]
+    # activity_dicts = [activity.to_dict() for activity in client.get_activities()]
+    activity_ids = [
+      activity.id 
+      for activity in client.get_activities()
+      if (
+        activity.type in ('Run', 'Walk', 'Hike')
+        and activity.id not in saved_strava_activity_ids
+      )
+    ]
+
+  except RateLimitExceeded:
+    # This generates retries in 1, 3, and 9 minutes.
+    self.retry(
+      countdown=60 * 3 ** self.request.retries,
+      max_retries=3,
+    )
+
+  num_15_max = est_15_min_rate(client)
+  for chunk_index, i in enumerate(range(0, len(activity_ids), num_15_max)):
+    activity_ids_15_min = activity_ids[i:i + num_15_max]
+    group_15_min = group(
+      async_save_strava_activity.s(
+        strava_account_id,
+        strava_activity_id,
+        handle_overlap=handle_overlap
+      )
+      for strava_activity_id in activity_ids_15_min
+    )
+    group_15_min.apply_async(countdown=15 * 60 * chunk_index)
+
+
+@celery.task(bind=True)
+def async_save_selected_strava_activities(self, strava_account_id, strava_activity_ids, handle_overlap='existing'):
+  strava_acct = StravaAccount.query.get(strava_account_id)
+  saved_strava_activity_ids = [saved_activity.strava_id for saved_activity in strava_acct.activities.all()]
+
+  run_in_parallel = group(
+    async_save_strava_activity.s(
+      strava_account_id,
+      strava_activity_id,
+      handle_overlap=handle_overlap
+    )
+    for strava_activity_id in strava_activity_ids
+    if strava_activity_id not in saved_strava_activity_ids
+  )
+
+  return run_in_parallel.delay()
+
+
 @celery.task(bind=True)
 def async_save_strava_activity(self, account_id, activity_id, handle_overlap='existing'):
 
@@ -22,11 +100,9 @@ def async_save_strava_activity(self, account_id, activity_id, handle_overlap='ex
   try:
     activity = client.get_activity(activity_id)
   except RateLimitExceeded:
-    # This generates retries in 1, 3, and 9 minutes.
-    # TODO: Print/pickle the exception to see if it contains useful 
-    #       information for smarter retrying.
+    # This generates retries in 3, 9, and 27 minutes.
     self.retry(
-      countdown=60 * 3 ** self.request.retries,
+      countdown=180 * 3 ** self.request.retries,
       max_retries=3,
     )
 
@@ -71,7 +147,7 @@ def async_save_strava_activity(self, account_id, activity_id, handle_overlap='ex
     )
   except RateLimitExceeded:
     self.retry(
-      countdown=60 * 3 ** self.request.retries,
+      countdown=180 * 3 ** self.request.retries,
       max_retries=3,
     )
 

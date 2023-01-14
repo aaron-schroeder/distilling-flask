@@ -5,7 +5,7 @@ import unittest
 from unittest.mock import patch
 
 from application.models import AdminUser
-from tests.mock_stravalib import (
+from application.util.mock_stravalib import (
   MOCK_TOKEN, 
   BatchedResultsIterator as MockBatchIterator
 )

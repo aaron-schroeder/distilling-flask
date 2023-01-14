@@ -3,8 +3,10 @@ from urllib.parse import urljoin
 
 from flask import flash, redirect, render_template, request, url_for
 from flask_login import login_required
+from stravalib.exc import RateLimitExceeded
 
 from application.models import db, StravaAccount
+from application.util import units
 from . import strava_api
 
 
@@ -130,3 +132,35 @@ def revoke():
 
   flash(msg_success)
   return redirect(url_for('strava_api.manage'))
+
+@strava_api.route('/status')
+@login_required
+def show_strava_status():
+  # Doesn't matter whose token I use
+  strava_account = StravaAccount.query.first()
+
+  if not strava_account:
+    return 'No strava accounts are authorized yet', 200
+
+  client = strava_account.client
+
+  try:
+    client.get_athlete()
+  except RateLimitExceeded as e:
+    result = 'RateLimitExceeded'
+  else:
+    result = 'Did not throw `RateLimitExceeded`' 
+    
+  short = client.protocol.rate_limiter.rules[0].rate_limits['short']
+  long = client.protocol.rate_limiter.rules[0].rate_limits['long']
+
+  return (
+    (
+      f'<html>'
+      f'  <div>{result}</div>'
+      f'  <div>Short: {short["usage"]}/{short["limit"]} in {units.seconds_to_string(short["time"], show_hour=True)}</div>'
+      f'  <div>Long: {long["usage"]}/{long["limit"]} in {units.seconds_to_string(long["time"], show_hour=True)}</div>'
+      f'</html>'
+    ),
+    200
+  )

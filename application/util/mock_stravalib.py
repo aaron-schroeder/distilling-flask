@@ -7,9 +7,20 @@ with open('tests/unit_tests/sample_data/exchange_code_for_token.json', 'r') as f
   MOCK_TOKEN = json.load(f)
 
 
+class DummyClass:
+  def __init__(self, *args, **kwargs):
+    for key, value in kwargs.items():
+      setattr(self, key, value)
+
+
 class Client:
   def __init__(self, *args, **kwargs):
     self.access_token = kwargs.pop('access_token', None)
+    self.short_limit = kwargs.pop('short_limit', 100)
+    self.long_limit = kwargs.pop('long_limit', 1000)
+    self.short_usage = kwargs.pop('short_usage', 0)
+    self.long_usage = kwargs.pop('long_usage', 0)
+    self.activity_count = kwargs.pop('activity_count', 100)
 
   def exchange_code_for_token(self, code=None, client_id=None, client_secret=None):
     return MOCK_TOKEN
@@ -31,25 +42,42 @@ class Client:
       bind_client=self
     )
     sample_athlete._stats = stravalib.model.AthleteStats(
-      all_run_totals=stravalib.model.ActivityTotals(count=10)
+      all_run_totals=stravalib.model.ActivityTotals(count=self.activity_count)
     )
 
     return sample_athlete
 
   def get_activities(self, limit=None):
     o = BatchedResultsIterator()
-    o._num_results = limit or 20
+    o._num_results = min(limit, self.activity_count) if limit else self.activity_count
     return o
 
   def get_activity(self, activity_id):
     with open('tests/unit_tests/sample_data/get_activity.json', 'r') as f:
       data = json.load(f)
+    data['id'] = activity_id
     return stravalib.model.Activity(**data)
 
   def get_activity_streams(self, activity_id, types=None):
     with open('tests/unit_tests/sample_data/get_activity_streams.json', 'r') as f:
       data = json.load(f)
     return {stream['type']: stravalib.model.Stream(**stream) for stream in data}
+
+  @property
+  def protocol(self):
+
+    return DummyClass(
+      rate_limiter=DummyClass(
+        rules=[
+          DummyClass(
+            rate_limits={
+              'short': {'usage': self.short_usage + 1, 'limit': self.short_limit},
+              'long': {'usage': self.long_usage + 1, 'limit': self.long_limit},
+            }
+          )
+        ]
+      )
+    )
 
 
 class BatchedResultsIterator:
@@ -83,3 +111,47 @@ class BatchedResultsIterator:
       )
       self._counter += 1
       return result
+
+
+class LowLimitClient(Client):
+  def __init__(self, *args, **kwargs):
+    super().__init__(
+      short_limit=100,
+      long_limit=1000,
+      short_usage=0,
+      long_usage=0,
+      activity_count=4,
+    )
+
+
+class SimDevClient(Client):
+  def __init__(self, *args, **kwargs):
+    super().__init__(
+      short_limit=100,
+      long_limit=1000,
+      short_usage=0,
+      long_usage=0,
+      activity_count=1100,
+    )
+
+
+class SimProdClient(Client):
+  def __init__(self, *args, **kwargs):
+    super().__init__(
+      short_limit=600,
+      long_limit=30000,
+      short_usage=0,
+      long_usage=0,
+      activity_count=1100,
+    )
+
+
+class UltraHighLimitClient(Client):
+  def __init__(self, *args, **kwargs):
+    super().__init__(
+      short_limit=1e10,
+      long_limit=1e10,
+      short_usage=0,
+      long_usage=0,
+      activity_count=4,
+    )

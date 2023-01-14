@@ -64,7 +64,7 @@ def layout(**url_queries):
             id='save-all',
             type='submit',
             class_name='me-2',
-            disabled=True,
+            # disabled=True,
           ),
           dbc.Button(
             'Save Selected Strava Activities',
@@ -215,20 +215,27 @@ def save_strava_activities(
   ):
     raise PreventUpdate
 
+  # TODO
   # Flash a message before/during/after redirecting like:
   # flash('Activities will be added in the background.')
+
   if n_clicks_all:
-    client = StravaAccount.query.get(strava_account_id).client
-    strava_ids = [activity.id for activity in client.get_activities()]
+    # call a master task that gathers all the strava activity ids
+    # then dispatches a new task for each ID.
+    tasks.async_save_all_strava_activities.delay(
+      strava_account_id,
+      handle_overlap=overlap_choice
+    )
+
   elif n_clicks_selected:
     df = pd.DataFrame.from_records(activity_data)
     strava_ids = df.iloc[selected_rows, :]['Id'].to_list()
 
-  for strava_activity_id in strava_ids:
-    tasks.async_save_strava_activity.delay(
-      strava_account_id,
-      strava_activity_id,
-      handle_overlap=overlap_choice
-    )
+    for strava_activity_id in strava_ids:
+      tasks.async_save_strava_activity.delay(
+        strava_account_id,
+        strava_activity_id,
+        handle_overlap=overlap_choice
+      )
 
   return '/strava/manage'
