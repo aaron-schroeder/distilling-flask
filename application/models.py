@@ -4,8 +4,10 @@ from importlib import import_module
 import os
 import sys
 
+from dateutil import tz
 from flask import current_app
 from flask_login import UserMixin
+import pandas as pd
 import pytz
 from stravalib.exc import RateLimitExceeded
 
@@ -142,6 +144,24 @@ class Activity(db.Model):
         and pytz.utc.localize(activity.recorded) < datetime_ed
       )
     ]
+
+  @classmethod
+  def load_summary_df(cls):
+
+    fields = ['recorded', 'tss', 'title', 'elapsed_time_s', 'moving_time_s',
+              'elevation_m', 'distance_m', 'id', 'description', 'strava_acct_id']
+    df = pd.DataFrame(
+      [[getattr(a, field) for field in fields] for a in cls.query.all()], 
+      columns=fields
+    )
+
+    df = df.sort_values(by='recorded', axis=0)
+
+    # For now, convert to my tz - suggests setting TZ by user,
+    # not by activity.
+    df['recorded'] = df['recorded'].dt.tz_localize(tz.tzutc()).dt.tz_convert(tz.gettz('America/Denver'))
+
+    return df
 
   def __repr__(self):
       return '<Activity {}>'.format(self.id)

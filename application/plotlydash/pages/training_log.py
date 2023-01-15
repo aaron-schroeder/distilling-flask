@@ -4,13 +4,10 @@ import math
 import dash
 from dash import dcc, html, callback, Input, Output, State, ALL
 import dash_bootstrap_components as dbc
-from dateutil import tz
 import numpy as np
-import pandas as pd
 import plotly.graph_objs as go
 
 from application.models import Activity
-from application.plotlydash.layout import COLORS
 from application.util import units
 
 
@@ -19,43 +16,9 @@ dash.register_page(__name__, path_template='/',
 
 
 def layout():
-  # Load dates and TSS from db in to DF.
-  activities=Activity.query.all()
-
-  if len(activities) == 0:
-    return dbc.Container(
-      [
-        html.H1('Training Log'),
-        html.Hr(),
-        html.Div('No activities have been saved yet.')
-      ]
-    )
-
-  fields = ['recorded', 'tss', 'title', 'elapsed_time_s', 'strava_acct_id']
-  df = pd.DataFrame(
-    [[getattr(a, field) for field in fields] for a in activities], 
-    columns=fields
-  )
-
-  df = df.sort_values(by='recorded', axis=0)
-
-  # For now, convert to my tz - suggests setting TZ by user,
-  # not by activity.
-  df['recorded'] = df['recorded'].dt.tz_localize(tz.tzutc()).dt.tz_convert(tz.gettz('America/Denver'))
-
-  calc_ctl_atl(df)
-
   return dbc.Container(
     [
-      html.H1('Training Log'),
-      html.Hr(),
-      html.H2('Training Stress'),
-      html.Div(
-        TssGraphAIO(df, aio_id='log'),
-        style={'overflowX': 'scroll'}
-      ),
-      html.Hr(),
-      html.H2('Weekly Log'),
+      html.H1('Week-by-Week Training Log'),
       dbc.Row(
         [
           dbc.Col(
@@ -105,7 +68,6 @@ def layout():
         justify='center',
         className='mb-2',
       ),
-      dcc.Location(id='url'),
     ],
     id='dash-container',
     fluid=True,
@@ -114,31 +76,18 @@ def layout():
 
 @callback(
   Output('calendar-rows', 'children'),
-  # Input('url', 'pathname'),
   Input('add-weeks', 'n_clicks'),
-  # Input('bubble-dropdown', 'value'),
   State('calendar-rows', 'children'),
 )
 def update_calendar(n_clicks, children):
   
   n_clicks = n_clicks or 0
 
-  # Load dates and TSS from db in to DF.
+  # Load dates and TSS from db into DF.
   # TODO: Consider querying the database for dates, rather than
   # loading them all into a DataFrame.
-  activities=Activity.query.all()
+  df = Activity.load_summary_df()
   
-  fields = ['id', 'recorded', 'tss', 'title', 'description',
-            'elapsed_time_s', 'moving_time_s', 'distance_m', 'elevation_m']
-  df = pd.DataFrame(
-    [[getattr(a, field) for field in fields] for a in activities], 
-    columns=fields
-  )
-  df = df.sort_values(by='recorded', axis=0)
-
-  # For now, convert to my tz - suggests setting TZ by user,
-  # not by activity.
-  df['recorded'] = df['recorded'].dt.tz_localize(tz.tzutc()).dt.tz_convert(tz.gettz('America/Denver'))
   df['weekday'] = df['recorded'].dt.weekday
 
   # ** Coming soon: Special calendar view for current week **
@@ -180,11 +129,9 @@ def update_calendar(n_clicks, children):
 
 @callback(
   Output({'type': 'week-cal', 'index': ALL}, 'figure'),
-  # Input('url', 'pathname'),
   Input('bubble-dropdown', 'value'),
-  # Input('bubble-dropdown', 'value'),
   State({'type': 'week-cal', 'index': ALL}, 'figure'),
-  # if I do this, adding rows does not work right if not using distance:
+  # if I do this, adding rows does not work right when not using distance:
   # prevent_initial_call=True,
 )
 def update_calendar(bubble_type, figures):
@@ -192,130 +139,6 @@ def update_calendar(bubble_type, figures):
   figures = [update_week_cal(figure, bubble_type) for figure in figures]
 
   return figures
-
-
-def calc_ctl_atl(df):
-  """Add power-related columns to the DataFrame.
-  
-  For more, see boulderhikes.views.ActivityListView
-
-  """
-  df.fillna({'tss': 0.0}, inplace=True)
-
-  # atl_pre = [0.0]
-  atl_0 = 0.0
-  atl_pre = [atl_0]
-  atl_post = [ df['tss'].iloc[0] / 7.0 + atl_0]
-  
-  # ctl_pre = [0.0]
-  ctl_0 = 0.0
-  ctl_pre = [ctl_0]
-  ctl_post = [ df['tss'].iloc[0] / 42.0 + ctl_0]
-  for i in range(1, len(df)):
-    delta_t_days = (
-      df['recorded'].iloc[i] - df['recorded'].iloc[i-1]
-    ).total_seconds() / (3600 * 24)
-    
-    atl_pre.append(
-      (atl_pre[i-1] + df['tss'].iloc[i-1] / 7.0) * (6.0 / 7.0) ** delta_t_days
-    )
-    atl_post.append(
-      df['tss'].iloc[i] / 7.0 + atl_post[i-1] * (6.0 / 7.0)  ** delta_t_days
-    )
-    ctl_pre.append(
-      (ctl_pre[i-1] + df['tss'].iloc[i-1] / 42.0) * (41.0 / 42.0) ** delta_t_days
-    )
-    ctl_post.append(
-      df['tss'].iloc[i] / 42.0 + ctl_post[i-1] * (41.0 / 42.0) ** delta_t_days
-    )
-
-  df['ATL_pre'] = atl_pre
-  df['CTL_pre'] = ctl_pre
-  df['ATL_post'] = atl_post
-  df['CTL_post'] = ctl_post
-
-
-def TssGraphAIO(df, aio_id=None):
-  """"
-  Args:
-    df (pd.DataFrame): A DataFrame representing a time-indexed DataFrame
-      containing TSS for each recorded activity.
-
-  Returns:
-    dcc.Graph: dash component containing a visualization of the
-    training stress data contained in the DataFrame.
-  
-  """
-
-  df_stress = pd.DataFrame.from_dict({
-    'ctl': pd.concat([df['CTL_pre'], df['CTL_post']]),
-    'atl': pd.concat([df['ATL_pre'], df['ATL_post']]),
-    'date': pd.concat([
-      df['recorded'],
-      df['recorded'] + df['elapsed_time_s'].apply(pd.to_timedelta, unit='s')
-    ]),
-  }).sort_values(by='date', axis=0)
-
-  t_max = df['recorded'].max()
-  # t_min = max(df['recorded'].min(), df['recorded'].max() - datetime.timedelta(days=365))
-  t_min = df['recorded'].min()
-
-  fig = go.Figure(
-    layout=dict(
-      xaxis=dict(
-        range=[t_min, t_max]
-      ),
-      yaxis=dict(
-        range=[0, 1.1 * df['tss'].max()],
-        tickformat='.1f',
-      ),
-      margin=dict(b=40,t=0,r=0,l=0),
-      legend={'orientation': 'h'}
-    )
-  )
-
-  for i, (strava_id, df_id) in enumerate(df.groupby('strava_acct_id')):
-    fig.add_trace(go.Scatter(
-      x=df_id['recorded'], 
-      y=df_id['tss'], 
-      name=f'TSS ({strava_id})',
-      text=df_id['title'],
-      mode='markers',
-      line_color=COLORS['USERS'][i],
-    ))
-
-  fig.add_trace(go.Scatter(
-    # x=df['recorded'],
-    x=df_stress['date'],
-    # y=df['CTL_post'],
-    y=df_stress['ctl'],
-    name='CTL',
-    fill='tozeroy',
-    mode='lines',
-    line_color=COLORS['CTL'],
-    # fillcolor='rgba(239, 85, 59, 0.5)',
-  ))
-
-  fig.add_trace(go.Scatter(
-    x=df_stress['date'],
-    y=df_stress['atl'],
-    name='ATL',
-    text=df_stress['atl']-df_stress['ctl'],
-    hovertemplate='%{x}: ATL=%{y:.1f}, TSB=%{text:.1f}',
-    fill='tonexty',
-    mode='lines',
-    line_color=COLORS['ATL'],
-  ))
-
-  px_per_year = 800
-  required_graph_px = px_per_year * (t_max - t_min).total_seconds() / datetime.timedelta(days=365).total_seconds()
-
-  return dcc.Graph(
-    id=aio_id,
-    figure=fig,
-    config={'displayModeBar': False},
-    style={'width': f'{required_graph_px}px'},
-  )
 
 
 def create_week_sum(df_week, date_start):
@@ -370,6 +193,7 @@ def create_week_sum(df_week, date_start):
   ])
 
   return div
+
 
 def create_week_cal(df_week):
   """Create weekly training log view as a bubble chart."""
