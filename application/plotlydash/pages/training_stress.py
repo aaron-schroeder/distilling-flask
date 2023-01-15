@@ -42,6 +42,7 @@ def layout():
               {'label': 'Week', 'value': 'week'},
               {'label': 'Month', 'value': 'month'},
               {'label': 'Year', 'value': 'year'},
+              {'label': 'All-time', 'value': 'alltime'},
             ],
             value='month',
             id='radioitems-timescale',
@@ -142,11 +143,12 @@ def TssGraph(df, id=None):
   )
 
 
-def required_graph_px(total_seconds, timescale='year'):
+def required_graph_px(total_seconds, timescale='alltime'):
   px_per_year = {
     'alltime': 800,
-    'month': 10000,
-    'week': 40000,
+    'year': 3000,
+    'month': 36000,
+    'week': 150000,
   }
   total_years = total_seconds / datetime.timedelta(days=365).total_seconds()
   return px_per_year.get(timescale, 2000) * total_years
@@ -158,7 +160,10 @@ def required_graph_px(total_seconds, timescale='year'):
   State('total-seconds', 'data')
 )
 def update_fig_width(timescale_choice, total_seconds):
-  if timescale_choice not in ('week', 'month', 'year') or total_seconds is None:
+  if (
+    timescale_choice not in ('week', 'month', 'year', 'alltime') 
+    or total_seconds is None
+  ):
     raise PreventUpdate
 
   px = max(

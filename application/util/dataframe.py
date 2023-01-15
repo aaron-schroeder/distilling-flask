@@ -1,5 +1,6 @@
 import datetime
 
+from dateutil import tz
 import pandas as pd
 from specialsauce.sources import minetti, strava, trainingpeaks
 
@@ -30,6 +31,9 @@ def calc_ctl_atl(df):
       recorded_full.extend(activities_today['recorded'].to_list())
     else:
       recorded_full.append(dt_dummy)
+
+  # Add a row representing the current time.
+  recorded_full.append(pd.Timestamp.now(tz.gettz('America/Denver')))
 
   df_padded = df.set_index('recorded'
     ).reindex(pd.DatetimeIndex(recorded_full)
