@@ -1,14 +1,15 @@
 import datetime
-import math
 
 import dash
-from dash import dcc, html
+from dash import callback, dcc, html, Input, Output, State
+from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
 import pandas as pd
 import plotly.graph_objs as go
 
 from application.models import Activity
 from application.plotlydash.layout import COLORS
+from application.util.dataframe import calc_ctl_atl
 
 
 dash.register_page(__name__, path_template='/stress',
@@ -27,64 +28,42 @@ def layout():
       ]
     )
 
-  calc_ctl_atl(df)
+  df_padded = calc_ctl_atl(df)
 
   return dbc.Container(
     [
       html.H1('Training Stress'),
       html.Hr(),
       html.Div(
-        TssGraphAIO(df, aio_id='stress'),
+        [
+          dbc.Label('Choose timescale'),
+          dbc.RadioItems(
+            options=[
+              {'label': 'Week', 'value': 'week'},
+              {'label': 'Month', 'value': 'month'},
+              {'label': 'Year', 'value': 'year'},
+            ],
+            value='month',
+            id='radioitems-timescale',
+            inline=True,
+          ),
+        ]
+      ),
+      html.Div(
+        TssGraph(df_padded, id='stress-graph'),
         style={'overflowX': 'scroll'}
       ),
+      dcc.Store(
+        id='total-seconds',
+        data=(df['recorded'].max() - df['recorded'].min()).total_seconds()
+      )
     ],
     id='dash-container',
     fluid=True,
   )
 
 
-def calc_ctl_atl(df):
-  """Add power-related columns to the DataFrame.
-  
-  For more, see boulderhikes.views.ActivityListView
-
-  """
-  df.fillna({'tss': 0.0}, inplace=True)
-
-  # atl_pre = [0.0]
-  atl_0 = 0.0
-  atl_pre = [atl_0]
-  atl_post = [ df['tss'].iloc[0] / 7.0 + atl_0]
-  
-  # ctl_pre = [0.0]
-  ctl_0 = 0.0
-  ctl_pre = [ctl_0]
-  ctl_post = [ df['tss'].iloc[0] / 42.0 + ctl_0]
-  for i in range(1, len(df)):
-    delta_t_days = (
-      df['recorded'].iloc[i] - df['recorded'].iloc[i-1]
-    ).total_seconds() / (3600 * 24)
-    
-    atl_pre.append(
-      (atl_pre[i-1] + df['tss'].iloc[i-1] / 7.0) * (6.0 / 7.0) ** delta_t_days
-    )
-    atl_post.append(
-      df['tss'].iloc[i] / 7.0 + atl_post[i-1] * (6.0 / 7.0)  ** delta_t_days
-    )
-    ctl_pre.append(
-      (ctl_pre[i-1] + df['tss'].iloc[i-1] / 42.0) * (41.0 / 42.0) ** delta_t_days
-    )
-    ctl_post.append(
-      df['tss'].iloc[i] / 42.0 + ctl_post[i-1] * (41.0 / 42.0) ** delta_t_days
-    )
-
-  df['ATL_pre'] = atl_pre
-  df['CTL_pre'] = ctl_pre
-  df['ATL_post'] = atl_post
-  df['CTL_post'] = ctl_post
-
-
-def TssGraphAIO(df, aio_id=None):
+def TssGraph(df, id=None):
   """"
   Args:
     df (pd.DataFrame): A DataFrame representing a time-indexed DataFrame
@@ -156,12 +135,35 @@ def TssGraphAIO(df, aio_id=None):
     line_color=COLORS['ATL'],
   ))
 
-  px_per_year = 800
-  required_graph_px = px_per_year * (t_max - t_min).total_seconds() / datetime.timedelta(days=365).total_seconds()
-
   return dcc.Graph(
-    id=aio_id,
+    id=id,
     figure=fig,
     config={'displayModeBar': False},
-    style={'width': f'{required_graph_px}px'},
   )
+
+
+def required_graph_px(total_seconds, timescale='year'):
+  px_per_year = {
+    'alltime': 800,
+    'month': 10000,
+    'week': 40000,
+  }
+  total_years = total_seconds / datetime.timedelta(days=365).total_seconds()
+  return px_per_year.get(timescale, 2000) * total_years
+
+
+@callback(
+  Output('stress-graph', 'style'),
+  Input('radioitems-timescale', 'value'),
+  State('total-seconds', 'data')
+)
+def update_fig_width(timescale_choice, total_seconds):
+  if timescale_choice not in ('week', 'month', 'year') or total_seconds is None:
+    raise PreventUpdate
+
+  px = max(
+    required_graph_px(float(total_seconds), timescale=timescale_choice), 
+    120
+  )
+
+  return {'width': f'{px}px'}
