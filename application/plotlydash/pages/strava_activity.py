@@ -59,16 +59,14 @@ def layout(activity_id=None, **queries):
   Input('save-activity', 'n_clicks'),
   State(FigureDivAIO.ids.store('strava'), 'data'),
   State('strava-summary-response', 'data'),
-  State(StatsDivAIO.ids.intensity('strava'), 'value'),
-  State(StatsDivAIO.ids.tss('strava'), 'value'),
+  State(StatsDivAIO.ids.ngp('strava'), 'value'),
   prevent_initial_call=True
 )
 def save_activity(
   n_clicks, 
   record_data,
   activity_data,
-  intensity_factor,
-  tss
+  ngp_string,
 ):
   """Create database record for activity and save data files."""
   if (
@@ -91,10 +89,10 @@ def save_activity(
       elapsed_time_s=activity_data['elapsed_time'],
       # Fields below here not required
       strava_id=activity_data['id'],
+      strava_acct_id=activity_data['athlete']['id'],
       distance_m=activity_data['distance'],
       elevation_m=activity_data['total_elevation_gain'],
-      intensity_factor=intensity_factor,
-      tss=tss,
+      ngp_ms=units.pace_to_speed(ngp_string),
     )
     db.session.add(new_act)
     db.session.commit()

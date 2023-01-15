@@ -699,6 +699,7 @@ class StatsDivAIO(dbc.Accordion):
     table = id_factory('StatsDivAIO', 'table')
     intensity = lambda aio_id: TssDivAIO.ids.intensity(aio_id)
     tss = lambda aio_id: TssDivAIO.ids.tss(aio_id)
+    ngp = lambda aio_id: TssDivAIO.ids.ngp(aio_id)
 
   def __init__(self, df=None, aio_id=None):
     if df is None:

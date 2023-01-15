@@ -10,6 +10,7 @@ import pytz
 from stravalib.exc import RateLimitExceeded
 
 from application import db, login
+from application.util import units
 
 
 CLIENT_ID = os.environ.get('STRAVA_CLIENT_ID')
@@ -109,24 +110,22 @@ class Activity(db.Model):
     nullable=False,
   )
 
-  # Might make this required - I'd like every activity to have a
-  # quantification of stress. This + duration = stress. Still thinking
-  # it through, though.
-  #
-  # Also, consider that there might be multiple intensity factors
-  # corresponding to different data streams or methods of calculation.
-  intensity_factor = db.Column(
+  ngp_ms = db.Column(
     db.Float,
     unique=False,
-    nullable=True,
+    nullable=True
   )
 
-  # Maybe (could be duplicate info w/ IF)
-  tss = db.Column(
-    db.Float,
-    unique=False,
-    nullable=True,
-  )
+  @property
+  def intensity_factor(self):
+    if self.ngp_ms:
+      # return self.ngp_ms / AdminUser().get_ftp_ms(self.recorded)
+      return self.ngp_ms / units.pace_to_speed('6:30')
+
+  @property
+  def tss(self):
+    if self.intensity_factor:
+      return 100.0 * (self.elapsed_time_s / 3600) * self.intensity_factor ** 2
 
   @property
   def relative_url(self):
@@ -272,7 +271,7 @@ class StravaAccount(db.Model):
     klass = import_string(backend or 'stravalib.Client')
     return klass(access_token=access_token)
 
-  @property
+  @cached_property
   def athlete(self):
     try:
       _athlete = self.client.get_athlete()

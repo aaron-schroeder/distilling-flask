@@ -5,6 +5,7 @@ from sqlalchemy import exc
 
 from application import db
 from application.models import Activity, AdminUser, StravaAccount
+from application.util import units
 from .base import FlaskTestCase
 
 
@@ -130,6 +131,47 @@ class ActivityModelTest(FlaskTestCase):
         datetime.datetime(2019, 12, 4, hour=12, minute=15, tzinfo=pytz.UTC),
       )),
       2
+    )
+
+  def test_intensity_factor(self):
+    self.assertEqual(   
+      self.create_activity(ngp_ms=units.pace_to_speed('6:30')).intensity_factor,
+      1.0
+    )
+
+    self.assertLess(
+      self.create_activity(ngp_ms=units.pace_to_speed('7:30')).intensity_factor,
+      1.0
+    )
+
+    self.assertGreater(
+      self.create_activity(ngp_ms=units.pace_to_speed('5:30')).intensity_factor,
+      1.0
+    )
+
+  def test_tss(self):
+    self.assertEqual(   
+      self.create_activity(
+        ngp_ms=units.pace_to_speed('6:30'),
+        elapsed_time_s=3600,
+      ).tss,
+      100.0
+    )
+
+    self.assertLess(
+      self.create_activity(
+        ngp_ms=units.pace_to_speed('7:30'),
+        elapsed_time_s=3600,
+      ).tss,
+      100.0
+    )
+
+    self.assertGreater(
+      self.create_activity(
+        ngp_ms=units.pace_to_speed('5:30'),
+        elapsed_time_s=3600,
+      ).tss,
+      100.0
     )
 
 

@@ -50,11 +50,12 @@ class FlaskTestCase(unittest.TestCase):
       # strava_id=activity_data['id'],
       # distance_m=activity_data['distance'],
       # elevation_m=activity_data['total_elevation_gain'],
-      # intensity_factor=intensity_factor,
-      # tss=tss,
+      ngp_ms=kwargs.pop('ngp_ms', None)
     )
     db.session.add(act)
     db.session.commit()
+
+    return act
 
 
 class LoggedInFlaskTestCase(FlaskTestCase):

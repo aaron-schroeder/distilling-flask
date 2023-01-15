@@ -24,7 +24,6 @@ def layout(activity_id=None):
   if not strava_account or not strava_account.has_authorized:
     return dbc.Container('This app\'s administrator is not currently granting '
                          'permission to access their Strava activities.')
-  
   client = strava_account.client
 
   # Read the Strava response into a DataFrame and perform
@@ -36,18 +35,12 @@ def layout(activity_id=None):
   ))
   dataframe.calc_power(df)
 
-  activity_dict = {
-    k: f if not isinstance(f, datetime.date) else f.isoformat()
-    for k, f in activity.__dict__.items() 
-    if not k.startswith('_') and not k == 'strava_acct'
-  }
-
   return dbc.Container(
     [
       html.Div(id='model-stats'),
       StatsDivAIO(df=df, aio_id='saved'),
       FigureDivAIO(df=df, aio_id='saved'),
-      dcc.Store(id='activity-stats', data=activity_dict),
+      dcc.Store(id='activity-id', data=activity_id),
     ],
     id='dash-container',
   )
@@ -55,23 +48,25 @@ def layout(activity_id=None):
 
 @callback(
   Output('model-stats', 'children'),
-  Input('activity-stats', 'data'),
+  Input('activity-id', 'data'),
 )
-def update_stats(activity_data):
+def update_stats(activity_id):
   """Fill the div with Activity model data."""
-  if activity_data is None:
+  if activity_id is None:
     raise PreventUpdate
 
+  activity = Activity.query.get(activity_id)
+
   children = [
-    html.H2(f"{activity_data['title']} ({activity_data['recorded']})"),
+    html.H2(f"{activity.title} ({activity.recorded})"),
     dbc.Row([
       # dbc.Col(f"{activity_data['distance'] / 1609.34:.2f} mi"),
-      dbc.Col(f"Elapsed time: {units.seconds_to_string(activity_data['elapsed_time_s'])}"),
-      dbc.Col(f"Gain: {activity_data['elevation_m'] * units.FT_PER_M:.0f} ft"),
+      dbc.Col(f"Elapsed time: {units.seconds_to_string(activity.elapsed_time_s)}"),
+      dbc.Col(f"Gain: {activity.elevation_m * units.FT_PER_M:.0f} ft"),
       # dbc.Col(f"{activity_data['moving_time']} sec (moving)"),
-      dbc.Col(f"TSS: {activity_data['tss']:.0f} (IF: {activity_data['intensity_factor']:.2f})"),
+      dbc.Col(f"TSS: {activity.tss:.0f} (IF: {activity.intensity_factor:.2f})"),
     ]),
-    html.Div(activity_data['description']),
+    html.Div(activity.description),
     html.Hr(),
   ]
 

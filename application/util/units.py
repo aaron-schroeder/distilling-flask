@@ -10,10 +10,7 @@ KG_PER_LB = 2.2
 
 
 def pace_to_speed(pace_string):
-  pace = datetime.datetime.strptime(pace_string, '%M:%S')  \
-       - datetime.datetime.strptime('0:00', '%M:%S')
-
-  return M_PER_MI / pace.total_seconds()
+  return M_PER_MI / string_to_seconds(pace_string)
   
 
 def datetime_to_string(dt, show_hour=False):
