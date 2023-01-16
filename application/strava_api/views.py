@@ -133,6 +133,7 @@ def revoke():
   flash(msg_success)
   return redirect(url_for('strava_api.manage'))
 
+
 @strava_api.route('/status')
 @login_required
 def show_strava_status():

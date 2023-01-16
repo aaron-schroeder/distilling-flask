@@ -1,7 +1,6 @@
 from functools import wraps
-import uuid
 
-from dash import Dash, dcc
+from dash import Dash, dcc, html
 import dash_bootstrap_components as dbc
 from flask_login import current_user
 
@@ -9,12 +8,12 @@ from application.plotlydash.aio_components import FigureDivAIO, StatsDivAIO
 from application.util.dataframe import calc_power
 
 
-def layout_login_required(f):
-  @wraps(f)
+def layout_login_required(layout_func):
+  @wraps(layout_func)
   def decorated_function(*args, **kwargs):
-    if current_user.is_authenticated:
-        return f(*args, **kwargs)
-    return dcc.Location(pathname='/login', id=str(uuid.uuid4()))
+    if not current_user.is_authenticated:
+      return dcc.Location(pathname='/login')
+    return layout_func(*args, **kwargs)
   return decorated_function
 
 
