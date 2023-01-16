@@ -155,6 +155,9 @@ class Activity(db.Model):
       columns=fields
     )
 
+    if not len(df):
+      return df
+
     df = df.sort_values(by='recorded', axis=0)
 
     # For now, convert to my tz - suggests setting TZ by user,
@@ -284,11 +287,21 @@ class StravaAccount(db.Model):
   @staticmethod
   def get_client(backend=None, access_token=None):
     """Load a strava connection backend and return an instance of it.
-    If backend is None (default), use `config.STRAVA_API_BACKEND`, or
+    If backend is None (default), use `config.STRAVALIB_CLIENT`, or
     finally default to stravalib.
     """
-    backend = backend or current_app.config.get('STRAVA_API_BACKEND')
+    backend = backend or current_app.config.get('STRAVALIB_CLIENT')
     klass = import_string(backend or 'stravalib.Client')
+    for cfg_name, cfg_val in current_app.config.items():
+      if (
+        cfg_name.startswith('MOCK_STRAVALIB_') 
+        and current_app.config.get(cfg_name)
+      ):
+        setattr(
+          klass,
+          cfg_name.split('MOCK_STRAVALIB')[1].lower(),
+          cfg_val
+        )
     return klass(access_token=access_token)
 
   @cached_property

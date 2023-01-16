@@ -87,6 +87,9 @@ def update_calendar(n_clicks, children):
   # TODO: Consider querying the database for dates, rather than
   # loading them all into a DataFrame.
   df = Activity.load_summary_df()
+
+  if len(df) == 0:
+    return html.Div('No activities have been saved yet.')
   
   df['weekday'] = df['recorded'].dt.weekday
 

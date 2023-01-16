@@ -14,13 +14,14 @@ class DummyClass:
 
 
 class Client:
+  _short_limit = 100
+  _long_limit = 1000
+  _short_usage = 0
+  _long_usage = 0
+  _activity_count = 100
+
   def __init__(self, *args, **kwargs):
     self.access_token = kwargs.pop('access_token', None)
-    self.short_limit = kwargs.pop('short_limit', 100)
-    self.long_limit = kwargs.pop('long_limit', 1000)
-    self.short_usage = kwargs.pop('short_usage', 0)
-    self.long_usage = kwargs.pop('long_usage', 0)
-    self.activity_count = kwargs.pop('activity_count', 100)
 
   def exchange_code_for_token(self, code=None, client_id=None, client_secret=None):
     return MOCK_TOKEN
@@ -42,14 +43,14 @@ class Client:
       bind_client=self
     )
     sample_athlete._stats = stravalib.model.AthleteStats(
-      all_run_totals=stravalib.model.ActivityTotals(count=self.activity_count)
+      all_run_totals=stravalib.model.ActivityTotals(count=self._activity_count)
     )
 
     return sample_athlete
 
   def get_activities(self, limit=None):
     o = BatchedResultsIterator()
-    o._num_results = min(limit, self.activity_count) if limit else self.activity_count
+    o._num_results = min(limit, self._activity_count) if limit else self._activity_count
     return o
 
   def get_activity(self, activity_id):
@@ -71,8 +72,8 @@ class Client:
         rules=[
           DummyClass(
             rate_limits={
-              'short': {'usage': self.short_usage + 1, 'limit': self.short_limit},
-              'long': {'usage': self.long_usage + 1, 'limit': self.long_limit},
+              'short': {'usage': self._short_usage + 1, 'limit': self._short_limit},
+              'long': {'usage': self._long_usage + 1, 'limit': self._long_limit},
             }
           )
         ]
@@ -114,44 +115,24 @@ class BatchedResultsIterator:
 
 
 class LowLimitClient(Client):
-  def __init__(self, *args, **kwargs):
-    super().__init__(
-      short_limit=100,
-      long_limit=1000,
-      short_usage=0,
-      long_usage=0,
-      activity_count=4,
-    )
+  _short_limit = 100
+  _long_limit = 1000
+  _short_usage = 0
+  _long_usage = 0
+  _activity_count = 4
 
 
 class SimDevClient(Client):
-  def __init__(self, *args, **kwargs):
-    super().__init__(
-      short_limit=100,
-      long_limit=1000,
-      short_usage=0,
-      long_usage=0,
-      activity_count=1100,
-    )
+  _short_limit = 100
+  _long_limit = 1000
+  _short_usage = 0
+  _long_usage = 0
+  _activity_count = 1100
 
 
 class SimProdClient(Client):
-  def __init__(self, *args, **kwargs):
-    super().__init__(
-      short_limit=600,
-      long_limit=30000,
-      short_usage=0,
-      long_usage=0,
-      activity_count=1100,
-    )
-
-
-class UltraHighLimitClient(Client):
-  def __init__(self, *args, **kwargs):
-    super().__init__(
-      short_limit=1e10,
-      long_limit=1e10,
-      short_usage=0,
-      long_usage=0,
-      activity_count=4,
-    )
+  _short_limit = 600
+  _long_limit = 30000
+  _short_usage = 0
+  _long_usage = 0
+  _activity_count = 1100

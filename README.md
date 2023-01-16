@@ -33,6 +33,8 @@ runs in a dashboard powered by Plotly Dash. From there, you can save each
 run to a database, and view the long-term effects of training in a
 training log dashboard.
 
+A [demo app](https://fit.trailzealot.com) is available to view on my website.
+
 See the [Running the App](#running-the-app) below to see how everything works.
 
 ---
@@ -93,24 +95,7 @@ To do this, you must:
   - Set the authorization callback domain for your app to `localhost`
   - Copy your app's "client ID" and "client secret" somewhere secure
 
-To run the app from a python script:
-```python
-import os
-
-import application
-
-
-# Get ahold of the credentials for your Strava app
-# ...
-os.environ['STRAVA_CLIENT_ID'] = client_id
-os.environ['STRAVA_CLIENT_SECRET'] = client_secret
-
-# Choose the password for this app. Ideally don't use your Strava password.
-os.environ['PASSWORD'] = 'super_secret_password'
-app = application.create_app()
-app.run()
-```
-To run the app from the command line:
+To run the app using Flask's CLI:
 ```
 STRAVA_CLIENT_ID=${STRAVA_CLIENT_ID}  \
 STRAVA_CLIENT_SECRET=${STRAVA_CLIENT_SECRET}  \
@@ -128,7 +113,21 @@ You don't need to set your app up with Strava to access some of
 its features like the file upload analysis dashboard.
 The command to run this configuration of the app is simpler.
 
-Python script:
+Flask CLI:
+```sh
+PASSWORD=super_secret_password  \
+flask --app 'application:create_app("dummy")'
+```
+
+distilling-flask CLI:
+To use `df` (the distilling-flask CLI), first install the package locally with
+`pip install -e .`
+```
+PASSWORD=super_secret_password  \
+df rundummy
+```
+
+In a python script:
 ```python
 import os
 
@@ -140,11 +139,16 @@ os.environ['PASSWORD'] = 'super_secret_password'
 app = application.create_app()
 app.run()
 ```
-Command line:
-```sh
-PASSWORD=super_secret_password  \
-flask --app application
-```
+
+There are a number of optional settings that control the behavior of the
+simulated Strava client. They can all be set with environment variables,
+a `.env` file, or (in the case of the distilling-flask CLI) arguments to
+the command.
+- `MOCK_STRAVALIB_ACTIVITY_COUNT`
+- `MOCK_STRAVALIB_SHORT_LIMIT`
+- `MOCK_STRAVALIB_LONG_LIMIT`
+- `MOCK_STRAVALIB_SHORT_USAGE`
+- `MOCK_STRAVALIB_LONG_USAGE`
 
 Filetypes accepted by the upload-to-analyze dashboard:
   - `fit` file (requires [`fitparse`](https://github.com/dtcooper/python-fitparse) and [`dateutil`](https://dateutil.readthedocs.io/en/stable/))
@@ -160,8 +164,8 @@ Filetypes accepted by the upload-to-analyze dashboard:
 
 ### Production
 
-To create an instance of the app with production-oriented settings, pass
-the value `prod` to the `config_name` keyword of `create_app()`.
+To create an instance of the app with production-oriented settings, call
+`create_app(config_name='prod')`.
 
 Like the development configuration, the production configuration of 
 defaults to using an on-disk SQLite database, or any database 

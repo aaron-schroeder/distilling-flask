@@ -38,7 +38,8 @@ class Config:
 
   CELERY_BROKER_URL = 'redis://localhost:6379/0'
   # CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
-  STRAVA_API_BACKEND = os.environ.get('STRAVA_API_BACKEND', 'stravalib.Client')
+
+  STRAVALIB_CLIENT = os.environ.get('STRAVALIB_CLIENT', 'stravalib.Client')
 
 
 class TestingConfig(Config):
@@ -58,7 +59,14 @@ class DummyConfig(Config):
   SQLALCHEMY_DATABASE_URI = 'sqlite:///dummy.db'
   # STRAVA_API_BACKEND = 'application.util.mock_stravalib.Client'
   # STRAVA_API_BACKEND = 'application.util.mock_stravalib.LowLimitClient'
-  STRAVA_API_BACKEND = 'application.util.mock_stravalib.SimProdClient'
+  # STRAVA_API_BACKEND = 'application.util.mock_stravalib.SimProdClient'
+
+  STRAVALIB_CLIENT = 'application.util.mock_stravalib.Client'
+  MOCK_STRAVALIB_ACTIVITY_COUNT = 100
+  MOCK_STRAVALIB_SHORT_LIMIT = 100
+  MOCK_STRAVALIB_LONG_LIMIT = 1000
+  MOCK_STRAVALIB_SHORT_USAGE = 0
+  MOCK_STRAVALIB_LONG_USAGE = 0
 
 
 class ProductionConfig(Config):
