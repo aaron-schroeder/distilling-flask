@@ -71,7 +71,7 @@ TRACE_LAYOUT = {
 
   SPEED: dict(
     line=dict(
-      width=1,
+      width=2,
     ),
     #opacity=0.7,
   ),

@@ -373,20 +373,30 @@ class FigureRowsAIO(html.Div):
 
       plotter.add_yaxis(SPEED_ID, SPEED, **AXIS_LAYOUT[SPEED])
 
+      if df.fld.has('GAP'):
+        plotter.add_trace(SPEED_ID,
+          'GAP',
+          formatter=units.speed_to_pace,
+          visible=True,
+          line_color='#FC4C02',
+          **TRACE_LAYOUT[SPEED]
+        )
+
+      if df.fld.has('NGP'):
+        plotter.add_trace(SPEED_ID,
+          'NGP',
+          formatter=units.speed_to_pace,
+          visible=True,
+          line_color='#204D74',
+          **TRACE_LAYOUT[SPEED]
+        )
+
       plotter.add_trace(SPEED_ID, SPEED,
         formatter=units.speed_to_pace,
         visible=True,
+        line_color='black',
         **TRACE_LAYOUT[SPEED]
       )
-
-      # for stream in ['equiv_speed', 'GAP', 'NGP']:
-      for stream in ['GAP', 'NGP']:
-        if df.fld.has(stream):
-          plotter.add_trace(SPEED_ID, stream,
-            formatter=units.speed_to_pace,
-            visible=True,
-            **TRACE_LAYOUT[SPEED]
-          )
     
     if df.fld.has(HEARTRATE):
 
@@ -451,43 +461,54 @@ class FigureRowsAIO(html.Div):
     # TODO: Make this into its own function, I think.
     
     if df.fld.has('moving') and plotter.has_fig(SPEED_ID):
-      # Highlight stopped periods on the speed plot with rectangles.
+      plotter.get_fig_by_id(SPEED).add_trace(dict(
+        x=plotter.x_stream,
+        y=[0.0 for _ in range(len(plotter.x_stream))],
+        text=['Moving' if moving else 'Stopped' for moving in plotter.df['moving']],
+        hovertemplate='%{text}<extra></extra>',
+        mode='markers',
+        marker_color=['green' if moving else 'red' for moving in plotter.df['moving']],
+        marker_size=2,
+        # yaxis=pwr_axis,
+      ))
 
-      # Find all the timestamps when strava switches the user from stopped
-      # to moving, or from moving to stopped.
-      stopped_ixs = df.index[~df['moving']]
-      stopped_periods_start_ixs = stopped_ixs[
-        stopped_ixs.to_series().diff() != 1]
-      stopped_periods_end_ixs = stopped_ixs[
-        stopped_ixs.to_series().diff(-1) != -1]
+      # # Highlight stopped periods on the speed plot with rectangles.
 
-      fig_with_stops = plotter.get_fig_by_id(SPEED_ID)
+      # # Find all the timestamps when strava switches the user from stopped
+      # # to moving, or from moving to stopped.
+      # stopped_ixs = df.index[~df['moving']]
+      # stopped_periods_start_ixs = stopped_ixs[
+      #   stopped_ixs.to_series().diff() != 1]
+      # stopped_periods_end_ixs = stopped_ixs[
+      #   stopped_ixs.to_series().diff(-1) != -1]
 
-      for i in range(len(stopped_periods_start_ixs)):
-        start_ix = stopped_periods_start_ixs[i]
-        end_ix = stopped_periods_end_ixs[i]
+      # fig_with_stops = plotter.get_fig_by_id(SPEED_ID)
 
-        if start_ix == end_ix:
-          # A single point - use a line, not a rectangle.
-          fig_with_stops.add_vline(
-            # x=df['time'][start_ix],
-            x=plotter.x_stream[start_ix],
-            line_color='red',
-            opacity=0.5,
-          )
-        else:
-          fig_with_stops.add_vrect(
-            # x0=df['time'][start_ix],
-            # x1=df['time'][end_ix],
-            x0=plotter.x_stream[start_ix],
-            x1=plotter.x_stream[end_ix],
-            #layer='below',
-            #line={'width': 0}, 
-            line_color='red',
-            #fillcolor='LightSalmon',
-            fillcolor='red',
-            opacity=0.5,
-          )
+      # for i in range(len(stopped_periods_start_ixs)):
+      #   start_ix = stopped_periods_start_ixs[i]
+      #   end_ix = stopped_periods_end_ixs[i]
+
+      #   if start_ix == end_ix:
+      #     # A single point - use a line, not a rectangle.
+      #     fig_with_stops.add_vline(
+      #       # x=df['time'][start_ix],
+      #       x=plotter.x_stream[start_ix],
+      #       line_color='red',
+      #       opacity=0.5,
+      #     )
+      #   else:
+      #     fig_with_stops.add_vrect(
+      #       # x0=df['time'][start_ix],
+      #       # x1=df['time'][end_ix],
+      #       x0=plotter.x_stream[start_ix],
+      #       x1=plotter.x_stream[end_ix],
+      #       #layer='below',
+      #       #line={'width': 0}, 
+      #       line_color='red',
+      #       #fillcolor='LightSalmon',
+      #       fillcolor='red',
+      #       opacity=0.5,
+      #     )
 
     # *** End of row 2 (elevation and speed) ***
 
