@@ -1,6 +1,9 @@
 from functools import wraps
+from urllib.parse import quote
+import uuid
 
-from dash import Dash, dcc, html
+import dash
+from dash import Dash, dcc, html, page_registry
 import dash_bootstrap_components as dbc
 from flask_login import current_user
 
@@ -11,8 +14,14 @@ from application.util.dataframe import calc_power
 def layout_login_required(layout_func):
   @wraps(layout_func)
   def decorated_function(*args, **kwargs):
+    registry_entry = dash.page_registry[layout_func.__module__]
+    rel_url = registry_entry['relative_path']
     if not current_user.is_authenticated:
-      return dcc.Location(pathname='/login')
+      return dcc.Location(
+        pathname=f'/login', 
+        search='?next=' + quote(rel_url),
+        id=str(uuid.uuid4())
+      )
     return layout_func(*args, **kwargs)
   return decorated_function
 

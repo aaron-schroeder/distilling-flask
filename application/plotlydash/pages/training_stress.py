@@ -16,7 +16,7 @@ dash.register_page(__name__, path_template='/stress',
   title='Training Stress Dashboard', name='Training Stress Dashboard')
 
 
-def layout():
+def layout(**_):
   df = Activity.load_summary_df()
 
   if len(df) == 0:

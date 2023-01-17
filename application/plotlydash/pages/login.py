@@ -3,7 +3,8 @@ import uuid
 import dash
 from dash import dcc, html, callback, Input, Output, State, ALL
 import dash_bootstrap_components as dbc
-from flask_login import login_user
+from flask import url_for
+from flask_login import current_user, login_user
 
 from application.models import AdminUser
 
@@ -12,7 +13,16 @@ dash.register_page(__name__, path_template='/login',
   title='Log in', name='Log in')
 
 
-def layout(**kwargs):
+def layout(**url_queries):
+  next_raw = url_queries.get('next')
+  if next_raw:
+    next_url = next_raw
+  else:
+    next_url = url_for('main.admin_landing')
+
+  if current_user.is_authenticated:
+    return dcc.Location(pathname=next_url, id=str(uuid.uuid4()))
+
   return dbc.Container([
     dbc.Form(
       dbc.Row(
@@ -30,7 +40,8 @@ def layout(**kwargs):
           ])),
           dbc.Col(
             dbc.Button('Log in', id='login', n_clicks=0)
-          )
+          ),
+          dcc.Store(id='next-url', data=next_url)
         ],
         justify='center',
       ),
@@ -44,15 +55,17 @@ def layout(**kwargs):
   Output('location-dummy', 'children'),
   Output('password', 'invalid'),
   Input('login', 'n_clicks'),
-  State('password', 'value')
+  State('password', 'value'),
+  State('next-url', 'data')
 )
-def validate_password(n_clicks, password):
+def validate_password(n_clicks, password, next_url):
   if n_clicks and n_clicks > 0:
     user = AdminUser()
     if user.check_password(password):
       # Login and redirect to admin landing page.
       login_user(user, remember=True)
-      return dcc.Location(pathname='/admin', id=str(uuid.uuid4())), False
+      print(next_url)
+      return dcc.Location(pathname=next_url, id=str(uuid.uuid4())), False
     else:
       return None, True
   return None, False

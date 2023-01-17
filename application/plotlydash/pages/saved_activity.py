@@ -14,7 +14,7 @@ dash.register_page(__name__, path_template='/saved/<activity_id>',
   title='Saved Activity Dashboard', name='Saved Activity Dashboard')
 
 
-def layout(activity_id=None):
+def layout(activity_id=None, **_):
   if activity_id is None:
     return html.Div([])
 

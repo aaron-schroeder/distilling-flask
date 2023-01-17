@@ -15,7 +15,7 @@ dash.register_page(__name__, path_template='/',
   title='Training Log Dashboard', name='Training Log Dashboard')
 
 
-def layout():
+def layout(**_):
   return dbc.Container(
     [
       html.H1('Week-by-Week Training Log'),

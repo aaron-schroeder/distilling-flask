@@ -34,7 +34,7 @@ dash.register_page(__name__, path_template='/analyze-file',
 
 
 @layout_login_required
-def layout():
+def layout(**_):
 
   return dbc.Container([
     dcc.Upload(
