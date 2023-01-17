@@ -46,9 +46,32 @@ def layout(activity_id=None, **queries):
   ))
   calc_power(df)
 
-  out = dbc.Container(
+  existing_activity = strava_acct.activities.filter_by(strava_id=activity_id).first()
+
+  if existing_activity:
+    button_col = dbc.Col(
+      dcc.Link(
+        dbc.Button('View Saved Activity'),
+        href=existing_activity.relative_url
+      )
+    )
+  else:
+    button_col = dbc.Col([
+      dbc.Button(
+        'Save Activity',
+        id='save-activity'
+      ),
+      dbc.Popover(
+        id='save-result',
+        is_open=False,
+        target='save-activity',
+      ),
+    ])
+
+  return dbc.Container(
     [
       html.Div(id='strava-stats'),
+      dbc.Row(button_col, class_name='mb-3'),
       StatsDivAIO(df=df, aio_id='strava'),
       FigureDivAIO(df=df, aio_id='strava'),
       dcc.Store(id='strava-summary-response', data=activity.to_dict()),
@@ -56,8 +79,6 @@ def layout(activity_id=None, **queries):
     id='dash-container',
     fluid=True,
   )
-
-  return out
 
 
 @callback(
@@ -133,17 +154,6 @@ def update_stats(activity_data):
       dbc.Col(f"Gain: {gain_ft:.0f} ft"),
     ]),
     html.Div(activity_data['description']),
-    dbc.Row([
-      dbc.Col([
-        dbc.Button('Save activity', id='save-activity'),
-        dbc.Popover(
-          id='save-result',
-          is_open=False,
-          target='save-activity',
-        ),
-      ]),
-      # dbc.Col(id='save-result')
-    ]),
     html.Hr(),
   ]
 
