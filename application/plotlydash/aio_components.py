@@ -252,15 +252,8 @@ class FigureDivAIO(html.Div):
     # init_hover_callbacks_smart(app, available_figs)
 
     return [
-      dbc.Col(
-        # layout.create_x_stream_radiogroup(x_stream_opts),
-        x_stream_radiogroup,
-      ),
-      # dbc.Col(
-      #   # layout.create_plot_checkgroup(available_figs)
-      #   plot_checkgroup,
-      #   # layout.create_plot_checkgroup([MAP_ID, ELEVATION_ID, SPEED_ID])
-      # ),
+      dbc.Col(x_stream_radiogroup),
+      # dbc.Col(plot_checkgroup),
     ]
 
   # @callback(
@@ -277,7 +270,6 @@ class FigureDivAIO(html.Div):
 
   @callback(
     Output(ids.figures(MATCH), 'children'),
-    # Input('x-selector', 'value'),
     Input(ids.xselector(MATCH), 'value'),
     # Input('plot-checklist', 'values'),
     State(ids.store(MATCH), 'data'),
@@ -291,7 +283,6 @@ class FigureDivAIO(html.Div):
     if x_stream == 'record':
       x_stream = None
 
-    # return create_rows(df, x_stream_label=x_stream)
     return FigureRowsAIO(df, x_stream_label=x_stream)
 
   init_hover_callbacks_smart()
@@ -352,6 +343,7 @@ class FigureRowsAIO(html.Div):
 
       # Add trace to the `elevation` figure, on the default yaxis.
       plotter.add_trace(ELEVATION_ID, ELEVATION,
+        formatter=lambda meters: f'{meters*units.FT_PER_M:.0f} ft',
         visible=True,
         **TRACE_LAYOUT[ELEVATION]
       )
@@ -366,6 +358,7 @@ class FigureRowsAIO(html.Div):
 
       grade_axis = plotter.get_yaxis(ELEVATION_ID, GRADE)
       plotter.add_trace(ELEVATION_ID, GRADE,
+        formatter=lambda g_pct: f'{g_pct:.1f}%',
         yaxis=grade_axis,
         visible=True
       )
@@ -380,9 +373,8 @@ class FigureRowsAIO(html.Div):
 
       plotter.add_yaxis(SPEED_ID, SPEED, **AXIS_LAYOUT[SPEED])
 
-      speed_text = df[SPEED].apply(units.speed_to_pace)
       plotter.add_trace(SPEED_ID, SPEED,
-        text=speed_text, 
+        formatter=units.speed_to_pace,
         visible=True,
         **TRACE_LAYOUT[SPEED]
       )
@@ -391,7 +383,7 @@ class FigureRowsAIO(html.Div):
       for stream in ['GAP', 'NGP']:
         if df.fld.has(stream):
           plotter.add_trace(SPEED_ID, stream,
-            text=df[stream].apply(units.speed_to_pace),
+            formatter=units.speed_to_pace,
             visible=True,
             **TRACE_LAYOUT[SPEED]
           )
@@ -415,6 +407,7 @@ class FigureRowsAIO(html.Div):
       # TODO: Consider kwargs to make this call less ambiguous.
       hr_axis = plotter.get_yaxis(SPEED_ID, HEARTRATE)
       plotter.add_trace(SPEED_ID, HEARTRATE, yaxis=hr_axis,
+        formatter=lambda hr: f'{hr:.0f} bpm',
         visible=True,
         **TRACE_LAYOUT[HEARTRATE]
       )
@@ -439,6 +432,7 @@ class FigureRowsAIO(html.Div):
       # TODO: Specify trace colors, typ, or it'll be up to order of plotting.
       plotter.add_trace(SPEED_ID, CADENCE,
         yaxis=cad_axis,
+        formatter=lambda hr: f'{hr:.0f} spm',
         **TRACE_LAYOUT[CADENCE]
       )
 
@@ -448,6 +442,7 @@ class FigureRowsAIO(html.Div):
       pwr_axis = plotter.get_yaxis(SPEED_ID, POWER)
 
       plotter.add_trace(SPEED_ID, POWER,
+        formatter=lambda pwr: f'{pwr:.2f} W/kg',
         yaxis=pwr_axis,
         **TRACE_LAYOUT[POWER]
       )
@@ -499,6 +494,13 @@ class FigureRowsAIO(html.Div):
     # TODO: Define these callbacks dynamically, eg
     # `init_hover_callbacks_smart(figs=plotter.fig_ids)`
     init_hover_callbacks_smart()
+
+    for row in plotter.rows:
+      for child in row.children:
+        if isinstance(child, dbc.Col):
+          graph = child.children[0]
+          print(graph.figure.layout)
+          
   
     super().__init__(plotter.rows)
 
@@ -800,6 +802,10 @@ class StatsDivAIO(dbc.Accordion):
       data=df_stats.to_dict('records'),
       columns=self._create_moving_table_cols(df_stats.columns),
       id=self.ids.table(self.aio_id),
+      style_cell={
+        'whiteSpace': 'normal',
+        'height': 'auto',
+      },
     )
 
   @staticmethod
@@ -809,10 +815,5 @@ class StatsDivAIO(dbc.Accordion):
       if (i.startswith('Distance') or i.startswith('Speed')) else
       {'name': i, 'id': i}
       for i in cols
+      if i not in ['Time (s)', 'Distance (m)', 'Speed (m/s)']
     ]
-
-    # return dbc.Table.from_dataframe(
-    #   # df_stats.loc[['Time', 'Distance (mi)', 'Pace']],
-    #   df_stats,
-    #   bordered=True
-    # )

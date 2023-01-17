@@ -24,50 +24,33 @@ AXIS_LAYOUT = {
     #   math.floor(df[elev_lbl].min() / 200) * 200,
     #   math.ceil(df[elev_lbl].max() / 200) * 200
     # ],
-    ticksuffix=' m',
-    hoverformat='.2f',
   ),
 
   GRADE: dict(
     # Same values no matter if axis is primary or not.
     #title=dict(text='Grade (%)'),
-    ticksuffix='%',
     range=[-75, 75],
-    hoverformat='.2f',
-
-    # Turn on the zeroline and make it visible in this color scheme.
     zeroline=True,
-    zerolinewidth=1, 
+    zerolinewidth=1,
     zerolinecolor='black',
   ),
 
   SPEED: dict(
     range=[-0.1, 6.0],
-    ticksuffix=' m/s',
-    hoverformat='.2f',
-
-    # Turn on the zeroline and make it visible
     zeroline=True,
     zerolinewidth=1, 
     zerolinecolor='black',
   ),
 
   CADENCE: dict(
-    # Same values no matter if axis is primary or not.
-    ticksuffix=' spm',
     range=[110, 220],
-    hoverformat='.0f',
   ),
 
   HEARTRATE: dict(
-    ticksuffix=' bpm',
     range=[110, 170],
-    hoverformat='.0f',
   ),
 
   POWER: dict(
-    ticksuffix=' W/kg',
-    hoverformat='.2f',
     #range=[-0.1, 35.0],
     #range=[9.0, 18.0],
     range=[-0.3, 18.0],

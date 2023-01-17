@@ -116,13 +116,18 @@ def update_stats(activity_data):
   if activity_data is None:
     raise PreventUpdate
 
+  elapsed_time_str = units.seconds_to_string(
+    activity_data['elapsed_time'],
+    show_hour=True
+  )
+  gain_ft = activity_data['total_elevation_gain'] * units.FT_PER_M
+
   return [
     html.H2(f"{activity_data['name']} ({activity_data['start_date_local']})"),
     dbc.Row([
       # dbc.Col(f"{activity_data['distance'] / 1609.34:.2f} mi"),
-      dbc.Col(f"{activity_data['elapsed_time']} sec (total)"),
-      dbc.Col(f"{activity_data['total_elevation_gain'] * units.FT_PER_M:.0f} ft (gain)"),
-      # dbc.Col(f"{activity_data['moving_time']} sec (moving)"),
+      dbc.Col(f"Elapsed time: {elapsed_time_str}"),
+      dbc.Col(f"Gain: {gain_ft:.0f} ft"),
     ]),
     html.Div(activity_data['description']),
     dbc.Row([

@@ -57,13 +57,17 @@ def update_stats(activity_id):
 
   activity = Activity.query.get(activity_id)
 
+  elapsed_time_str = units.seconds_to_string(
+    activity.elapsed_time_s,
+    show_hour=True
+  )
+
   children = [
     html.H2(f"{activity.title} ({activity.recorded})"),
     dbc.Row([
       # dbc.Col(f"{activity_data['distance'] / 1609.34:.2f} mi"),
-      dbc.Col(f"Elapsed time: {units.seconds_to_string(activity.elapsed_time_s)}"),
+      dbc.Col(f"Elapsed time: {elapsed_time_str}"),
       dbc.Col(f"Gain: {activity.elevation_m * units.FT_PER_M:.0f} ft"),
-      # dbc.Col(f"{activity_data['moving_time']} sec (moving)"),
       dbc.Col(f"TSS: {activity.tss:.0f} (IF: {activity.intensity_factor:.2f})"),
     ]),
     html.Div(activity.description),

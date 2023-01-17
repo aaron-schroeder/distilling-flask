@@ -8,6 +8,8 @@ from dash import dcc, html
 import dash_bootstrap_components as dbc
 import plotly.graph_objs as go
 
+from application.util import units
+
 
 class Plotter(object):
   def __init__(self, df):
@@ -33,19 +35,25 @@ class Plotter(object):
 
   @property
   def x_stream_text(self):
-    if self._x_stream_label == 'time' or self._x_stream_label == 'distance':
-      return self.x_stream.apply(lambda x: f'{x} {self.unit_suffix}')
-
-    return self.x_stream
-
-  @property
-  def unit_suffix(self):
     if self._x_stream_label == 'time':
-      return ' s'
+      return self.x_stream.apply(
+        lambda seconds: units.seconds_to_string(seconds, show_hour=True))
     elif self._x_stream_label == 'distance':
-      return ' m'
+      return self.x_stream.apply(lambda meters: f'{meters/units.M_PER_MI:.2f} mi')
     else:
-      return ''
+      return self.x_stream.apply(lambda record: f'Point {record}')
+
+  def get_trace_text(self, stream_label, formatter):
+    if formatter is None:
+      ser_y_text = self.df[stream_label]
+    else:
+      ser_y_text = self.df[stream_label].apply(formatter)
+
+    return [
+      f'{y_text} at {x_text}' 
+      for y_text, x_text 
+      in zip(ser_y_text, self.x_stream_text)
+    ]
 
   def set_x_stream_label(self, stream_label):
     """Set the x data for all xy plots.
@@ -157,8 +165,6 @@ class Plotter(object):
         self.x_stream.min(),
         self.x_stream.max()
       ],
-      hoverformat='.0f',
-      ticksuffix=self.unit_suffix,
     ))
     fig.update_yaxes(dict(
       zeroline=False,  # unless I need it somewhere
@@ -194,9 +200,8 @@ class Plotter(object):
     map_fig.add_trace(go.Scattermapbox(
       lon=lon,
       lat=lat,
-      customdata=self.x_stream,
-      # name=source_name,
-      hovertemplate=f'%{{customdata:.0f}}{self.unit_suffix}<extra></extra>',
+      customdata=self.x_stream_text,
+      hovertemplate=f'%{{customdata}}<extra></extra>',
       mode='markers',
     ))
 
@@ -243,13 +248,15 @@ class Plotter(object):
 
     self._fig_yaxes[fig_id].append(field_name)
 
-  def add_trace(self, fig_id, stream_label, **kwargs):
+  def add_trace(self, fig_id, stream_label, formatter=None, **kwargs):
 
     trace = dict(
       x=self.x_stream,
       y=self.df[stream_label],
+      text=self.get_trace_text(stream_label, formatter),
       name=str(stream_label),
       visible='legendonly',
+      hovertemplate='%{text}',
     )
     
     # Add the custom trace schtuff, if any.
