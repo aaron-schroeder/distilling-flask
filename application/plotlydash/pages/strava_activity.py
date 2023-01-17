@@ -25,12 +25,18 @@ def layout(activity_id=None, **queries):
   strava_acct = StravaAccount.query.get(queries.get('id') or queries.get('strava_id'))
 
   if activity_id is None or strava_acct is None:
-    return html.Div([])  # todo: add help text
+    return dbc.Container([])  # TODO: add help text
 
   client = strava_acct.client
 
   activity = client.get_activity(activity_id)
 
+  if activity.type not in ['Run', 'Walk', 'Hike']:
+    return dbc.Container(
+      f'Unsupported activity type "{activity.type}". '
+      'Currently supported activity types are Run, Walk, and Hike.'
+    )
+  
   # Read the Strava json response into a DataFrame and perform
   # additional calculations on it.
   df = readers.from_strava_streams(client.get_activity_streams(

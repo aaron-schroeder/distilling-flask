@@ -51,11 +51,11 @@ def layout(**url_queries):
                 'value': 'add-walks',
                 'disabled': True,
               },
-              {
-                'label': 'Add bike rides?',
-                'value': 'add-rides',
-                'disabled': True,
-              },
+              # {
+              #   'label': 'Add bike rides?',
+              #   'value': 'add-rides',
+              #   'disabled': True,
+              # },
             ],
             value=['add-walks'],
           ),

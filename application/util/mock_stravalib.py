@@ -82,13 +82,12 @@ class Client:
 
 
 class BatchedResultsIterator:
-  def __init__(self, *args, **kwargs):
-    self._page = 1
-    self.per_page = 200
-    self.limit = None
-    self._counter = 0
+  _page = 1
+  per_page = 200
+  limit = None
+  _counter = 0
 
-    self._num_results = 1000
+  _num_results = 1000
 
   def __iter__(self):
     return self
@@ -102,7 +101,8 @@ class BatchedResultsIterator:
       result = stravalib.model.Activity(
         id=self._counter + 1,
         name=f'Activity {self._counter + 1}',
-        type='Run',
+        # Throw in a bike ride every once in a while
+        type='Ride' if self._counter % 5 else 'Run',
         start_date_local='2018-02-20T10:02:13Z',
         start_date='2018-02-20T10:02:02',
         distance=10000,
