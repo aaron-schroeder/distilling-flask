@@ -56,6 +56,7 @@ def layout(activity_id=None, **queries):
 
 @callback(
   Output('save-result', 'children'),
+  Output('save-result', 'is_open'),
   Input('save-activity', 'n_clicks'),
   State(FigureDivAIO.ids.store('strava'), 'data'),
   State('strava-summary-response', 'data'),
@@ -98,13 +99,9 @@ def save_activity(
     db.session.commit()
 
   except IntegrityError as e:
-    print(e)
-    return html.Div([
-      'There was an error saving this activity.'
-    ])
+    return f'There was an error saving this activity: {e}', True
 
-  return f'Activity saved successfully! Internal ID = {new_act.id}'
-  # return dcc.Location(id=new_act.id, pathname=f'/dash/saved-activity/{new_act.id}')
+  return dcc.Location(pathname=f'/saved/{new_act.id}', id=str(uuid.uuid4())), True
 
 
 @callback(
@@ -131,8 +128,15 @@ def update_stats(activity_data):
     ]),
     html.Div(activity_data['description']),
     dbc.Row([
-      dbc.Col(dbc.Button('Save activity to DB', id='save-activity')),
-      dbc.Col(id='save-result')
+      dbc.Col([
+        dbc.Button('Save activity', id='save-activity'),
+        dbc.Popover(
+          id='save-result',
+          is_open=False,
+          target='save-activity',
+        ),
+      ]),
+      # dbc.Col(id='save-result')
     ]),
     html.Hr(),
   ]

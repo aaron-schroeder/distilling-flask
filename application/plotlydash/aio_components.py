@@ -494,13 +494,6 @@ class FigureRowsAIO(html.Div):
     # TODO: Define these callbacks dynamically, eg
     # `init_hover_callbacks_smart(figs=plotter.fig_ids)`
     init_hover_callbacks_smart()
-
-    for row in plotter.rows:
-      for child in row.children:
-        if isinstance(child, dbc.Col):
-          graph = child.children[0]
-          print(graph.figure.layout)
-          
   
     super().__init__(plotter.rows)
 
