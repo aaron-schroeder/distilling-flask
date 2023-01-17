@@ -102,7 +102,7 @@ class BatchedResultsIterator:
         id=self._counter + 1,
         name=f'Activity {self._counter + 1}',
         # Throw in a bike ride every once in a while
-        type='Ride' if self._counter % 5 else 'Run',
+        type='Run' if self._counter % 5 else 'Ride',
         start_date_local='2018-02-20T10:02:13Z',
         start_date='2018-02-20T10:02:02',
         distance=10000,
