@@ -35,44 +35,42 @@ def layout(activity_id=None, **_):
   ))
   dataframe.calc_power(df)
 
-  return dbc.Container(
-    [
-      html.Div(id='model-stats'),
-      StatsDivAIO(df=df, aio_id='saved'),
-      FigureDivAIO(df=df, aio_id='saved'),
-      dcc.Store(id='activity-id', data=activity_id),
-    ],
-    id='dash-container',
-  )
-
-
-@callback(
-  Output('model-stats', 'children'),
-  Input('activity-id', 'data'),
-)
-def update_stats(activity_id):
-  """Fill the div with Activity model data."""
-  if activity_id is None:
-    raise PreventUpdate
-
-  activity = Activity.query.get(activity_id)
-
   elapsed_time_str = units.seconds_to_string(
     activity.elapsed_time_s,
     show_hour=True
   )
 
-  children = [
-    html.H2(f"{activity.title} ({activity.recorded})"),
-    dbc.Row([
-      # dbc.Col(f"{activity_data['distance'] / 1609.34:.2f} mi"),
-      dbc.Col(f"Elapsed time: {elapsed_time_str}"),
-      dbc.Col(f"Gain: {activity.elevation_m * units.FT_PER_M:.0f} ft"),
-      dbc.Col(f"TSS: {activity.tss:.0f} (IF: {activity.intensity_factor:.2f})"),
-    ]),
-    html.Div(activity.description),
-    html.Hr(),
-  ]
-
-  return children
-
+  return dbc.Container(
+    [
+      html.H1(activity.title),
+      dbc.Row([
+        dbc.Col(
+          activity.recorded.strftime('%a, %m/%d/%Y %H:%M:%S'),
+          width=12,
+          md=4,
+        ),
+        # dbc.Col(f"{activity_data['distance'] / 1609.34:.2f} mi"),
+        dbc.Col(
+          f"Elapsed time: {elapsed_time_str}",
+          width=12,
+          md=3,
+        ),
+        dbc.Col(
+          f"Gain: {activity.elevation_m * units.FT_PER_M:.0f} ft",
+          width=12,
+          md=2,
+        ),
+        dbc.Col(
+          f"TSS: {activity.tss:.0f} (IF: {activity.intensity_factor:.2f})",
+          width=12,
+          md=3,
+        ),
+      ]),
+      html.Div(activity.description),
+      html.Hr(),
+      StatsDivAIO(df=df, aio_id='saved', className='mb-4'),
+      FigureDivAIO(df=df, aio_id='saved'),
+      dcc.Store(id='activity-id', data=activity_id),
+    ],
+    id='dash-container',
+  )

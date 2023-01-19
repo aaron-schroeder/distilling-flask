@@ -10,7 +10,7 @@ Things required by each test:
 import unittest
 
 from application.tasks import est_15_min_rate
-from application.util.mock_stravalib import Client
+from application.util.mock_stravalib import SimDevClient, SimProdClient
 
 
 class TestEstRate(unittest.TestCase):
@@ -18,12 +18,7 @@ class TestEstRate(unittest.TestCase):
   def test_low_limit(self):
     self.assertEqual(
       est_15_min_rate(
-        Client(
-          short_limit=100,
-          short_usage=0,
-          long_limit=1000,
-          long_usage=0,
-        )
+        SimDevClient()
       ),
       3
     )
@@ -31,12 +26,7 @@ class TestEstRate(unittest.TestCase):
   def test_high_limit(self):
     self.assertEqual(
       est_15_min_rate(
-        Client(
-          short_limit=600,
-          short_usage=0,
-          long_limit=30000,
-          long_usage=0,
-        )
+        SimProdClient()
       ),
       104
     )
@@ -45,11 +35,11 @@ class TestEstRate(unittest.TestCase):
   def test_high_limit_w_usage(self):
     self.assertEqual(
       est_15_min_rate(
-        Client(
-          short_limit=600,
-          short_usage=0,
-          long_limit=30000,
-          long_usage=15000,
+        SimProdClient(
+          # short_limit=600,
+          # short_usage=0,
+          # long_limit=30000,
+          # long_usage=15000,
         )
       ),
       52

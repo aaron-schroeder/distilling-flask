@@ -16,30 +16,25 @@ class LoginTest(FunctionalTest):
     self.browser.find_element(By.XPATH, '//button[text()="Log in"]').click()
 
     # The admin user is logged in!
-    self.assertEqual(
-      self.browser.find_element(By.TAG_NAME, 'h2').text,
-      'Admin'
+    self.assertIn(
+      'settings',
+      self.browser.find_element(By.TAG_NAME, 'h1').text.lower()
     )
 
     # They see links for authenticating a strava account...
-    self.check_for_link_text('Manage Strava Connections')
+    self.check_for_link_text('Strava Account Connections')
 
     # ...and a file analysis dashboard.
-    self.check_for_link_text('Analyze an activity file (.gpx, .fit, .tcx, .csv)')
+    self.check_for_link_text('Analyze Activity File')
 
     # The admin dgafs and logs out.
-    self.browser.find_element(
-      By.XPATH, 
-      '//button[contains(@class, "toggler")]'
-    ).click()
-    self.wait_for_element(By.LINK_TEXT, 'Log Out').click()
+    self.browser.find_element(By.LINK_TEXT, 'Log Out').click()
 
     # They are logged out and back on the homepage.
     self.assertEqual(
       self.browser.current_url,
       urljoin(self.server_url, '/')
     )
-    # TODO
 
   def test_wrong_password_no_redirect(self):
     self.navigate_to_admin()

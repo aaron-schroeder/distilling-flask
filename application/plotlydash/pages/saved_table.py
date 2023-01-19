@@ -35,7 +35,7 @@ def layout(**url_queries):
 
   out = dbc.Container(
     [
-      html.H2('Your Saved Activities'),
+      html.H1('Saved Activities'),
       dash_table.DataTable(
         id='datatable-saved',
         cell_selectable=False,

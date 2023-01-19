@@ -18,7 +18,7 @@ def layout(**url_queries):
   if next_raw:
     next_url = next_raw
   else:
-    next_url = url_for('main.admin_landing')
+    next_url = url_for('main.settings')
 
   if current_user.is_authenticated:
     return dcc.Location(pathname=next_url, id=str(uuid.uuid4()))
@@ -35,7 +35,6 @@ def layout(**url_queries):
               placeholder='Enter password',
               # required=True
             ),
-            # dbc.FormFeedback('Correct password', type='valid'),
             dbc.FormFeedback('Incorrect password', type='invalid')
           ])),
           dbc.Col(
@@ -46,6 +45,7 @@ def layout(**url_queries):
         justify='center',
       ),
       action='',
+      class_name='mt-2'
     ),
     html.Div(id='location-dummy')
   ])

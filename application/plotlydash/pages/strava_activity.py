@@ -58,7 +58,7 @@ def layout(activity_id=None, **queries):
   else:
     button_col = dbc.Col([
       dbc.Button(
-        'Save Activity',
+        'Import Activity',
         id='save-activity'
       ),
       dbc.Popover(
@@ -147,7 +147,7 @@ def update_stats(activity_data):
   gain_ft = activity_data['total_elevation_gain'] * units.FT_PER_M
 
   return [
-    html.H2(f"{activity_data['name']} ({activity_data['start_date_local']})"),
+    html.H1(f"{activity_data['name']} ({activity_data['start_date_local']})"),
     dbc.Row([
       # dbc.Col(f"{activity_data['distance'] / 1609.34:.2f} mi"),
       dbc.Col(f"Elapsed time: {elapsed_time_str}"),

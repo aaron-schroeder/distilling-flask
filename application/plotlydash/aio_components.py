@@ -604,6 +604,7 @@ class TssDivAIO(html.Div):
       ),
       dbc.Row(
         html.I(className='fa-solid fa-down-long fa-2xl my-4'),
+        justify='center',
       ),
       html.Div(
         [
@@ -652,7 +653,10 @@ class TssDivAIO(html.Div):
         ],
         id='equation-2'
       ),
-      dbc.Row(html.I(className='fa-solid fa-down-long fa-2xl my-4')),
+      dbc.Row(
+        html.I(className='fa-solid fa-down-long fa-2xl my-4'),
+        justify='center',
+      ),
       dbc.Row(
         html.Div(
           [
@@ -717,7 +721,7 @@ class StatsDivAIO(dbc.Accordion):
     tss = lambda aio_id: TssDivAIO.ids.tss(aio_id)
     ngp = lambda aio_id: TssDivAIO.ids.ngp(aio_id)
 
-  def __init__(self, df=None, aio_id=None):
+  def __init__(self, *args, df=None, aio_id=None, **kwargs):
     if df is None:
       raise Exception('No data supplied. Pass in a dataframe as `df=`')
     
@@ -744,7 +748,9 @@ class StatsDivAIO(dbc.Accordion):
       # There just isn't enough data in the DF to make this div interesting.
       super().__init__(
         [],
+        *args,
         start_collapsed=True,
+        **kwargs
       )
       return
 
@@ -767,7 +773,7 @@ class StatsDivAIO(dbc.Accordion):
       [
         dbc.AccordionItem(
           html.Div(self.create_moving_table(df_stats)),
-          title='Stats Table',
+          title='Pace Comparison',
         ),
         dbc.AccordionItem(
           TssDivAIO(
@@ -778,7 +784,9 @@ class StatsDivAIO(dbc.Accordion):
           title='Training Stress Score details'
         ),
       ],
+      *args,
       start_collapsed=True,
+      **kwargs,
     )
 
   def _calc_stats_df(self, df):
@@ -803,9 +811,9 @@ class StatsDivAIO(dbc.Accordion):
         df_stats.loc['Moving (Strava)', 'Distance (m)'] = df_stats.loc['Total', 'Distance (m)']
 
       df_stats['Speed (m/s)'] = df_stats['Distance (m)'] / df_stats['Time (s)']
-      df_stats['Pace'] = df_stats['Speed (m/s)'].apply(units.speed_to_pace)
-      df_stats['Time'] = df_stats['Time (s)'].apply(units.seconds_to_string)
       df_stats['Distance (mi)'] = df_stats['Distance (m)'].astype('float') / units.M_PER_MI
+      df_stats['Time'] = df_stats['Time (s)'].apply(units.seconds_to_string)
+      df_stats['Pace'] = df_stats['Speed (m/s)'].apply(units.speed_to_pace)
 
       return df_stats
 

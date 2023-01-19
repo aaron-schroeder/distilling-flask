@@ -10,7 +10,7 @@ class UploadTest(LoggedInFunctionalTest):
     # From the admin page, the user navigates to the file upload dashboard.
     self.browser.find_element(
       By.PARTIAL_LINK_TEXT,
-      'Analyze an activity file'
+      'Analyze Activity File'
     ).click()
 
     # They use the upload widget to select an activity file to analyze.

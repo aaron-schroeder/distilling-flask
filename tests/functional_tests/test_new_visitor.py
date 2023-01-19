@@ -72,7 +72,7 @@ class NewVisitorTest(FunctionalTest):
     url_login = urljoin(self.server_url, '/login')
 
     for relative_url in [
-      '/admin',
+      '/settings',
       '/analyze-file',
       '/strava/authorize',
       '/strava/activities',

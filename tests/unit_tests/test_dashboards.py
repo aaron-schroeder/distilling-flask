@@ -9,7 +9,11 @@ from application.util.mock_stravalib import (
   MOCK_TOKEN, 
   BatchedResultsIterator as MockBatchIterator
 )
-from .base import LoggedInFlaskTestCase, AuthenticatedFlaskTestCase
+from .base import (
+  AuthenticatedFlaskTestCase,
+  FlaskTestCase,
+  LoggedInFlaskTestCase
+)
 
 
 class PagesFunctionalTest:
@@ -110,3 +114,16 @@ class TestActivityListAuthorized(AuthenticatedFlaskTestCase):
     # Might want to just verify that token is passed to refresh_token,
     # and then test refresh_token behavior in test_stravatalk.py
     pass
+
+
+@unittest.skip('Needs to be converted to a dash test')
+class ListPageTest(FlaskTestCase):
+  
+  def test_displays_all_list_items(self):
+    self.create_activity(title='itemey 1')
+    self.create_activity(title='itemey 2')
+
+    response = self.client.get(url_for('main.view_activities'))
+
+    self.assertIn('itemey 1', response.get_data(as_text=True))
+    self.assertIn('itemey 2', response.get_data(as_text=True))

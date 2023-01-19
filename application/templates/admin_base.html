@@ -8,3 +8,51 @@
     <a href="{{ url_for('main.logout') }}" class="nav-link">Log Out</a>
   </div>
 {% endblock nav_items %}
+
+
+{% block content %}
+  <div class="container-fluid">
+    <div class="row">
+      <nav class="col-md-3 d-none d-md-block navbar-light bg-light sidebar">
+        <div class="sidebar-sticky">
+          <ul class="nav flex-column">
+            <li class="nav-item {% if request.path == url_for('main.settings') %}active{% endif %}">
+              <a class="nav-link d-flex" href="{{ url_for('main.settings') }}">
+                <div class="d-flex align-items-center me-2"><i class="fa-solid fa-gear"></i></div>
+                <div>Profile Settings <span class="sr-only">(current)</span></div>
+              </a>
+            </li>
+            <li class="nav-item {% if request.path == url_for('strava_api.manage') %}active{% endif %}">
+              <a class="nav-link d-flex" href="{{ url_for('strava_api.manage') }}">
+                <div class="d-flex align-items-center me-2"><i class="fa-solid fa-circle-nodes"></i></div>
+                <div>Strava Account Connections</div>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link d-flex" href="/analyze-file">
+                <div class="d-flex align-items-center me-2"><i class="fa-solid fa-microscope"></i></div>
+                <div>Analyze Activity File</div>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link d-flex" href="/logout">
+                <div class="d-flex align-items-center me-2"><i class="fa-solid fa-right-from-bracket"></i></div>
+                <div>Log Out</div>
+              </a>
+            </li>
+          </ul>
+        </div>
+      </nav>
+
+      <main role="main" class="col-md-9 ms-sm-auto px-4">
+        <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+          <h1 class="h2">{% block header %}{% endblock %}</h1>
+        </div>
+
+        {% block main %}{% endblock main %}
+
+      </main>
+
+    </div>
+  </div>
+{% endblock content %}

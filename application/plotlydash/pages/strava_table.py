@@ -29,7 +29,7 @@ def layout(**url_queries):
   out = dbc.Container(
     [
       dcc.Location(id='url'),
-      html.H2('Your Strava Activities'),
+      html.H1('Strava Activity Import'),
       dbc.Form(
         [
           dbc.Label('Which activities to keep in the case of overlap?'),
@@ -60,14 +60,14 @@ def layout(**url_queries):
             value=['add-walks'],
           ),
           dbc.Button(
-            'Save All Strava Activities',
+            'Import All',
             id='save-all',
             type='submit',
             class_name='me-2',
             # disabled=True,
           ),
           dbc.Button(
-            'Save Selected Strava Activities',
+            'Import Selected',
             id='save-selected',
             type='submit'
           ),

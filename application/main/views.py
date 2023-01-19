@@ -6,21 +6,10 @@ from application.models import Activity
 from . import main
 
 
-@main.route('/admin')
+@main.route('/settings')
 @login_required
-def admin_landing():
-  return render_template('main/admin.html')
-
-
-@main.route('/view-saved-activities')
-def view_activities():
-  """A simple html list for debugging."""
-
-  return render_template(
-    'main/activities_saved.html',
-    activities=Activity.query.all(),
-    # title='Show Activities'
-  )
+def settings():
+  return render_template('main/settings.html')
 
 
 @main.route('/logout')

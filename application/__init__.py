@@ -57,6 +57,14 @@ def create_app(config_name='dev'):
     # SQLAlchemy
     from application import models
 
+  # Synchronize html imports across flask and dash apps
+  @app.context_processor
+  def add_dash_imports():
+    return dict(
+      dash_css=dash_app._generate_css_dist_html(),
+      favicon_url = f"{dash_app.get_asset_url(dash_app._favicon)}"
+    )
+
   # Flask-Login
   login.init_app(app)
   login.login_view = dash.page_registry['pages.login']['relative_path']

@@ -191,7 +191,8 @@ class FunctionalTest(LiveServerTestCase):
 
   def navigate_to_admin(self):
     self.browser_get_relative('/')
-    
+
+    self.wait_for_element(By.CLASS_NAME, 'navbar-toggler').click()
     self.wait_for_element(By.LINK_TEXT, 'Admin').click()
 
 
