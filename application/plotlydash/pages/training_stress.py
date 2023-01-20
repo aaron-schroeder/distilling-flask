@@ -34,26 +34,7 @@ def layout(**_):
     [
       html.H1('Training Stress'),
       html.Hr(),
-      html.Div(
-        [
-          dbc.Label('Choose timescale'),
-          dbc.RadioItems(
-            options=[
-              {'label': 'Week', 'value': 'week'},
-              {'label': 'Month', 'value': 'month'},
-              {'label': 'Year', 'value': 'year'},
-              {'label': 'All-time', 'value': 'alltime'},
-            ],
-            value='month',
-            id='radioitems-timescale',
-            inline=True,
-          ),
-        ]
-      ),
-      html.Div(
-        TssGraph(df_padded, id='stress-graph'),
-        style={'overflowX': 'scroll'}
-      ),
+      TssGraph(df_padded, id='stress-graph'),
       dcc.Store(
         id='total-seconds',
         data=(df['recorded'].max() - df['recorded'].min()).total_seconds()
@@ -92,10 +73,43 @@ def TssGraph(df, id=None):
   fig = go.Figure(
     layout=dict(
       xaxis=dict(
-        range=[t_min, t_max]
+        # range=[t_min, t_max],
+        rangeselector=dict(
+          buttons=list([
+            dict(
+              label='1m',
+              step='month',
+              count=1,
+              stepmode='backward'
+            ),
+            dict(
+              label='6m',
+              step='month',
+              count=6,
+              stepmode='backward'
+            ),
+            dict(
+              label='YTD',
+              step='year',
+              count=1,
+              stepmode='todate'
+            ),
+            dict(
+              label='1y',
+              step='year',
+              count=1,
+              stepmode='backward'
+            ),
+            # dict(step='all')
+          ])
+        ),
+        rangeslider=dict(visible=True),
+        range=[t_min, t_max],
+        rangeslider_range=[t_min, t_max],
+        autorange=False,
       ),
       yaxis=dict(
-        range=[0, 1.1 * df['tss'].max()],
+        # range=[0, 1.1 * df['tss'].max()],
         tickformat='.1f',
       ),
       margin=dict(b=40,t=0,r=0,l=0),
@@ -141,34 +155,3 @@ def TssGraph(df, id=None):
     figure=fig,
     config={'displayModeBar': False},
   )
-
-
-def required_graph_px(total_seconds, timescale='alltime'):
-  px_per_year = {
-    'alltime': 800,
-    'year': 3000,
-    'month': 36000,
-    'week': 150000,
-  }
-  total_years = total_seconds / datetime.timedelta(days=365).total_seconds()
-  return px_per_year.get(timescale, 2000) * total_years
-
-
-@callback(
-  Output('stress-graph', 'style'),
-  Input('radioitems-timescale', 'value'),
-  State('total-seconds', 'data')
-)
-def update_fig_width(timescale_choice, total_seconds):
-  if (
-    timescale_choice not in ('week', 'month', 'year', 'alltime') 
-    or total_seconds is None
-  ):
-    raise PreventUpdate
-
-  px = max(
-    required_graph_px(float(total_seconds), timescale=timescale_choice), 
-    120
-  )
-
-  return {'width': f'{px}px'}
