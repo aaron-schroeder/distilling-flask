@@ -121,7 +121,7 @@ def TssGraph(df, id=None):
     fig.add_trace(go.Scatter(
       x=df_id['recorded'], 
       y=df_id['tss'], 
-      name=f'TSS ({strava_id})',
+      name=f'TSS (Strava account #{strava_id:.0f})',
       text=df_id['title'],
       mode='markers',
       line_color=COLORS['USERS'][i],
