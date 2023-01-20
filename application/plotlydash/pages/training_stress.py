@@ -149,7 +149,10 @@ def TssGraph(df, id=None):
 
   # df_nondummy_tss = df.loc[~df['strava_acct_id'].isnull(), :]
   df_tss = df.loc[df['tss'] > 0, :]
-  strava_id_list = [id if pd.notnull(id) else None for id in df_tss['strava_acct_id']]
+  strava_id_list = [
+    id if pd.notnull(id) else None
+    for id in df_tss['strava_acct_id'][::-1]
+  ]
   colors_by_id = {
     strava_acct_id: COLORS['USERS'][i]
     for i, strava_acct_id in enumerate(set(strava_id_list))
