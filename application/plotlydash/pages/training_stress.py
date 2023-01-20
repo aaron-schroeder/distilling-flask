@@ -151,10 +151,10 @@ def TssGraph(df, id=None):
   df_tss = df.loc[df['tss'] > 0, :]
   strava_id_list = [
     id if pd.notnull(id) else None
-    for id in df_tss['strava_acct_id'][::-1]
+    for id in df_tss['strava_acct_id']
   ]
   colors_by_id = {
-    strava_acct_id: COLORS['USERS'][i]
+    strava_acct_id: COLORS['USERS'][::-1][i]
     for i, strava_acct_id in enumerate(set(strava_id_list))
   }
   fig.add_trace(go.Scatter(
