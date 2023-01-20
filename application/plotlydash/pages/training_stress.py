@@ -113,39 +113,18 @@ def TssGraph(df, id=None):
         tickformat='.1f',
       ),
       margin=dict(b=40,t=0,r=0,l=0),
-      legend={
-        'orientation': 'h',
-        'y': 1,
-        # 'yanchor': 'bottom',
-        'yanchor': 'top',
-        'x': 1,
-        'xanchor': 'right',
-      }
+      legend=dict(
+        orientation='h',
+        y=1,
+        yanchor='bottom',
+        # yanchor='top',
+        x=1,
+        xanchor='right',
+        traceorder='normal',
+      ),
+      # legend_traceorder='reversed'
     )
   )
-
-  fig.add_trace(go.Scatter(
-    # x=df['recorded'],
-    x=df_stress['date'],
-    # y=df['CTL_post'],
-    y=df_stress['ctl'],
-    name='CTL',
-    fill='tozeroy',
-    mode='lines',
-    line_color=COLORS['CTL'],
-    # fillcolor='rgba(239, 85, 59, 0.5)',
-  ))
-
-  fig.add_trace(go.Scatter(
-    x=df_stress['date'],
-    y=df_stress['atl'],
-    name='ATL',
-    text=df_stress['atl']-df_stress['ctl'],
-    hovertemplate='%{x}: ATL=%{y:.1f}, TSB=%{text:.1f}',
-    fill='tonexty',
-    mode='lines',
-    line_color=COLORS['ATL'],
-  ))
 
   # df_nondummy_tss = df.loc[~df['strava_acct_id'].isnull(), :]
   df_tss = df.loc[df['tss'] > 0, :]
@@ -166,6 +145,26 @@ def TssGraph(df, id=None):
     hovertemplate='%{y}<br>%{x}<br>%{text}<br>Strava Account #%{customdata}',
     mode='markers',
     marker_color=[colors_by_id[id] for id in strava_id_list],
+  ))
+
+  fig.add_trace(go.Scatter(
+    x=df_stress['date'],
+    y=df_stress['ctl'],
+    name='CTL',
+    fill='tozeroy',
+    mode='lines',
+    line_color=COLORS['CTL'],
+  ))
+
+  fig.add_trace(go.Scatter(
+    x=df_stress['date'],
+    y=df_stress['atl'],
+    name='ATL',
+    text=df_stress['atl']-df_stress['ctl'],
+    hovertemplate='%{x}: ATL=%{y:.1f}, TSB=%{text:.1f}',
+    fill='tonexty',
+    mode='lines',
+    line_color=COLORS['ATL'],
   ))
 
   return dcc.Graph(
