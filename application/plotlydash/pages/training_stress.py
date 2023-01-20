@@ -163,6 +163,7 @@ def TssGraph(df, id=None):
     name='TSS',
     text=df_tss['title'],
     customdata=df_tss['strava_acct_id'],
+    hovertemplate='%{y}<br>%{x}<br>%{text}<br>Strava Account #%{customdata}',
     mode='markers',
     marker_color=[colors_by_id[id] for id in strava_id_list],
   ))
