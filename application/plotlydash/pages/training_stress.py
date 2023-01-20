@@ -113,19 +113,16 @@ def TssGraph(df, id=None):
         tickformat='.1f',
       ),
       margin=dict(b=40,t=0,r=0,l=0),
-      legend={'orientation': 'h'}
+      legend={
+        'orientation': 'h',
+        'y': 1,
+        # 'yanchor': 'bottom',
+        'yanchor': 'top',
+        'x': 1,
+        'xanchor': 'right',
+      }
     )
   )
-
-  for i, (strava_id, df_id) in enumerate(df.groupby('strava_acct_id')):
-    fig.add_trace(go.Scatter(
-      x=df_id['recorded'], 
-      y=df_id['tss'], 
-      name=f'TSS (Strava account #{strava_id:.0f})',
-      text=df_id['title'],
-      mode='markers',
-      line_color=COLORS['USERS'][i],
-    ))
 
   fig.add_trace(go.Scatter(
     # x=df['recorded'],
@@ -148,6 +145,23 @@ def TssGraph(df, id=None):
     fill='tonexty',
     mode='lines',
     line_color=COLORS['ATL'],
+  ))
+
+  # df_nondummy_tss = df.loc[~df['strava_acct_id'].isnull(), :]
+  df_tss = df.loc[df['tss'] > 0, :]
+  strava_id_list = [id if pd.notnull(id) else None for id in df_tss['strava_acct_id']]
+  colors_by_id = {
+    strava_acct_id: COLORS['USERS'][i]
+    for i, strava_acct_id in enumerate(set(strava_id_list))
+  }
+  fig.add_trace(go.Scatter(
+    x=df_tss['recorded'],
+    y=df_tss['tss'], 
+    name='TSS',
+    text=df_tss['title'],
+    customdata=df_tss['strava_acct_id'],
+    mode='markers',
+    marker_color=[colors_by_id[id] for id in strava_id_list],
   ))
 
   return dcc.Graph(
