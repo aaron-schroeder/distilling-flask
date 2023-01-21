@@ -4,6 +4,7 @@ import dash
 from dash import dcc, html, callback, Input, Output
 from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
+from stravalib.exc import RateLimitExceeded
 
 from application.models import Activity
 from application.plotlydash.aio_components import FigureDivAIO, StatsDivAIO
@@ -20,27 +21,12 @@ def layout(activity_id=None, **_):
 
   activity = Activity.query.get(activity_id)
 
-  strava_account = activity.strava_acct
-  if not strava_account or not strava_account.has_authorized:
-    return dbc.Container('This app\'s administrator is not currently granting '
-                         'permission to access their Strava activities.')
-  client = strava_account.client
-
-  # Read the Strava response into a DataFrame and perform
-  # additional calculations on it.
-  df = readers.from_strava_streams(client.get_activity_streams(
-    activity.strava_id,
-    types=['time', 'latlng', 'distance', 'altitude', 'velocity_smooth',
-      'heartrate', 'cadence', 'watts', 'temp', 'moving', 'grade_smooth']
-  ))
-  dataframe.calc_power(df)
-
   elapsed_time_str = units.seconds_to_string(
     activity.elapsed_time_s,
     show_hour=True
   )
 
-  return dbc.Container(
+  layout_container = dbc.Container(
     [
       html.H1(activity.title),
       dbc.Row([
@@ -68,9 +54,38 @@ def layout(activity_id=None, **_):
       ]),
       html.Div(activity.description),
       html.Hr(),
-      StatsDivAIO(df=df, aio_id='saved', className='mb-4'),
-      FigureDivAIO(df=df, aio_id='saved'),
-      dcc.Store(id='activity-id', data=activity_id),
     ],
     id='dash-container',
+  )
+
+  strava_account = activity.strava_acct
+  if not strava_account or not strava_account.has_authorized:
+    layout_container.children.append(html.Div(
+      'The owner of this app is not currently granting '
+      'permission to access their Strava data.'
+    ))
+    return layout_container
+
+  client = strava_account.client
+
+  try:
+    df = readers.from_strava_streams(client.get_activity_streams(
+      activity.strava_id,
+      types=['time', 'latlng', 'distance', 'altitude', 'velocity_smooth',
+        'heartrate', 'cadence', 'watts', 'temp', 'moving', 'grade_smooth']
+    ))
+  except RateLimitExceeded as e:
+    layout_container.children.append(html.Div(
+      f'Strava API rate limit exceeded: '
+      f'{e.limit} requests in {e.timeout} seconds.'
+    ))
+    return layout_container
+
+  # Add additional calculated columns to the DataFrame
+  dataframe.calc_power(df)
+
+  layout_container.children.extend([
+      StatsDivAIO(df=df, aio_id='saved', className='mb-4'),
+      FigureDivAIO(df=df, aio_id='saved'),
+    ]
   )

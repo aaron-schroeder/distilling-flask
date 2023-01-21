@@ -3,6 +3,7 @@ from dash import dash_table, dcc, html, Input, Output, State
 from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
 import pandas as pd
+from stravalib.exc import RateLimitExceeded
 
 from application import tasks
 from application.models import Activity, StravaAccount
@@ -142,7 +143,19 @@ def update_table(page_current, page_size, sort_by, strava_id):
   
   strava_acct = StravaAccount.query.get(strava_id)
   
-  activities = strava_acct.client.get_activities(limit=page_size)
+  try:
+    activities = strava_acct.client.get_activities(limit=page_size)
+  except RateLimitExceeded as e:
+    # layout_container.children.append(html.Div(
+    print(
+      f'Strava API rate limit exceeded: '
+      f'{e.limit} requests in {e.timeout} seconds.'
+    )
+    # ))
+    # return layout_container
+    
+    raise PreventUpdate
+  
   activities.per_page = min(page_size, 200)
   activities._page = page_current + 1
 

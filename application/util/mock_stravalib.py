@@ -1,6 +1,8 @@
+import datetime
 import json
 
 import stravalib
+from stravalib.exc import RateLimitExceeded
 
 
 with open('tests/unit_tests/sample_data/exchange_code_for_token.json', 'r') as f:
@@ -11,6 +13,32 @@ class DummyClass:
   def __init__(self, *args, **kwargs):
     for key, value in kwargs.items():
       setattr(self, key, value)
+
+
+def _check_limit_rates(limit):
+  if limit['usage'] >= limit['limit']:
+    print(f'Rate limit of {limit["limit"]} reached.')
+    limit['lastExceeded'] = datetime.datetime.now()
+    _raise_rate_limit_exception(limit['time'], limit['limit'])
+
+
+def _raise_rate_limit_exception(timeout, limit_rate):
+  raise RateLimitExceeded(
+    f'Rate limit of {limit_rate} exceeded. '
+    f'Try again in {timeout} seconds.',
+    limit=limit_rate,
+    timeout=timeout
+  )
+
+
+def rate_limit(method):
+  def decorated_method(client, *args, **kwargs):
+    for rule in client.protocol.rate_limiter.rules:
+      for limit in rule.rate_limits.values():
+        # self._check_limit_time_invalid(limit)
+        _check_limit_rates(limit)
+    return method(client, *args, **kwargs)
+  return decorated_method
 
 
 class Client:
@@ -29,6 +57,7 @@ class Client:
   def refresh_access_token(self, refresh_token=None, client_id=None, client_secret=None):
     return MOCK_TOKEN
 
+  @rate_limit
   def get_athlete(self, *args, **kwargs):
     sample_athlete = stravalib.model.Athlete.deserialize(
       # '... tests/unit_tests/sample_data/get_athlete.json ...'
@@ -48,17 +77,20 @@ class Client:
 
     return sample_athlete
 
+  @rate_limit
   def get_activities(self, limit=None):
     o = BatchedResultsIterator()
     o._num_results = min(limit, self._activity_count) if limit else self._activity_count
     return o
 
+  @rate_limit
   def get_activity(self, activity_id):
     with open('tests/unit_tests/sample_data/get_activity.json', 'r') as f:
       data = json.load(f)
     data['id'] = activity_id
     return stravalib.model.Activity(**data)
 
+  @rate_limit
   def get_activity_streams(self, activity_id, types=None):
     with open('tests/unit_tests/sample_data/get_activity_streams.json', 'r') as f:
       data = json.load(f)
@@ -72,8 +104,16 @@ class Client:
         rules=[
           DummyClass(
             rate_limits={
-              'short': {'usage': self._short_usage + 1, 'limit': self._short_limit},
-              'long': {'usage': self._long_usage + 1, 'limit': self._long_limit},
+              'short': {
+                'usage': self._short_usage + 1,
+                'limit': self._short_limit,
+                'time': 900
+              },
+              'long': {
+                'usage': self._long_usage + 1,
+                'limit': self._long_limit,
+                'time': 86400
+              },
             }
           )
         ]
