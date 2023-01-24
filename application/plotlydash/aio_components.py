@@ -9,6 +9,7 @@ import dash_bootstrap_components as dbc
 import pandas as pd
 from scipy.interpolate import interp1d
 
+from application.models import AdminUser
 from application.plotlydash.figure_layout import (
   LAT, LON, ELEVATION, GRADE, SPEED, CADENCE, HEARTRATE, POWER,
   AXIS_LAYOUT, TRACE_LAYOUT
@@ -552,30 +553,32 @@ def validate_time_str(time_str):
 class TssDivAIO(html.Div):
   class ids:
     ngp = id_factory('TssDivAIO', 'ngp')
-    cp = id_factory('TssDivAIO', 'cp')
+    ftp = id_factory('TssDivAIO', 'ftp')
     total_time = id_factory('TssDivAIO', 'total')
-    tss_per_cp_hr = id_factory('TssDivAIO', 'tss_per_cp_hr')
+    tss_per_ftp_hr = id_factory('TssDivAIO', 'tss_per_ftp_hr')
     intensity = id_factory('TssDivAIO', 'intensity')
     tss = id_factory('TssDivAIO', 'tss')
 
-  def __init__(self, ngp=None, cp=None, total_time=None, aio_id=None):
+  def __init__(self, ngp=None, ftp=None, total_time=None, aio_id=None):
     """
     ngp: Normalized Graded Pace for this activity, in meters per second.
-    cp: Critical Pace for this athlete, in meters per second.
+    ftp: Functional Threshold Pace for this athlete, in meters per second.
     """
     if ngp is None:
-      raise Exception('Insufficient data supplied. Pass in normalized graded pace as `ngp=`')
-    if cp is None:
-      # Default to 6:30?
-      # raise Exception('Insufficient data supplied. Pass in critical pace as `cp=`')
-      pass  # defaults to 6:30 in the Input component, regardless of cp input here.
+      raise Exception(
+        'Insufficient data supplied. Pass in Normalized Graded Pace as `ngp=`'
+      )
+    if ftp is None:
+      raise Exception(
+        'Insufficient data supplied. Pass in Functional Threshold Pace '
+        ' as `ftp=`'
+      )
     if total_time is None:
-      raise Exception('Insufficient data supplied. Pass in integer seconds as `total_time=`')
+      raise Exception(
+        'Insufficient data supplied. Pass in integer seconds as `total_time=`'
+      )
     if aio_id is None:
       aio_id = str(uuid.uuid4())
-
-    ngp_td = units.speed_to_timedelta(ngp)
-    ngp_total_secs = ngp_td.total_seconds()
 
     super().__init__([
       html.Div(
@@ -583,7 +586,11 @@ class TssDivAIO(html.Div):
           html.Div(
             [
               dbc.FormText('Functional Threshold Pace'),
-              TimeInput(id=self.ids.cp(aio_id), seconds=6*60+30),
+              TimeInput(
+                id=self.ids.ftp(aio_id),
+                # seconds=units.speed_to_timedelta(ftp).total_seconds()
+                seconds=units.M_PER_MI / ftp
+              ),
             ],
             className='block'
           ),
@@ -594,7 +601,10 @@ class TssDivAIO(html.Div):
           html.Div(
             [
               dbc.FormText('Normalized Graded Pace'),
-              TimeInput(id=self.ids.ngp(aio_id), seconds=ngp_total_secs),
+              TimeInput(
+                id=self.ids.ngp(aio_id),
+                seconds=units.M_PER_MI / ngp
+              ),
             ],
             className='block'
           )
@@ -641,7 +651,7 @@ class TssDivAIO(html.Div):
             [
               dbc.FormText('TSS per hour'),
               dbc.Input(
-                id=self.ids.tss_per_cp_hr(aio_id),
+                id=self.ids.tss_per_ftp_hr(aio_id),
                 type='number',
                 value=100,
                 style={'width': '100px'}
@@ -678,17 +688,17 @@ class TssDivAIO(html.Div):
   @callback(
     Output(ids.intensity(MATCH), 'value'),
     Input(ids.ngp(MATCH), 'value'),
-    Input(ids.cp(MATCH), 'value'),
+    Input(ids.ftp(MATCH), 'value'),
   )
-  def update_intensity_factor(ngp_str, cp_str):
+  def update_intensity_factor(ngp_str, ftp_str):
 
-    if not validate_time_str(ngp_str) or not validate_time_str(cp_str):
+    if not validate_time_str(ngp_str) or not validate_time_str(ftp_str):
       raise PreventUpdate
 
     ngp_secs_per_mile = units.string_to_seconds(ngp_str)
-    cp_secs_per_mile = units.string_to_seconds(cp_str)
+    ftp_secs_per_mile = units.string_to_seconds(ftp_str)
 
-    intensity_factor = cp_secs_per_mile / ngp_secs_per_mile
+    intensity_factor = ftp_secs_per_mile / ngp_secs_per_mile
     
     return round(intensity_factor, 3)
 
@@ -696,20 +706,20 @@ class TssDivAIO(html.Div):
     Output(ids.tss(MATCH), 'value'),
     Input(ids.intensity(MATCH), 'value'),
     Input(ids.total_time(MATCH), 'value'),
-    Input(ids.tss_per_cp_hr(MATCH), 'value')
+    Input(ids.tss_per_ftp_hr(MATCH), 'value')
   )
-  def update_tss(intensity_factor, total_time_str, tss_per_cp_hr):
+  def update_tss(intensity_factor, total_time_str, tss_per_ftp_hr):
 
     if (
       intensity_factor is None 
       or not validate_time_str(total_time_str)
-      or tss_per_cp_hr is None
+      or tss_per_ftp_hr is None
     ):
       raise PreventUpdate
 
     total_hours = units.string_to_seconds(total_time_str) / 3600
 
-    tss = tss_per_cp_hr * total_hours * intensity_factor ** 2
+    tss = tss_per_ftp_hr * total_hours * intensity_factor ** 2
 
     return round(tss, 1)
 
@@ -778,6 +788,7 @@ class StatsDivAIO(dbc.Accordion):
         dbc.AccordionItem(
           TssDivAIO(
             aio_id=aio_id,
+            ftp=AdminUser().ftp_ms,
             ngp=ngp_ms,
             total_time=df['time'].iloc[-1]-df['time'].iloc[0]
           ),

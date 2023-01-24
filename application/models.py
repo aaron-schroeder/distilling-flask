@@ -9,6 +9,7 @@ from flask import current_app
 from flask_login import UserMixin
 import pandas as pd
 import pytz
+import sqlalchemy as sa
 from stravalib.exc import RateLimitExceeded
 
 from application import db, login
@@ -122,7 +123,8 @@ class Activity(db.Model):
   def intensity_factor(self):
     if self.ngp_ms:
       # return self.ngp_ms / AdminUser().get_ftp_ms(self.recorded)
-      return self.ngp_ms / units.pace_to_speed('6:30')
+      return self.ngp_ms / AdminUser().ftp_ms
+      # return self.ngp_ms / units.pace_to_speed('6:30')
 
   @property
   def tss(self):
@@ -172,11 +174,6 @@ class Activity(db.Model):
 
 class AdminUser(UserMixin):
   id = 1
-  # strava_accounts = db.relationship(
-  #   'StravaAccount',
-  #   backref='admin_user',
-  #   lazy=True
-  # )
 
   def check_password(self, password):
     # password_correct = config.get('settings', 'password')
@@ -184,9 +181,23 @@ class AdminUser(UserMixin):
     if password_correct:
       return password == password_correct
 
+  # strava_accounts = db.relationship(
+  #   'StravaAccount',
+  #   backref='admin_user',
+  #   lazy=True
+  # )
+
   @property
   def strava_accounts(self):
     return StravaAccount.query.all()
+
+  @property
+  def settings(self):
+    return UserSettings.query.get(self.id)
+
+  @property
+  def ftp_ms(self):
+    return self.settings.ftp_ms
 
   def __repr__(self):
     return '<Admin User>'
@@ -353,3 +364,19 @@ class StravaAccount(db.Model):
   @property
   def url(self):
     return f'https://www.strava.com/athletes/{self.strava_id}'
+
+
+class UserSettings(db.Model):
+  id = db.Column(
+    db.Integer,
+    primary_key=True
+  )
+  cp_ms = db.Column(
+    db.Float,
+    nullable=False,
+    server_default=sa.text(str(units.pace_to_speed('6:30')))
+  )
+
+  @property
+  def ftp_ms(self):
+    return self.cp_ms
