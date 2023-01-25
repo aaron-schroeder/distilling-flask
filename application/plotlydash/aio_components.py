@@ -541,7 +541,7 @@ class TimeInput(dbc.Input):
       pattern='[0-9][0-9]:[0-5][0-9]:[0-5][0-9]',
       value=f'{hours:02d}:{minutes:02d}:{seconds:02d}',
       debounce=True,
-      style={'width': '100px'},
+      style={'max-width': '100px'},
       **derived_kwargs
     )
 
@@ -850,3 +850,22 @@ class StatsDivAIO(dbc.Accordion):
       for i in cols
       if i not in ['Time (s)', 'Distance (m)', 'Speed (m/s)']
     ]
+
+
+class SettingsLabel(dbc.Label):
+  def __init__(self, *args, 
+    width=5,
+    sm=5,
+    md=4,
+    lg=3,
+    xl=2,
+    **kwargs
+  ):
+    super().__init__(*args, 
+      width=width,
+      sm=sm,
+      md=md,
+      lg=lg,
+      xl=xl,
+      **kwargs
+    )
