@@ -18,7 +18,7 @@ def layout(**url_queries):
   if next_raw:
     next_url = next_raw
   else:
-    next_url = url_for('main.settings')
+    next_url = '/settings'
 
   if current_user.is_authenticated:
     return dcc.Location(pathname=next_url, id=str(uuid.uuid4()))

@@ -1,6 +1,10 @@
 import dash
 from dash import Dash, html, Input, Output, State
 import dash_bootstrap_components as dbc
+from flask_login import current_user
+
+
+NAVBAR_EXPAND = 'lg'
 
 
 def add_dash_app_to_flask(server):
@@ -44,20 +48,24 @@ def add_dash_app_to_flask(server):
             n_clicks=0
           ),
           dbc.Collapse(
-            [
-              dbc.NavItem(
-                dbc.NavLink('Training Log', href='/', external_link=True)
-              ),
-              dbc.NavItem(
-                dbc.NavLink('Training Stress', href='/stress', external_link=True)
-              ),
-              dbc.NavItem(
-                dbc.NavLink('All Activities', href='/saved-list', external_link=True)
-              ),
-              dbc.NavItem(
-                dbc.NavLink('Admin', href='/settings', external_link=True)
-              )
-            ], 
+            dbc.Nav(
+              [
+                dbc.DropdownMenu(
+                  [
+                    # dbc.DropdownMenuItem("More pages", header=True),
+                    dbc.DropdownMenuItem('Training Log', href='/', external_link=True),
+                    dbc.DropdownMenuItem('Training Stress', href='/stress', external_link=True),
+                    dbc.DropdownMenuItem('All Activities', href='/saved-list', external_link=True),
+                  ],
+                  nav=True,
+                  in_navbar=True,
+                  label='Training',
+                  align_end=True,
+                ),
+                html.Div(id='nav-item-end'),
+              ],
+              navbar=True,
+            ),
             id='navbarToggleContent',
             class_name='justify-content-end',
             is_open=False,
@@ -66,7 +74,7 @@ def add_dash_app_to_flask(server):
         ],
         fluid=True,
       ),
-      expand='lg',
+      expand=NAVBAR_EXPAND,
       # className='navbar navbar-light bg-light'
       style={'box-shadow': 'inset 0 -1px 0 rgba(0, 0, 0, .1)'}
     ),
@@ -83,5 +91,35 @@ def add_dash_app_to_flask(server):
       if n:
           return not is_open
       return is_open
+
+  # populate the navbar depending on user login status
+  @dash_app.callback(
+    Output('nav-item-end', 'children'),
+    Input(dash.dash._ID_CONTENT, 'children')
+  )
+  def update_nav_item_end(_):
+    if current_user.is_authenticated:
+      return dbc.DropdownMenu(
+        [
+          dbc.DropdownMenuItem('Settings', href='/settings', external_link=True),
+          dbc.DropdownMenuItem('Log Out', href='/logout', external_link=True),
+        ],
+        nav=True,
+        in_navbar=True,
+        label='User',
+        align_end=True,
+      )
+    else:
+      return dbc.Col(
+        dbc.Button(
+          'Log in',
+          href='/login',
+          color='primary',
+          class_name=f'ms-0 ms-{NAVBAR_EXPAND}-2',
+          size='sm'
+        ),
+        width='auto',
+        class_name='d-flex align-items-center',
+      )
 
   return dash_app
