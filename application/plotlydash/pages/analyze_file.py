@@ -1,14 +1,5 @@
 """Display data from an uploaded activity or route file.
 
-Basically want to have an encapsulated demo that I can deploy to
-pythonanywhere etc. I have built cool stuff, but it is hard to show
-my work!
-
-https://dash.plotly.com/dash-core-components/upload
-
-dcc.Upload properties:
-https://dash.plotly.com/dash-core-components/upload#dcc.upload-component-properties
-
 No saving the file for now - keep as a DataFrame in memory.
 (Opportunity to use redis?)
 """

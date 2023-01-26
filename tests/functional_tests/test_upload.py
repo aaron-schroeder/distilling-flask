@@ -8,9 +8,9 @@ from .base import LoggedInFunctionalTest
 class UploadTest(LoggedInFunctionalTest):
   def test_can_upload_activity(self):
     # From the admin page, the user navigates to the file upload dashboard.
-    self.browser.find_element(
-      By.PARTIAL_LINK_TEXT,
-      'Analyze Activity File'
+    self.wait_for_element(
+      By.XPATH,
+      '//*[text()="Analyze Activity File"]'
     ).click()
 
     # They use the upload widget to select an activity file to analyze.

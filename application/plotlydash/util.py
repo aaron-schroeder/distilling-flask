@@ -14,6 +14,9 @@ from application.util.dataframe import calc_power
 def layout_login_required(layout_func):
   @wraps(layout_func)
   def decorated_function(*args, **kwargs):
+    # TODO: Find a permafix for this hack. Noticing it probably won't hold
+    # up `layout_login_required` decorates an already-decorated layout
+    # function.
     registry_entry = dash.page_registry[layout_func.__module__]
     rel_url = registry_entry['relative_path']
     if not current_user.is_authenticated:

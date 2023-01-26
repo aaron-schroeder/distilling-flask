@@ -43,7 +43,7 @@ def SettingsContainer(children, page_title=None):
           html.Ul(
             [
               html.Li(
-                html.A(
+                dbc.NavLink(
                   [
                    html.Div(
                     html.I(className='fa-solid fa-gear'),
@@ -53,12 +53,13 @@ def SettingsContainer(children, page_title=None):
                   ],
                   href='/settings',
                   # href='/settings/user'  # or '/settings/profile'
-                  className='nav-link d-flex'
+                  class_name='d-flex',
+                  active='exact',
                 ),
                 className='nav-item'
               ),
               html.Li(
-                html.A(
+                dbc.NavLink(
                   [
                    html.Div(
                     html.I(className='fa-solid fa-circle-nodes'),
@@ -66,14 +67,14 @@ def SettingsContainer(children, page_title=None):
                    ),
                    html.Div('Strava Account Connections')
                   ],
-                  href='/strava/manage',
-                  # href='/settings/strava',  # along with '/settings/profile'
-                  className='nav-link d-flex'
+                  href='/settings/strava',
+                  class_name='d-flex',
+                  active='exact',
                 ),
                 className='nav-item'
               ),
               html.Li(
-                html.A(
+                dbc.NavLink(
                   [
                    html.Div(
                     html.I(className='fa-solid fa-microscope'),
@@ -82,7 +83,8 @@ def SettingsContainer(children, page_title=None):
                    html.Div('Analyze Activity File')
                   ],
                   href='/analyze-file',
-                  className='nav-link d-flex'
+                  class_name='d-flex',
+                  active='exact',
                 ),
                 className='nav-item'
               ),

@@ -68,7 +68,7 @@ def layout(**_):
       action='',
       class_name='mt-2'
     ),
-    page_title='User Setttings'
+    page_title='User Settings'
   )
 
 

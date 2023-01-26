@@ -6,8 +6,10 @@ from dash import (dcc, html, dash_table, callback, clientside_callback,
   Input, Output, State, MATCH)
 from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
+from flask import url_for
 import pandas as pd
 from scipy.interpolate import interp1d
+from stravalib.exc import RateLimitExceeded
 
 from application.models import AdminUser
 from application.plotlydash.figure_layout import (
@@ -541,7 +543,10 @@ class TimeInput(dbc.Input):
       pattern='[0-9][0-9]:[0-5][0-9]:[0-5][0-9]',
       value=f'{hours:02d}:{minutes:02d}:{seconds:02d}',
       debounce=True,
-      style={'max-width': '100px'},
+      style={
+        'max-width': '100px',
+        'min-width': '100px'
+      },
       **derived_kwargs
     )
 
@@ -869,3 +874,115 @@ class SettingsLabel(dbc.Label):
       xl=xl,
       **kwargs
     )
+
+
+class StravaAccountRow(dbc.Row):
+
+  def __init__(self, strava_account, *args, **kwargs):
+    try:
+      super().__init__(
+        class_name='py-3',
+        justify='center',
+        children=dbc.Col(
+          xl=9,
+          children=dbc.Card(
+            style={'border-radius': '15px'},
+            children=dbc.CardBody(
+              class_name='p-4',
+              children=html.Div(
+                className='d-flex text-black',
+                children=[
+                  html.Div(
+                    className='flex-shrink-0',
+                    children=html.A(
+                      href=strava_account.url,
+                      children=html.Img(
+                        src=strava_account.profile_picture_url,
+                        alt='Athlete Profile Picture',
+                        className='img-fluid',
+                        style={'width': '180px', 'border_radius': '10px'}
+                      )
+                    )                    
+                  ),
+                  html.Div(
+                    className='flex-grow-1 ms-3',
+                    children=[
+                      html.A(
+                        href=strava_account.url,
+                        children=html.H5(
+                          className='mb-1',
+                          children=f'{strava_account.firstname} {strava_account.lastname}'
+                        )
+                      ),
+                      html.P(
+                        className='mb-2 pb-1',
+                        style={'color': '#2b2a2'},
+                        children=f'Strava Account #{strava_account.strava_id}'
+                      ),
+                      html.P(
+                        className='mb-2 pb-1',
+                        style={'color': '#2b2a2'},
+                        children=f'{strava_account.athlete.city}, {strava_account.athlete.state}, {strava_account.athlete.country}'
+                      ),
+                      html.Div(
+                        className='d-flex justify-content-start '
+                                  'rounded-3 p-2 mb-2',
+                        style={'background-color': '#efefef'},
+                        children=[
+                          html.Div([
+                            html.P(
+                              className='small text-muted mb-1',
+                              children='Runs'
+                            ),
+                            html.P(
+                              className='mb-0',
+                              children=strava_account.run_count
+                            ),
+                          ]),
+                          html.Div(
+                            className='px-3',
+                            children=[
+                              html.P(
+                                className='small text-muted mb-1',
+                                children='Followers'
+                              ),
+                              html.P(
+                                className='mb-0',
+                                children=strava_account.follower_count
+                              ),                              
+                            ]
+                          )
+                        ]
+                      ),
+                      html.Div(
+                        className='d-flex pt-1',
+                        children=[
+                          dbc.Button(
+                            href=f'/strava/activities?id={strava_account.strava_id}',
+                            color='primary',
+                            class_name='me-1 flex-grow-1',
+                            external_link=True,
+                            children='View Strava Activities'
+                          ),
+                          dbc.Button(
+                            href=url_for(
+                              'strava_api.revoke',
+                              id=strava_account.strava_id
+                            ),
+                            color='danger',
+                            class_name='flex-grow-1',
+                            external_link=True,
+                            children='Revoke Access'
+                          )
+                        ]
+                      )
+                    ]
+                  )
+                ]
+              )
+            )
+          )
+        )
+      )
+    except RateLimitExceeded:
+      super().__init__('Rate limit exceeded')

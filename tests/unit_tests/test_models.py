@@ -4,7 +4,7 @@ import pytz
 from sqlalchemy import exc
 
 from application import db
-from application.models import Activity, AdminUser, StravaAccount
+from application.models import Activity, AdminUser, StravaAccount, UserSettings
 from application.util import units
 from .base import FlaskTestCase
 
@@ -134,6 +134,9 @@ class ActivityModelTest(FlaskTestCase):
     )
 
   def test_intensity_factor(self):
+    db.session.add(UserSettings())
+    db.session.commit()
+
     self.assertEqual(   
       self.create_activity(ngp_ms=units.pace_to_speed('6:30')).intensity_factor,
       1.0
@@ -150,11 +153,16 @@ class ActivityModelTest(FlaskTestCase):
     )
 
   def test_tss(self):
+    db.session.add(UserSettings())
+    db.session.commit()
+
+    activity = self.create_activity(
+      ngp_ms=units.pace_to_speed('6:30'),
+      elapsed_time_s=3600,
+    )
+
     self.assertEqual(   
-      self.create_activity(
-        ngp_ms=units.pace_to_speed('6:30'),
-        elapsed_time_s=3600,
-      ).tss,
+      activity.tss,
       100.0
     )
 

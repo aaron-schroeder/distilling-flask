@@ -3,7 +3,6 @@ import uuid
 import dash
 from dash import dcc, html, callback, Input, Output, State, ALL
 import dash_bootstrap_components as dbc
-from flask import url_for
 from flask_login import current_user, login_user
 
 from application.models import AdminUser
@@ -62,9 +61,7 @@ def validate_password(n_clicks, password, next_url):
   if n_clicks and n_clicks > 0:
     user = AdminUser()
     if user.check_password(password):
-      # Login and redirect to admin landing page.
       login_user(user, remember=True)
-      print(next_url)
       return dcc.Location(pathname=next_url, id=str(uuid.uuid4())), False
     else:
       return None, True

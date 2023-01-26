@@ -47,7 +47,7 @@ class TestHandleCode(LoggedInFlaskTestCase):
     # Since the scope is accepted correctly, the user is redirected
     # to their strava account list. (Should it go to activity list instead?)
     self.assertEqual(rv.status_code, 302)
-    self.assertEqual(rv.location, url_for('strava_api.manage'))
+    self.assertEqual(rv.location, '/settings/strava')
 
     # Next, the external strava api responds to a POST request
     # from my app that includes the code that was previously
@@ -130,7 +130,7 @@ class TestManageAccounts(LoggedInFlaskTestCase):
 
     db.session.add(StravaAccount(strava_id=1, expires_at=0))
     db.session.commit()
-    self.client.get(url_for('strava_api.manage'))
+    self.client.get('/settings/strava')
 
     # TODO: Finish this test
   
@@ -152,10 +152,13 @@ class TestRevoke(AuthenticatedFlaskTestCase):
     response = self.client.get(url_for('strava_api.revoke', id=strava_accts[0].strava_id))
 
     self.assertEqual(response.status_code, 302)
-    self.assertEqual(response.location, url_for('strava_api.manage'))
+    self.assertEqual(response.location, '/settings/strava')
 
     self.assertFalse(len(AdminUser().strava_accounts), 0)
 
   def test_revoke_on_strava(self):
-    """The user revokes app access at https://www.strava.com/settings/apps"""
+    """The user revokes app access at https://www.strava.com/settings/apps
+    
+    Expected behavior: revoking access results in a webhook event
+    """
     pass

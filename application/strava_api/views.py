@@ -7,6 +7,7 @@ from stravalib.exc import RateLimitExceeded
 
 from application.models import db, StravaAccount
 from application.util import units
+from application import messages
 from . import strava_api
 
 
@@ -80,7 +81,7 @@ def handle_code():
     strava_acct.access_token = token['access_token']
     strava_acct.refresh_token = token['refresh_token']
     strava_acct.expires_at = token['expires_at']
-    action = 'updated'
+    action = 'updated.'
   else:
     strava_acct = StravaAccount(
       strava_id=athlete.id,
@@ -93,14 +94,17 @@ def handle_code():
       # _=token['athlete']['profile'],
     )
     db.session.add(strava_acct)
-    action = 'added'
+    action = 'added!'
 
   db.session.commit()
 
-  # Redirect them to the main admin
-  flash(f'Strava account for {strava_acct.firstname} {strava_acct.lastname} '
-        f'successfully {action}!')
-  return redirect(url_for('strava_api.manage'))
+  # Redirect them to the strava account page
+  flash(
+    f'Strava account for {strava_acct.firstname} {strava_acct.lastname} '
+    f'successfully {action}',
+    category=messages.SUCCESS
+  )
+  return redirect('/settings/strava')
 
 
 @strava_api.route('/manage')
@@ -119,8 +123,11 @@ def revoke():
   strava_account = StravaAccount.query.get(request.args.get('id'))
   
   if strava_account is None:
-    flash(f'No strava account was found with id {request.args.get("id")}')
-    return redirect(url_for('strava_api.manage'))
+    flash(
+      f'No strava account was found with id {request.args.get("id")}',
+      category=messages.WARNING
+    )
+    return redirect('/settings/strava')
 
   msg_success = (
     f'Strava account {strava_account.firstname} {strava_account.lastname} '
@@ -130,8 +137,8 @@ def revoke():
   db.session.delete(strava_account)
   db.session.commit()
 
-  flash(msg_success)
-  return redirect(url_for('strava_api.manage'))
+  flash(msg_success, category=messages.SUCCESS)
+  return redirect('/settings/strava')
 
 
 @strava_api.route('/status')

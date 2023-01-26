@@ -8,6 +8,7 @@ from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 
 from application.config import config, Config
+from application import messages
 
 
 db = SQLAlchemy()
@@ -68,6 +69,7 @@ def create_app(config_name='dev'):
   # Flask-Login
   login.init_app(app)
   login.login_view = dash.page_registry['pages.login']['relative_path']
+  login.login_message_category = messages.INFO
 
   # flask-migrate
   migrate.init_app(app, db)

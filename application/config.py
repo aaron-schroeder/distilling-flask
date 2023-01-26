@@ -52,6 +52,7 @@ class TestingConfig(Config):
     'TEST_DATABASE_URL',
     'sqlite://'
   )
+  SQLALCHEMY_ECHO = False
   SECRET_KEY = 'super secret key'
 
 

@@ -127,3 +127,14 @@ class ListPageTest(FlaskTestCase):
 
     self.assertIn('itemey 1', response.get_data(as_text=True))
     self.assertIn('itemey 2', response.get_data(as_text=True))
+
+
+@unittest.skip('Needs to be converted to a dash test')
+class SettingsPageTest(LoggedInFlaskTestCase):
+
+  def test_settings_page_returns_correct_html(self):
+    response = self.client.get('/settings')
+
+    html = response.get_data(as_text=True)
+    self.assertTrue(html.startswith('<!doctype html>'))
+    self.assertIn('<title>Profile Settings - Training Zealot</title>', html)

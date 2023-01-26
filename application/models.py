@@ -123,7 +123,7 @@ class Activity(db.Model):
   def intensity_factor(self):
     if self.ngp_ms:
       # return self.ngp_ms / AdminUser().get_ftp_ms(self.recorded)
-      return self.ngp_ms / AdminUser().ftp_ms
+      return self.ngp_ms / AdminUser().settings.ftp_ms
       # return self.ngp_ms / units.pace_to_speed('6:30')
 
   @property
@@ -194,10 +194,6 @@ class AdminUser(UserMixin):
   @property
   def settings(self):
     return UserSettings.query.get(self.id)
-
-  @property
-  def ftp_ms(self):
-    return self.settings.ftp_ms
 
   def __repr__(self):
     return '<Admin User>'
@@ -320,19 +316,20 @@ class StravaAccount(db.Model):
     try:
       _athlete = self.client.get_athlete()
     except RateLimitExceeded:
-      # HACK
-      class AthUhLete(object):
-        def __init__(zelf, *args, **kwargs):
-          for attr_nm, attr in kwargs.items():
-            setattr(zelf, attr_nm, attr)
+      from application.util.mock_stravalib import DummyClass
       
-      _athlete = AthUhLete(
+      _athlete = DummyClass(
         profile=None,
         firstname='Rate',
         lastname='Limit',
-        run_count=None,
         follower_count=None,
         email=None,
+        city=None,
+        state=None,
+        country=None,
+        stats=DummyClass(
+          all_run_totals=DummyClass(count=1)
+        )
       )
     
     return _athlete

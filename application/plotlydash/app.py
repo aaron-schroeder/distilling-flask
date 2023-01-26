@@ -1,6 +1,7 @@
 import dash
 from dash import Dash, html, Input, Output, State
 import dash_bootstrap_components as dbc
+from flask import get_flashed_messages
 from flask_login import current_user
 
 
@@ -78,6 +79,7 @@ def add_dash_app_to_flask(server):
       # className='navbar navbar-light bg-light'
       style={'box-shadow': 'inset 0 -1px 0 rgba(0, 0, 0, .1)'}
     ),
+    html.Div(id='status-container'),
     dash.page_container
   ])
 
@@ -121,5 +123,24 @@ def add_dash_app_to_flask(server):
         width='auto',
         class_name='d-flex align-items-center',
       )
+
+  @dash_app.callback(
+    Output('status-container', 'children'),
+    Input(dash.dash._ID_CONTENT, 'children')
+  )
+  def update_status(_):
+    return [
+      dbc.Toast(
+        message,
+        header=category.capitalize(),
+        is_open=True,
+        dismissable=True,
+        duration=10000,
+        icon=category.lower(),
+        # top: 66 positions the toast below the navbar
+        style={'position': 'fixed', 'top': 66, 'right': 10, 'width': 350},
+      )
+      for category, message in get_flashed_messages(with_categories=True)
+    ]
 
   return dash_app

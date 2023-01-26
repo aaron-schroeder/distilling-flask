@@ -77,7 +77,8 @@ class LiveServerTestCase(unittest.TestCase):
     self._ctx = self.app.test_request_context()
     self._ctx.push()
 
-    db.create_all()
+    from flask_migrate import upgrade as _upgrade
+    _upgrade()
 
     if settings.SKIP_STRAVA_API:
       # Spoof a StravaAccount that has authorized with strava.
@@ -189,11 +190,10 @@ class FunctionalTest(LiveServerTestCase):
   def browser_get_relative(self, path):
     self.browser.get(urljoin(self.server_url, path))
 
-  def navigate_to_admin(self):
+  def navigate_to_login(self):
     self.browser_get_relative('/')
-
     self.wait_for_element(By.CLASS_NAME, 'navbar-toggler').click()
-    self.wait_for_element(By.LINK_TEXT, 'Admin').click()
+    self.wait_for_element(By.LINK_TEXT, 'Log in').click()
 
 
 class LoggedInFunctionalTest(FunctionalTest):
@@ -213,7 +213,7 @@ class AuthenticatedUserFunctionalTest(LoggedInFunctionalTest):
       # No need to go through real auth process, since the
       # database is pre-spoofed.
       time.sleep(0.2)
-      self.browser_get_relative(url_for('strava_api.manage'))
+      self.browser_get_relative('/settings/strava')
       time.sleep(0.2)
     else:
       time.sleep(0.2)
