@@ -1,0 +1,21 @@
+{% extends 'strava_api/callback_base.html' %}
+
+{% block header %}Problem linking your Strava account{% endblock %}
+
+{% block message %}
+  {{ warning }}
+  <div class="d-grid gap-2 mt-2">
+    <a href="{{ url_for('strava_api.authorize') }}"class="btn btn-primary">
+      Ok, send me back to Strava's authorization page.
+    </a>
+    <a href="/settings" class="btn btn-secondary">
+      Never mind, I don't want to grant access to my Strava data.
+    </a>
+    {% with error = request.args.get('error') %}
+      {% if error %}
+        <hr>
+        <small>Error from Strava API: {{ error }}</small>
+      {% endif %}
+    {% endwith %}
+  </div>
+{% endblock message %}

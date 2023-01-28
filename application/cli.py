@@ -71,7 +71,11 @@ def rundummy(
   
   with app.app_context():
     db.drop_all()
-    db.create_all()
+    from flask_migrate import stamp as _stamp
+    _stamp(revision='base')
+
+    from flask_migrate import upgrade as _upgrade
+    _upgrade()
     
     # Spoof a StravaAccount that has authorized with strava.
     # This will only be used with mockstravalib, not the real thing.

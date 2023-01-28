@@ -9,7 +9,7 @@ from sqlalchemy.exc import IntegrityError
 from stravalib.exc import RateLimitExceeded
 
 from application import celery
-from application.models import db, Activity, StravaAccount
+from application.models import db, Activity, AdminUser, StravaAccount
 from application.util.dataframe import calc_power
 from application.util import readers
 import power.util as putil
@@ -170,8 +170,8 @@ def async_save_strava_activity(self, account_id, activity_id, handle_overlap='ex
       ngp_rolling = pd.Series(ngp_1sec).rolling(window).mean()          
       ngp_ms = putil.lactate_norm(ngp_rolling[29:])
 
-      cp_ms = 1609.34 / (6 * 60 + 30)  # 6:30 mile
-      intensity_factor = ngp_ms / cp_ms
+      # cp_ms = 1609.34 / (6 * 60 + 30)  # 6:30 mile
+      intensity_factor = ngp_ms / AdminUser().ftp_ms
 
       total_hours = (df['time'].iloc[-1] - df['time'].iloc[0]) / 3600
       tss = 100.0 * total_hours * intensity_factor ** 2

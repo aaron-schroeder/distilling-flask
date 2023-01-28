@@ -1,0 +1,16 @@
+{% extends 'strava_api/callback_base.html' %}
+
+{% block message %}
+  Strava account for {{ strava_name }} was already linked.
+  If you would like to link an additional Strava account, please
+  <a href="https://strava.com/logout" target="_blank">log out of the linked Strava account</a>,
+  come back to this page, and try again.
+  <div class="d-grid gap-2 mt-2">
+    <a href="{{ url_for('strava_api.authorize') }}"class="btn btn-primary">
+      Ok, send me back to Strava's authorization page.
+    </a>
+    <a href="/settings" class="btn btn-secondary">
+      Never mind, I don't want to link another Strava account.
+    </a>
+  </div>
+{% endblock message %}

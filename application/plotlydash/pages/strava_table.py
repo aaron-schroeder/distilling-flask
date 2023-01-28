@@ -251,4 +251,4 @@ def save_strava_activities(
         handle_overlap=overlap_choice
       )
 
-  return '/strava/manage'
+  return '/settings/strava'

@@ -1,14 +1,5 @@
 """Display data from an uploaded activity or route file.
 
-Basically want to have an encapsulated demo that I can deploy to
-pythonanywhere etc. I have built cool stuff, but it is hard to show
-my work!
-
-https://dash.plotly.com/dash-core-components/upload
-
-dcc.Upload properties:
-https://dash.plotly.com/dash-core-components/upload#dcc.upload-component-properties
-
 No saving the file for now - keep as a DataFrame in memory.
 (Opportunity to use redis?)
 """
@@ -24,6 +15,7 @@ import dash_bootstrap_components as dbc
 import pandas as pd
 
 from application.plotlydash.aio_components import FigureDivAIO, StatsDivAIO
+from application.plotlydash.layout import SettingsContainer
 from application.plotlydash.util import layout_login_required
 from application.util import readers
 from application.util.dataframe import calc_power
@@ -36,32 +28,35 @@ dash.register_page(__name__, path_template='/analyze-file',
 @layout_login_required
 def layout(**_):
 
-  return dbc.Container([
-    dcc.Upload(
-      id='upload-data',
-      # children=html.Div([
-      children=[
-        'Drag and Drop or ',
-        html.A('Select File')
-      ],
-      # ]),
-      style={
-        'width': '100%',
-        'height': '60px',
-        'lineHeight': '60px',
-        'borderWidth': '1px',
-        'borderStyle': 'dashed',
-        'borderRadius': '5px',
-        'textAlign': 'center',
-        'margin': '10px 0px'
-      },
-      # Allow multiple files to be uploaded?
-      multiple=False,
-    ),
-    html.Div(id='file-stats'),
-    html.Div(id='stats-container'),
-    html.Div(id='figure-container'),
-  ])
+  return SettingsContainer(
+    [
+      dcc.Upload(
+        id='upload-data',
+        # children=html.Div([
+        children=[
+          'Drag and Drop or ',
+          html.A('Select File')
+        ],
+        # ]),
+        style={
+          'width': '100%',
+          'height': '60px',
+          'lineHeight': '60px',
+          'borderWidth': '1px',
+          'borderStyle': 'dashed',
+          'borderRadius': '5px',
+          'textAlign': 'center',
+          'margin': '10px 0px'
+        },
+        # Allow multiple files to be uploaded?
+        multiple=False,
+      ),
+      html.Div(id='file-stats'),
+      html.Div(id='stats-container'),
+      html.Div(id='figure-container'),
+    ],
+    page_title='Analyze an Activity File'
+  )
 
   # --- Stopped periods callback experiment ----------------
 

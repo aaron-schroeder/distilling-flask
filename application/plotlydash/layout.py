@@ -17,47 +17,90 @@ COLORS = {
 }
 
 
-def create_x_stream_radiogroup(opts, value=None):
-  value = value or opts[0]
+def SettingsContainer(children, page_title=None):
 
-  return dbc.Row([
-    dbc.Label('Select x-axis stream:'),
-    dbc.RadioItems(
-      options=[{'label': x, 'value': x} for x in opts],
-      value=value,
-      id='x-selector',
-      inline=True
-    ),
-  ])
+  if page_title:
+    # Convert `children` to a list (if it isn't already)
+    # and insert a header element in the first position.
+    main_children = [
+      html.Div(
+        html.H1(page_title, className='h2'),
+        className='d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom',
+      )
+    ]
+    if isinstance(children, list):
+      main_children.extend(children)
+    else:
+      main_children.append(children)
+  else:
+    # Pass `children` to the layout as-is.
+    main_children = children
 
-
-def create_plot_checkgroup(opts, values=None):
-  values = values or opts
-
-  return dbc.Row([
-    dbc.Label('Select visible plots:'),
-    dbc.Checklist(
-      options=[{'label': x, 'value': x} for x in opts],
-      value=values,
-      id='plot-checklist',
-      inline=True
-    ),
-  ])
-
-
-def init_layout():
-  """Dumb layout - does not change based on what data is available."""
-  out = dbc.Container(
-    [
-      html.Div(id='stats'),
-      dbc.Row(id='plot-options'),
-      html.Div(id='figures'),
-      dcc.Store(id='activity-data'), # data streams
-      dcc.Store(id='activity-stats'), # could be strava response etc
-      dcc.Store(id='calc-stats'), # storage for DF-to-stats calc
-    ],
-    id='dash-container',
+  return dbc.Container(
+    dbc.Row([
+      dbc.Navbar(
+        html.Div(
+          html.Ul(
+            [
+              html.Li(
+                dbc.NavLink(
+                  [
+                   html.Div(
+                    html.I(className='fa-solid fa-gear'),
+                    className='d-flex align-items-center me-2'
+                   ),
+                   html.Div('Profile Settings')
+                  ],
+                  href='/settings',
+                  # href='/settings/user'  # or '/settings/profile'
+                  class_name='d-flex',
+                  active='exact',
+                ),
+                className='nav-item'
+              ),
+              html.Li(
+                dbc.NavLink(
+                  [
+                   html.Div(
+                    html.I(className='fa-solid fa-circle-nodes'),
+                    className='d-flex align-items-center me-2'
+                   ),
+                   html.Div('Strava Account Connections')
+                  ],
+                  href='/settings/strava',
+                  class_name='d-flex',
+                  active='exact',
+                ),
+                className='nav-item'
+              ),
+              html.Li(
+                dbc.NavLink(
+                  [
+                   html.Div(
+                    html.I(className='fa-solid fa-microscope'),
+                    className='d-flex align-items-center me-2'
+                   ),
+                   html.Div('Analyze Activity File')
+                  ],
+                  href='/analyze-file',
+                  class_name='d-flex',
+                  active='exact',
+                ),
+                className='nav-item'
+              ),
+            ],
+            className='nav flex-column'
+          ),
+          className='sidebar-sticky'
+        ),
+        class_name='col-md-3 d-none d-md-block sidebar'  # 'navbar-light bg-light'
+      ),
+      
+      html.Main(
+        main_children,
+        className='col-md-9 ms-sm-auto px-4',
+        role='main',  # necessary?
+      ),
+    ]),
     fluid=True,
   )
-
-  return out

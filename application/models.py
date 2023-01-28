@@ -9,6 +9,7 @@ from flask import current_app
 from flask_login import UserMixin
 import pandas as pd
 import pytz
+import sqlalchemy as sa
 from stravalib.exc import RateLimitExceeded
 
 from application import db, login
@@ -122,7 +123,8 @@ class Activity(db.Model):
   def intensity_factor(self):
     if self.ngp_ms:
       # return self.ngp_ms / AdminUser().get_ftp_ms(self.recorded)
-      return self.ngp_ms / units.pace_to_speed('6:30')
+      return self.ngp_ms / AdminUser().settings.ftp_ms
+      # return self.ngp_ms / units.pace_to_speed('6:30')
 
   @property
   def tss(self):
@@ -172,11 +174,6 @@ class Activity(db.Model):
 
 class AdminUser(UserMixin):
   id = 1
-  # strava_accounts = db.relationship(
-  #   'StravaAccount',
-  #   backref='admin_user',
-  #   lazy=True
-  # )
 
   def check_password(self, password):
     # password_correct = config.get('settings', 'password')
@@ -184,9 +181,19 @@ class AdminUser(UserMixin):
     if password_correct:
       return password == password_correct
 
+  # strava_accounts = db.relationship(
+  #   'StravaAccount',
+  #   backref='admin_user',
+  #   lazy=True
+  # )
+
   @property
   def strava_accounts(self):
     return StravaAccount.query.all()
+
+  @property
+  def settings(self):
+    return UserSettings.query.get(self.id)
 
   def __repr__(self):
     return '<Admin User>'
@@ -309,19 +316,20 @@ class StravaAccount(db.Model):
     try:
       _athlete = self.client.get_athlete()
     except RateLimitExceeded:
-      # HACK
-      class AthUhLete(object):
-        def __init__(zelf, *args, **kwargs):
-          for attr_nm, attr in kwargs.items():
-            setattr(zelf, attr_nm, attr)
+      from application.util.mock_stravalib import DummyClass
       
-      _athlete = AthUhLete(
+      _athlete = DummyClass(
         profile=None,
         firstname='Rate',
         lastname='Limit',
-        run_count=None,
         follower_count=None,
         email=None,
+        city=None,
+        state=None,
+        country=None,
+        stats=DummyClass(
+          all_run_totals=DummyClass(count=1)
+        )
       )
     
     return _athlete
@@ -353,3 +361,19 @@ class StravaAccount(db.Model):
   @property
   def url(self):
     return f'https://www.strava.com/athletes/{self.strava_id}'
+
+
+class UserSettings(db.Model):
+  id = db.Column(
+    db.Integer,
+    primary_key=True
+  )
+  cp_ms = db.Column(
+    db.Float,
+    nullable=False,
+    server_default=sa.text(str(units.pace_to_speed('6:30')))
+  )
+
+  @property
+  def ftp_ms(self):
+    return self.cp_ms
