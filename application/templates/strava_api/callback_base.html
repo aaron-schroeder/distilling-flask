@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+  
+{% block title %}Link Your Strava Account{% endblock %}
+
+{% block content %}
+  <div class="container-fluid"> 
+    <div class="row justify-content-center">
+      <div class="col col-sm-10 col-md-8 col-lg-6 col-xxl-4">
+        <div class="alert alert-warning mt-3">
+          <h4 class="alert-heading">
+            {% block header %}Link your Strava account{% endblock %}
+          </h4>
+          {% block message %}{% endblock %}
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}

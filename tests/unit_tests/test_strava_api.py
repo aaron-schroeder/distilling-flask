@@ -87,7 +87,7 @@ class TestHandleCode(LoggedInFlaskTestCase):
     # so my app can function properly.
     self.assertEqual(rv.status_code, 200)
     # self.assertTemplateUsed(rv, 'strava_api/callback.html')
-    self.assertIn('permissions', rv.get_data(as_text=True))
+    self.assertIn('Please accept the permission', rv.get_data(as_text=True))
 
   def test_handle_strava_error(self):
     # User clicks `cancel` button when accepting strava permissions, 

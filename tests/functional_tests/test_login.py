@@ -15,8 +15,6 @@ class LoginTest(FunctionalTest):
 
     self.browser.find_element(By.XPATH, '//button[text()="Log in"]').click()
 
-    # self.wait_for_element(By.CLASS_NAME, 'dash-error-card__list-item').click()
-
     header = self.wait_for_element(By.TAG_NAME, 'h1')
 
     # The admin user is logged in!

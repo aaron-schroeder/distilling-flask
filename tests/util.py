@@ -84,3 +84,7 @@ def strava_auth_flow(browser):
       'btn-accept-cookie-banner'
     ).click()
     auth_btn.click()
+
+
+def expand_dash_err_container(browser):
+  browser.find_element(By.CLASS_NAME, 'dash-error-card__list-item').click()

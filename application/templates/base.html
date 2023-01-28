@@ -8,28 +8,7 @@
 <nav class="navbar navbar-expand-lg navbar-light bg-light topbar">
   <div class="container-fluid">
     <a href="/" class="navbar-brand">Training Zealot Analysis Platform</a>
-    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarToggleContent" aria-controls="navbarToggleContent" aria-expanded="false" aria-label="Toggle navigation">
-      <span class="navbar-toggler-icon"></span>
-    </button>
-    <div class="collapse navbar-collapse" id="navbarToggleContent">
-      <ul class="nav me-auto mt-2 mt-lg-0 flex-column flex-lg-row justify-content-end" style="width: 100%">
-        <li class="nav-item{% if request.path == '/' %} active{% endif %}">
-          <a class="nav-link" href="/">Training Log</a>
-        </li>
-        <li class="nav-item{% if request.path == '/stress' %} active{% endif %}">
-          <a class="nav-link" href="/stress">Training Stress</a>
-        </li>
-        <li class="nav-item{% if request.path == '/saved-list' %} active{% endif %}">
-          <a class="nav-link" href="/saved-list">All Activities</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="/settings">Admin</a>
-        </li>
-      </ul>
-      <div class="my-2 my-lg-0">
-
-      </div>
-    </div>
+    {% block nav_items %}{% endblock %}
   </div>
 </nav>
 

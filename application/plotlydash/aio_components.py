@@ -793,7 +793,7 @@ class StatsDivAIO(dbc.Accordion):
         dbc.AccordionItem(
           TssDivAIO(
             aio_id=aio_id,
-            ftp=AdminUser().ftp_ms,
+            ftp=AdminUser().settings.ftp_ms,
             ngp=ngp_ms,
             total_time=df['time'].iloc[-1]-df['time'].iloc[0]
           ),

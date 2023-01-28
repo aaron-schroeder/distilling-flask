@@ -38,33 +38,29 @@ def authorize():
 @login_required
 def handle_code():
 
-  if request.args.get('error', None) is not None:
+  if request.args.get('error') is not None:
     # Handles user clicking "cancel" button, resulting in a response like:
     # http://localhost:5000/strava/redirect?state=&error=access_denied
-    error = (
-      'It looks like you clicked "cancel" on the strava permission screen.\n'
-      'If you want to use Training Zealot to analyze your Strava data, '
-      'you must grant the app access to your Strava data.\n'
-      f'Error from Strava API: {request.args.get("error")}'
-    )
     return render_template(
-      'strava_api/callback.html',
-      error=error
+      'strava_api/callback_permission.html',
+      warning=(
+        'It looks like you clicked "cancel" on Strava\'s authorization page. '
+        'If you want to use Training Zealot to analyze your Strava data, '
+        'you must grant the app access.'
+      )
     )
 
   # Validate that the user accepted the necessary scope,
   # and display a warning if not.
-  scope = request.args.get('scope')
-  if 'activity:read_all' not in scope.split(','):
-    error = (
-      'You did not accept the required permission '
-      '"View data about your private activities"\n'
-      'If you want to use Training Zealot to analyze your Strava data, '
-      'you must accept all permissions.'
-    )
+  elif 'activity:read_all' not in request.args.get('scope', '').split(','):
+    # Handles user un-selecting the required `activity:read_all` permissions.
     return render_template(
-      'strava_api/callback.html',
-      error=error
+      'strava_api/callback_permission.html',
+      warning=(
+        'Please accept the permission '
+        '"View data about your private activities" on Strava\'s authorization page '
+        '(otherwise, we won\'t be able to access your data).'
+      )
     )
 
   token = StravaAccount.get_client().exchange_code_for_token(
@@ -72,48 +68,50 @@ def handle_code():
     client_secret=CLIENT_SECRET,
     code=request.args.get('code'),
   )
-
   athlete = StravaAccount.get_client(access_token=token['access_token']).get_athlete()
-
   strava_acct = StravaAccount.query.get(athlete.id)
 
   if strava_acct:
+    # The user had already authorized this strava account.
+    # But the action they just took provides us with a fresh token.
     strava_acct.access_token = token['access_token']
     strava_acct.refresh_token = token['refresh_token']
     strava_acct.expires_at = token['expires_at']
-    action = 'updated.'
-  else:
-    strava_acct = StravaAccount(
-      strava_id=athlete.id,
-      access_token=token['access_token'],
-      refresh_token=token['refresh_token'],
-      expires_at=token['expires_at'],
-      # _=token['athlete']['firstname'],
-      # _=token['athlete']['lastname'],
-      # _=token['athlete']['profile_medium'],
-      # _=token['athlete']['profile'],
-    )
-    db.session.add(strava_acct)
-    action = 'added!'
+    db.session.commit()
 
+    return render_template(
+      'strava_api/callback_duplicate.html',
+      strava_name=f'{strava_acct.firstname} {strava_acct.lastname}'
+    )
+
+  # This account doesn't exist in our database, so register it.
+  strava_acct = StravaAccount(
+    strava_id=athlete.id,
+    access_token=token['access_token'],
+    refresh_token=token['refresh_token'],
+    expires_at=token['expires_at'],
+    # _=token['athlete']['firstname'],
+    # _=token['athlete']['lastname'],
+    # _=token['athlete']['profile_medium'],
+    # _=token['athlete']['profile'],
+  )
+  db.session.add(strava_acct)
   db.session.commit()
 
   # Redirect them to the strava account page
+  # TODO: Maybe keep this type of user on the callback page too,
+  # so they can have options of what to do next:
+  # View strava activity list, import all activities form, 
+  # (set up webhooks), ...
+  # Alternatively, in a perfect world, the user would land on the
+  # strava page and there would be a little helpful tour of strava-enabled
+  # features.
   flash(
     f'Strava account for {strava_acct.firstname} {strava_acct.lastname} '
-    f'successfully {action}',
+    f'was successfully linked!',
     category=messages.SUCCESS
   )
   return redirect('/settings/strava')
-
-
-@strava_api.route('/manage')
-@login_required
-def manage():
-  return render_template(
-    'strava_api/manage.html',
-    strava_accounts=StravaAccount.query.all()
-  )
 
 
 @strava_api.route('/revoke')
@@ -124,14 +122,14 @@ def revoke():
   
   if strava_account is None:
     flash(
-      f'No strava account was found with id {request.args.get("id")}',
+      f'Could not find a linked Strava account with ID #{request.args.get("id")}.',
       category=messages.WARNING
     )
     return redirect('/settings/strava')
 
   msg_success = (
-    f'Strava account {strava_account.firstname} {strava_account.lastname} '
-     'successfully removed!'
+    f'Strava account for {strava_account.firstname} {strava_account.lastname} '
+     'was unlinked successfully.'
   )
 
   db.session.delete(strava_account)

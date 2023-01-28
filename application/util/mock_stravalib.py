@@ -51,6 +51,15 @@ class Client:
   def __init__(self, *args, **kwargs):
     self.access_token = kwargs.pop('access_token', None)
 
+  @property
+  def stravalib_client(self):
+    # Supply a genuine stravalib Client for passthrough methods.
+    return stravalib.Client(access_token=self.access_token)
+
+  def authorization_url(self, *args, **kwargs):
+    # Straight-up passthrough method because this doesn't hit Strava API
+    return self.stravalib_client.authorization_url(*args, **kwargs)
+
   def exchange_code_for_token(self, code=None, client_id=None, client_secret=None):
     return MOCK_TOKEN
 
