@@ -144,3 +144,37 @@ def add_dash_app_to_flask(server):
     ]
 
   return dash_app
+
+
+def create_dash_app():
+  from application.plotlydash.aio_components import StressStatusTable
+
+  dash_app = Dash(
+    __name__,
+    routes_pathname_prefix='/',
+    external_stylesheets=[
+      dbc.themes.BOOTSTRAP,
+      dbc.icons.FONT_AWESOME,
+      # Match the stylesheet used for Flask-generated pages.
+      # TODO: Update to latest version.
+      # 'https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css
+      # '/bootstrap.min.css',
+    ],
+    external_scripts=[
+      # Include a modified plotly.js script to make my programmatic
+      # hover-on-map stuff work.
+      'https://cdn.jsdelivr.net/gh/aaron-schroeder/shared-assets@main/assets/'
+      'plotly-strict-2.0.0-rc-adsmod.0.js',
+    ],
+    suppress_callback_exceptions=True,
+  )
+
+  dash_app.layout = dbc.Container(
+    StressStatusTable(
+      aio_id='poop',
+      atl_init=51.1,
+      ctl_init=42.1
+    )
+  )
+
+  return dash_app

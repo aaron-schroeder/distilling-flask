@@ -1,14 +1,16 @@
+import datetime
 import math
 import re
 import uuid
 
 from dash import (dcc, html, dash_table, callback, clientside_callback,
-  Input, Output, State, MATCH)
+  Input, Output, State, ALL, MATCH)
 from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
 from flask import url_for
 import pandas as pd
 from scipy.interpolate import interp1d
+from specialsauce.sources import trainingpeaks as tp
 from stravalib.exc import RateLimitExceeded
 
 from application.models import AdminUser
@@ -986,3 +988,193 @@ class StravaAccountRow(dbc.Row):
       )
     except RateLimitExceeded:
       super().__init__('Rate limit exceeded')
+
+
+class StressStatusTable(html.Div):
+  ids = staticmethod(lambda id, i: {'type': id, 'index': i})
+
+  def __init__(self, *args, aio_id=None, atl_init=0.0, ctl_init=0.0, **kwargs):
+    super().__init__(
+      id=aio_id,
+      children=[
+        dbc.Row([
+          dbc.Col(),
+          dbc.Col('ATL'),
+          dbc.Col('CTL'),
+          dbc.Col('TSB'),
+        ]),
+        html.Div(
+          id='container',
+          children=[
+            dbc.Row(
+              class_name='mb-3',
+              children=[
+                dbc.Col(
+                  # 'Current'
+                ),
+                dbc.Col([
+                  dbc.FormFloating([
+                    dbc.Input(
+                      # id='atl-init',
+                      id=self.ids('atl', 0),
+                      type='number',
+                      value=atl_init,
+                      debounce=True,
+                      # placeholder='Current ATL',
+                    ),
+                    dbc.Label('Current ATL'),
+                    # dbc.FormText('Current ATL'),
+                  ]),
+                ]),
+                dbc.Col([
+                  dbc.FormFloating([
+                    dbc.Input(
+                      # id='ctl-init',
+                      id=self.ids('ctl', 0),
+                      type='number',
+                      value=ctl_init,
+                      debounce=True
+                    ),
+                    dbc.Label('Current CTL'),
+                  ])
+                ]),
+                dbc.Col([
+                  dbc.FormFloating([
+                    dbc.Input(id=self.ids('tsb', 0), type='number', disabled=True),
+                    dbc.Label('TSB'),
+                    dbc.FormText(id=self.ids('status', 0))
+                  ])
+                ]),
+              ]
+            ),
+          ]
+        ),
+        dbc.Row(
+          dbc.Button('Add a planned workout', id='add-row', n_clicks=1),
+          align='center',
+          class_name='mb-3'
+        )
+      ]
+    )
+
+    self._register_callbacks()
+
+  def _register_callbacks(self):
+
+    @callback(
+      Output('container', 'children'),
+      Input('add-row', 'n_clicks'),
+      State('container', 'children'))
+    def display_rows(n_clicks, children):
+      if not n_clicks:
+        # if n_clicks is None:
+        raise PreventUpdate
+
+      n_row = n_clicks
+
+      # if not len(children):
+      #   delta_t_days_prev = 0.0
+      # else:
+      #   #                       dbc.Row     dbc.Col     
+      #   col_delta_t_days_prev = children[-1]['props']['children'][0]
+      #   delta_t_days_prev = col_delta_t_days_prev['props']['children'][1]['props']['value']
+      
+      # if isinstance(col_delta_t_days_prev['props']['children'], list):
+      #   delta_t_days_prev = col_delta_t_days_prev['props']['children'][1]['props']['value']
+      # else:
+      #   delta_t_days_prev = 0.0
+
+      children.append(dbc.Row(
+        class_name='mb-2',
+        children=[
+          dbc.Col([
+            dbc.FormFloating([
+              dbc.Input(
+                id=self.ids('tss', n_row),
+                type='number',
+                value=0,
+                debounce=True
+              ),
+              dbc.Label('TSS')
+            ]),
+            dbc.FormText(
+              (datetime.date.today() + datetime.timedelta(days=n_row-1)
+                ).strftime('%a %D')
+            )
+          ]),
+          dbc.Col(dbc.FormFloating([
+            dbc.Input(
+              id=self.ids('atl', n_row),
+              type='number',
+              disabled=True,
+            ),
+            dbc.Label('ATL')
+          ])),
+          dbc.Col(dbc.FormFloating([
+            dbc.Input(
+              id=self.ids('ctl', n_row),
+              type='number',
+              disabled=True
+            ),
+            dbc.Label('CTL')
+          ])),
+          dbc.Col(dbc.FormFloating([
+            dbc.Input(
+              id=self.ids('tsb', n_row),
+              type='number',
+              disabled=True
+            ),
+            dbc.Label('TSB'),
+            dbc.FormText(id=self.ids('status', n_row))
+          ]))
+        ]
+      ))
+
+      return children
+
+    @callback(
+      Output(self.ids('tsb', MATCH), 'value'),
+      Output(self.ids('status', MATCH), 'children'),
+      # Output(self.ids('tsb', MATCH), 'formtext'),
+      Input(self.ids('atl', MATCH), 'value'),
+      Input(self.ids('ctl', MATCH), 'value'))
+    def update_tsb(atl, ctl):
+      tsb = (ctl or 0) - (atl or 0)
+      return (
+        round(tsb, 1),
+        tp.training_status(tsb)
+      )
+
+    @callback(
+      Output(self.ids('atl', ALL), 'value'),
+      Output(self.ids('ctl', ALL), 'value'),
+      Input(self.ids('tss', ALL), 'value'),
+      Input(self.ids('atl', 0), 'value'),
+      Input(self.ids('ctl', 0), 'value'),
+      # Input(self.ids('atl', ALLSMALLER), 'value'),
+      # Input(self.ids('ctl', ALLSMALLER), 'value'),
+      # Input(self.ids('delta-t-days', ALL), 'value'),
+    )
+    def update_projected_stress(
+      tss_all,
+      atl_init,
+      ctl_init,
+    ):
+      if not len(tss_all):
+        raise PreventUpdate
+
+      atl_init = atl_init or 0.0
+      ctl_init = ctl_init or 0.0
+
+      # Replace `None` TSS values with zeros
+      tss_all_filled = [tss_i or 0 for tss_i in tss_all]
+
+      atl_all = [atl_init] + [
+        round(atl_val, 1) for atl_val in tp.acute_training_load(tss_all_filled, atl_init)
+      ]
+      ctl_all = [ctl_init] + [
+        round(ctl_val, 1) for ctl_val in tp.chronic_training_load(tss_all_filled, ctl_init)
+      ]
+
+      return atl_all, ctl_all
+      
