@@ -1,6 +1,7 @@
 import datetime
 
 import click
+import numpy as np
 
 from application import create_app
 from application.models import db, Activity, StravaAccount
@@ -22,6 +23,12 @@ def cli():
   '--saved_activity_count',
   default=20,
   help='Number of saved activities with which to pre-populate the database.'
+)
+@click.option(
+  '--saved_activity_daily_count',
+  default=1,
+  help='Number of saved activities in the database per day. '
+       'Used in combination with --saved_activity_count.'
 )
 @click.option(
   '--strava_activity_count',
@@ -50,6 +57,7 @@ def cli():
 # )
 def rundummy(
   saved_activity_count,
+  saved_activity_daily_count,
   strava_activity_count,
   short_limit,
   long_limit,
@@ -91,17 +99,21 @@ def rundummy(
 
     # optionally pre-populate the DB with dummy activities
     if saved_activity_count:
+
+      def timediff(i):
+        return datetime.timedelta(days=i/saved_activity_daily_count)
+
       db.session.add_all(
         Activity(
           id=i,
           title=f'Activity {i}',
           description='',
           created=datetime.datetime.now(),
-          recorded=datetime.datetime.now() - datetime.timedelta(days=i),
+          recorded=datetime.datetime.now() - timediff(i),
           tz_local='UTC',
           strava_id=i,
           strava_acct_id=123,
-          distance_m=10000,
+          distance_m=abs(np.random.normal(loc=10000, scale=10000)),
           elevation_m=500,
           elapsed_time_s=3600,
           moving_time_s=3600,
