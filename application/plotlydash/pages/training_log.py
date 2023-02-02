@@ -120,7 +120,7 @@ def update_calendar(n_clicks, children):
         dcc.Graph(
           # id=f'week-cal-{i}',
           id={'type': 'week-cal', 'index': i},
-          figure=create_week_cal(df_week),
+          figure=TrainingWeekFigure.from_dataframe(df_week),
           config=dict(displayModeBar=False),
         ),
         width=10,
@@ -139,9 +139,10 @@ def update_calendar(n_clicks, children):
 )
 def update_calendar(bubble_type, figures):
 
-  figures = [update_week_cal(figure, bubble_type) for figure in figures]
-
-  return figures
+  return [
+    TrainingWeekFigure(figure, bubble_type=bubble_type)
+    for figure in figures
+  ]
 
 
 def create_week_sum(df_week, date_start):
@@ -198,148 +199,164 @@ def create_week_sum(df_week, date_start):
   return div
 
 
-def create_week_cal(df_week):
-  """Create weekly training log view as a bubble chart."""
-  fig = go.Figure(layout=dict(
-    xaxis=dict(
-      range=[-0.5, 6.5],
-      showticklabels=False,
-      showgrid=False,
-      zeroline=False,
-      fixedrange=True,
-    ),
-    yaxis=dict(
-      range=[0, 3],
-      showticklabels=False,
-      showgrid=False,
-      zeroline=False,
-      fixedrange=True,
-    ),
-    margin=dict(b=0,t=0,r=0,l=0),
-    height=160,
-    # hoverdistance=100,
-    plot_bgcolor='rgba(0,0,0,0)',
-  ))
+class TrainingWeekFigure(go.Figure):
 
-  line = dict(
-    dash='dot',
-    width=1,
-    color='#bbb',
-  )
+  # The denominator of the sizeref property, set so the marker_size
+  # will be 100 when the trace value equals the sizeref numerator.
+  _sizeref_denominator = 0.5 * 100 ** 2
 
-  fig.add_hline(
-    y=1, 
-    layer='below',
-    line=line,
-  )
+  def __init__(self, *args, bubble_type=None, **kwargs):
+    """Create weekly training log view as a bubble chart."""
+    super().__init__(*args, **kwargs)
 
-  for x in range(7):
-    fig.add_shape(type='line', y0=1, y1=1.9, x0=x, x1=x, layer='below', line=line)
-    if x not in df_week['weekday'].values:
-      fig.add_annotation(
-        x=x,
-        y=2,
-        text='Rest',
-        showarrow=False,
-        font=dict(
-          color='#bbb',
-          size=11,
-          # weight=200,
-        )
+    if bubble_type:
+      self._update_bubble_type(bubble_type)
+
+  @property
+  def circle_trace(self):
+    return self.data[0]
+
+  def _update_bubble_type(self, bubble_type):
+
+    hrefs = [f"{txt.split('>')[0]}>" for txt in self.circle_trace.text]
+
+    if bubble_type == 'Time':
+      time_strs = [cdata[5] for cdata in self.circle_trace.customdata]
+      secs = [units.string_to_seconds(t) for t in time_strs]
+
+      self.circle_trace.text = [f'{a}{math.floor(s/3600)}hr{round((s % 3600) / 60)}m</a>' for a, s in zip(hrefs, secs)]
+      
+      # Convert str to seconds, and size/sizeref based on that
+      self.circle_trace.marker['size'] = secs
+      self.circle_trace.marker['sizeref'] = 3.5 * 3600 / self._sizeref_denominator
+      
+    elif bubble_type == 'Distance':
+      dists_mi = [float(cdata[4]) for cdata in self.circle_trace.customdata]
+
+      self.circle_trace.text = [f'{a}{d:.1f}</a>' for a, d in zip(hrefs, dists_mi)]
+
+      # Need to rescale based on miles rather than meters
+      self.circle_trace.marker['size'] = dists_mi
+      self.circle_trace.marker['sizeref'] = 26.2 / self._sizeref_denominator
+
+    elif bubble_type == 'Elevation':
+      elevs_ft = [float(cdata[8]) for cdata in self.circle_trace.customdata]
+
+      self.circle_trace.text = [f'{a}{e:.0f}</a>' for a, e in zip(hrefs, elevs_ft)]
+
+      self.circle_trace.marker['size'] = elevs_ft
+      self.circle_trace.marker['sizeref'] = 7000 / self._sizeref_denominator
+
+    elif bubble_type == 'TSS':
+      tsss = [float(cdata[9]) for cdata in self.circle_trace.customdata]
+
+      self.circle_trace.text = [f'{a}{tss:.1f}</a>' for a, tss in zip(hrefs, tsss)]
+
+      self.circle_trace.marker['size'] = tsss
+      self.circle_trace.marker['sizeref'] = 250 / self._sizeref_denominator
+
+    self.update_layout(transition_duration=1000)
+
+  @classmethod
+  def from_dataframe(cls, df_week):
+    fig = cls(
+      layout=dict(
+        xaxis=dict(
+          range=[-0.5, 6.5],
+          showticklabels=False,
+          showgrid=False,
+          zeroline=False,
+          fixedrange=True,
+        ),
+        yaxis=dict(
+          range=[0, 3],
+          showticklabels=False,
+          showgrid=False,
+          zeroline=False,
+          fixedrange=True,
+        ),
+        margin=dict(b=0,t=0,r=0,l=0),
+        height=160,
+        # hoverdistance=100,
+        plot_bgcolor='rgba(0,0,0,0)',
+        dragmode=False
       )
+    )
 
-  fig.add_trace(dict(
-    x=df_week['weekday'],
-    y=[2 for d in df_week['weekday']],
-    text=[f'<a href="/saved/{id}">{d / units.M_PER_MI:.1f}</a>' for id, d in zip(df_week['id'], df_week['distance_m'])],
-    name='easy', # they are all easy right now
-    mode='markers+text',
-    marker=dict(
-      # size=100, # debugging
-      size=df_week['distance_m'],
-      # Make marker_size=100 at marathon length.
-      sizemode='area',
-      sizeref=(1609.34*26.2)/(0.5*100**2),
-      # sizemode='diameter',
-      # sizeref=(1609.34*26.2)/100,
-      color='#D5E5D3',
-      line_color='#BDD6BA',
-      line_width=1,
-      opacity=1.0,
-    ),
-    textposition='middle center',
-    customdata=np.transpose(np.array([
-      df_week['recorded'].dt.strftime('%a, %b %-d, %Y %-I:%M %p'),
-      df_week['id'],
-      df_week['title'], 
-      df_week['description'].astype(str).str.slice(0, 50) + ' ...',
-      df_week['distance_m'] / units.M_PER_MI,
-      df_week['moving_time_s'].apply(units.seconds_to_string),
-      (df_week['distance_m'] / df_week['moving_time_s']).apply(units.speed_to_pace),
-      (df_week['distance_m'] / df_week['elapsed_time_s']).apply(units.speed_to_pace),
-      df_week['elevation_m'] * units.FT_PER_M,
-      df_week['tss'],
-    ])),
-    hovertemplate=
-      '<span style="font-size:11px; color: #6D6D78">'+
-      '%{customdata[0]}</span><br>'+ 
-      '<span style="font-size: 16px;">%{customdata[2]}</span><br>'+ 
-      '<span style="font-size: 14px; color: #6D6D78;">'+
-      '%{customdata[3]}</span><br>'+
-      '<b>'+
-      'Distance: %{customdata[4]:.1f} mi<br>'+
-      'Moving Time: %{customdata[5]}<br>'+
-      'Moving Pace: %{customdata[6]}/mi<br>'+
-      'Overall Pace: %{customdata[7]}/mi<br>'+
-      'Elevation: %{customdata[8]:.0f} ft<br>'+
-      'Training Stress: %{customdata[9]:.0f}<br>'+
-      '</b>',
-    hoverlabel=dict(bgcolor='#fff'),
-  ))
+    line = dict(
+      dash='dot',
+      width=1,
+      color='#bbb',
+    )
 
-  return fig
+    fig.add_hline(
+      y=1, 
+      layer='below',
+      line=line,
+    )
 
+    for x in range(7):
+      fig.add_shape(type='line', y0=1, y1=1.9, x0=x, x1=x, layer='below', line=line)
+      if x not in df_week['weekday'].values:
+        fig.add_annotation(
+          x=x,
+          y=2,
+          text='Rest',
+          showarrow=False,
+          font=dict(
+            color='#bbb',
+            size=11,
+            # weight=200,
+          )
+        )
 
-def update_week_cal(fig, bubble_type):
-  fig = go.Figure(fig)
-  
-  hrefs = [f"{txt.split('>')[0]}>" for txt in fig.data[0].text]
+    fig.add_trace(dict(
+      x=df_week['weekday'],  # ADS here
+      y=[2 for d in df_week['weekday']],
+      text=[f'<a href="/saved/{id}">{d / units.M_PER_MI:.1f}</a>' for id, d in zip(df_week['id'], df_week['distance_m'])],
+      name='easy', # they are all easy right now
+      mode='markers+text',
+      marker=dict(
+        # size=100, # debugging
+        size=df_week['distance_m'],
+        # Make marker_size=100 at marathon length.
+        sizemode='area',
+        sizeref=(1609.34*26.2) / cls._sizeref_denominator,
+        # sizemode='diameter',
+        # sizeref=(1609.34*26.2)/100,
+        color='#D5E5D3',
+        line_color='#BDD6BA',
+        line_width=1,
+        opacity=1.0,
+      ),
+      textposition='middle center',
+      customdata=np.transpose(np.array([
+        df_week['recorded'].dt.strftime('%a, %b %-d, %Y %-I:%M %p'),
+        df_week['id'],
+        df_week['title'],
+        df_week['description'].astype(str).str.slice(0, 50) + ' ...',
+        df_week['distance_m'] / units.M_PER_MI,
+        df_week['moving_time_s'].apply(units.seconds_to_string),
+        (df_week['distance_m'] / df_week['moving_time_s']).apply(units.speed_to_pace),
+        (df_week['distance_m'] / df_week['elapsed_time_s']).apply(units.speed_to_pace),
+        df_week['elevation_m'] * units.FT_PER_M,
+        df_week['tss'],
+      ])),
+      hovertemplate=
+        '<span style="font-size:11px; color: #6D6D78">'+
+        '%{customdata[0]}</span><br>'+
+        '<span style="font-size: 16px;">%{customdata[2]}</span><br>'+
+        '<span style="font-size: 14px; color: #6D6D78;">'+
+        '%{customdata[3]}</span><br>'+
+        '<b>'+
+        'Distance: %{customdata[4]:.1f} mi<br>'+
+        'Moving Time: %{customdata[5]}<br>'+
+        'Moving Pace: %{customdata[6]}/mi<br>'+
+        'Overall Pace: %{customdata[7]}/mi<br>'+
+        'Elevation: %{customdata[8]:.0f} ft<br>'+
+        'Training Stress: %{customdata[9]:.0f}<br>'+
+        '</b>',
+      hoverlabel=dict(bgcolor='#fff'),
+    ))
 
-  if bubble_type == 'Time':
-    time_strs = [cdata[5] for cdata in fig.data[0].customdata]
-    secs = [units.string_to_seconds(t) for t in time_strs]
-
-    fig.data[0].text = [f'{a}{math.floor(s/3600)}hr{round((s % 3600) / 60)}m</a>' for a, s in zip(hrefs, secs)]
-    
-    # Convert str to seconds, and size/sizeref based on that
-    fig.data[0].marker['size'] = secs
-    fig.data[0].marker['sizeref'] = 3.5 * 3600 / (0.5 * 100 ** 2)
-    
-  elif bubble_type == 'Distance':
-    dists_mi = [float(cdata[4]) for cdata in fig.data[0].customdata]
-
-    fig.data[0].text = [f'{a}{d:.1f}</a>' for a, d in zip(hrefs, dists_mi)]
-
-    # Need to rescale based on miles rather than meters
-    fig.data[0].marker['size'] = dists_mi
-    fig.data[0].marker['sizeref'] = 26.2 / (0.5 * 100 ** 2)
-
-  elif bubble_type == 'Elevation':
-    elevs_ft = [float(cdata[8]) for cdata in fig.data[0].customdata]
-
-    fig.data[0].text = [f'{a}{e:.0f}</a>' for a, e in zip(hrefs, elevs_ft)]
-
-    fig.data[0].marker['size'] = elevs_ft
-    fig.data[0].marker['sizeref'] = 7000 / (0.5 * 100 ** 2)
-
-  elif bubble_type == 'TSS':
-    tsss = [float(cdata[9]) for cdata in fig.data[0].customdata]
-
-    fig.data[0].text = [f'{a}{tss:.1f}</a>' for a, tss in zip(hrefs, tsss)]
-
-    fig.data[0].marker['size'] = tsss
-    fig.data[0].marker['sizeref'] = 250 / (0.5 * 100 ** 2)
-
-  fig.update_layout(transition_duration=1000)
-
-  return fig
+    return fig
