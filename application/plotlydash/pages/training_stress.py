@@ -111,6 +111,7 @@ def TssGraph(df, id=None):
       yaxis=dict(
         # range=[0, 1.1 * df['tss'].max()],
         tickformat='.1f',
+        fixedrange=False
       ),
       margin=dict(b=40,t=0,r=0,l=0),
       legend=dict(
