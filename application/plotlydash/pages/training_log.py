@@ -111,7 +111,7 @@ def update_calendar(n_clicks, children):
 
     children.append(dbc.Row([
       dbc.Col(
-        children=create_week_sum(df_week, mon_last),
+        children=create_week_summary(df_week, mon_last),
         id=f'week-summary-{i}',
         width=2,
       ),
@@ -145,7 +145,7 @@ def update_calendar(bubble_type, figures):
   ]
 
 
-def create_week_sum(df_week, date_start):
+def create_week_summary(df_week, date_start):
   date_end = date_start + datetime.timedelta(6)
 
   if date_start.month != date_end.month:
@@ -162,7 +162,7 @@ def create_week_sum(df_week, date_start):
     mins = round((moving_time_s - hrs * 3600) / 60)
     time_str = f'{hrs}h{mins}m'
 
-  div = html.Div([
+  return html.Div([
     html.Div(
       date_str,
       style={
@@ -196,14 +196,20 @@ def create_week_sum(df_week, date_start):
     html.Hr(),
   ])
 
-  return div
-
 
 class TrainingWeekFigure(go.Figure):
 
   # The denominator of the sizeref property, set so the marker_size
   # will be 100 when the trace value equals the sizeref numerator.
   _sizeref_denominator = 0.5 * 100 ** 2
+
+  _reference_values = dict(
+    distance_m=1609.34 * 26.2,
+    distance_mi=26.2,
+    time_sec=3.5 * 3600,
+    tss=250,
+    elevation_ft=7000
+  )
 
   def __init__(self, *args, bubble_type=None, **kwargs):
     """Create weekly training log view as a bubble chart."""
@@ -228,7 +234,7 @@ class TrainingWeekFigure(go.Figure):
       
       # Convert str to seconds, and size/sizeref based on that
       self.circle_trace.marker['size'] = secs
-      self.circle_trace.marker['sizeref'] = 3.5 * 3600 / self._sizeref_denominator
+      self.circle_trace.marker['sizeref'] = self._reference_values['time_sec'] / self._sizeref_denominator
       
     elif bubble_type == 'Distance':
       dists_mi = [float(cdata[4]) for cdata in self.circle_trace.customdata]
@@ -237,7 +243,7 @@ class TrainingWeekFigure(go.Figure):
 
       # Need to rescale based on miles rather than meters
       self.circle_trace.marker['size'] = dists_mi
-      self.circle_trace.marker['sizeref'] = 26.2 / self._sizeref_denominator
+      self.circle_trace.marker['sizeref'] = self._reference_values['distance_mi'] / self._sizeref_denominator
 
     elif bubble_type == 'Elevation':
       elevs_ft = [float(cdata[8]) for cdata in self.circle_trace.customdata]
@@ -245,7 +251,7 @@ class TrainingWeekFigure(go.Figure):
       self.circle_trace.text = [f'{a}{e:.0f}</a>' for a, e in zip(hrefs, elevs_ft)]
 
       self.circle_trace.marker['size'] = elevs_ft
-      self.circle_trace.marker['sizeref'] = 7000 / self._sizeref_denominator
+      self.circle_trace.marker['sizeref'] = self._reference_values['elevation_ft'] / self._sizeref_denominator
 
     elif bubble_type == 'TSS':
       tsss = [float(cdata[9]) for cdata in self.circle_trace.customdata]
@@ -253,10 +259,27 @@ class TrainingWeekFigure(go.Figure):
       self.circle_trace.text = [f'{a}{tss:.1f}</a>' for a, tss in zip(hrefs, tsss)]
 
       self.circle_trace.marker['size'] = tsss
-      self.circle_trace.marker['sizeref'] = 250 / self._sizeref_denominator
+      self.circle_trace.marker['sizeref'] = self._reference_values['tss'] / self._sizeref_denominator
 
     self.update_layout(transition_duration=1000)
 
+  def calculate_marker_positions(self, vol_1, vol_2, units='distance_m'):
+    # offset = 2 * (vol_1 ** 2 + vol_2 **2) ** 0.5 - (vol_1 + vol_2)
+    offset = ((vol_1 ** 2 + vol_2 **2) ** 0.5 - 0.5 * (vol_1 + vol_2)) / self._reference_values[units]
+    # offset = (2 / math.pi) * (vol_1 + vol_2) - (vol_1 ** 0.5 + vol_2 ** 0.5) * (1 / math.pi) ** 0.5
+
+    # r_tot = ((vol_1 + vol_2) / self._reference_values[units]) ** 0.5
+
+    # pos_left = -0.5 * (offset + vol_2 - vol_1) / self._reference_values[units]
+    # pos_right = offset / self._reference_values[units] + pos_left
+    pos_left = -offset * (vol_2) ** 0.5 / (vol_1 ** 0.5 + vol_2 ** 0.5)
+    pos_right = offset + pos_left
+    return pos_left, pos_right
+
+    # dumb_val = 0.5 * offset / self._reference_values[units]
+    # print(dumb_val)
+    # return -dumb_val, dumb_val
+  
   @classmethod
   def from_dataframe(cls, df_week):
     fig = cls(
@@ -279,7 +302,8 @@ class TrainingWeekFigure(go.Figure):
         height=160,
         # hoverdistance=100,
         plot_bgcolor='rgba(0,0,0,0)',
-        dragmode=False
+        dragmode=False,
+        showlegend=False,
       )
     )
 
@@ -310,22 +334,39 @@ class TrainingWeekFigure(go.Figure):
           )
         )
 
+    x_vals = []
+    for weekday, df_day in df_week.groupby('weekday'):
+      if len(df_day) == 1:
+        x_vals.append(weekday)
+      elif len(df_day) == 2:
+        x_pos_abs = [
+          weekday + marker_pos for marker_pos in 
+          fig.calculate_marker_positions(
+            df_day['distance_m'].iloc[0],
+            df_day['distance_m'].iloc[1],
+            units='distance_m'
+          )
+        ]
+        x_vals.extend(x_pos_abs)
+
     fig.add_trace(dict(
-      x=df_week['weekday'],  # ADS here
+      x=x_vals,
       y=[2 for d in df_week['weekday']],
       text=[f'<a href="/saved/{id}">{d / units.M_PER_MI:.1f}</a>' for id, d in zip(df_week['id'], df_week['distance_m'])],
       name='easy', # they are all easy right now
       mode='markers+text',
+      # mode='markers',  # tmp
       marker=dict(
         # size=100, # debugging
         size=df_week['distance_m'],
         # Make marker_size=100 at marathon length.
         sizemode='area',
-        sizeref=(1609.34*26.2) / cls._sizeref_denominator,
+        sizeref=cls._reference_values['distance_m'] / cls._sizeref_denominator,
         # sizemode='diameter',
         # sizeref=(1609.34*26.2)/100,
         color='#D5E5D3',
         line_color='#BDD6BA',
+        # line_color='black',  # tmp
         line_width=1,
         opacity=1.0,
       ),
@@ -357,6 +398,25 @@ class TrainingWeekFigure(go.Figure):
         'Training Stress: %{customdata[9]:.0f}<br>'+
         '</b>',
       hoverlabel=dict(bgcolor='#fff'),
+    ))
+
+    day_totals = df_week.groupby('weekday').sum()['distance_m']
+
+    fig.add_trace(go.Scatter(
+      x=day_totals.index,
+      y=[2 for _ in day_totals],
+      mode='markers',
+      marker=dict(
+        size=df_week.groupby('weekday').sum()['distance_m'],
+        sizemode='area',
+        sizeref= cls._reference_values['distance_m'] / cls._sizeref_denominator,
+        color='rgba(0,0,0,0)',
+        line=dict(
+          # color='black',
+          color='#BDD6BA',
+          width=1,
+        )
+      ),
     ))
 
     return fig
