@@ -4,7 +4,7 @@ import stravalib
 import unittest
 from unittest.mock import patch
 
-from application.models import AdminUser
+from application.models import db, AdminUser, StravaAccount
 from application.util.mock_stravalib import (
   MOCK_TOKEN, 
   BatchedResultsIterator as MockBatchIterator
@@ -138,3 +138,28 @@ class SettingsPageTest(LoggedInFlaskTestCase):
     html = response.get_data(as_text=True)
     self.assertTrue(html.startswith('<!doctype html>'))
     self.assertIn('<title>Profile Settings - Training Zealot</title>', html)
+
+
+@unittest.skip('Needs to be converted to a dash test')
+class TestManageAccounts(LoggedInFlaskTestCase):
+  @patch('stravalib.model.Athlete.stats')
+  @patch('stravalib.Client.get_athlete')
+  @patch('stravalib.Client.refresh_access_token')
+  def test_displays_account_info(self,  mock_refresh_access_token, mock_get_athlete, mock_stats):
+    mock_refresh_access_token.return_value = MOCK_TOKEN
+    mock_get_athlete.return_value = stravalib.model.Athlete(
+      firstname='Aaron',
+      lastname='Schroeder',
+    )
+    mock_stats.return_value = stravalib.model.AthleteStats(
+      all_run_totals=stravalib.model.ActivityTotals(count=10)
+    )
+
+    db.session.add(StravaAccount(strava_id=1, expires_at=0))
+    db.session.commit()
+    self.client.get('/settings/strava')
+
+    # TODO: Finish this test
+  
+  def test_displays_multiple_accounts(self):
+    pass

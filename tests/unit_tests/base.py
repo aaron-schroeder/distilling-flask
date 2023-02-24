@@ -61,7 +61,9 @@ class FlaskTestCase(unittest.TestCase):
 class LoggedInFlaskTestCase(FlaskTestCase):
   def setUp(self):
     super().setUp()
-    self.client = self.app.test_client(user=AdminUser(), use_cookies=True)
+    self.client = self.app.test_client(user=AdminUser(), 
+                                      #  use_cookies=True
+                                       )
 
 
 class AuthenticatedFlaskTestCase(LoggedInFlaskTestCase):

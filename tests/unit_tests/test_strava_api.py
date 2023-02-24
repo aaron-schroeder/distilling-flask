@@ -114,30 +114,6 @@ class TestHandleCode(LoggedInFlaskTestCase):
     pass
 
 
-class TestManageAccounts(LoggedInFlaskTestCase):
-  @patch('stravalib.model.Athlete.stats')
-  @patch('stravalib.Client.get_athlete')
-  @patch('stravalib.Client.refresh_access_token')
-  def test_displays_account_info(self,  mock_refresh_access_token, mock_get_athlete, mock_stats):
-    mock_refresh_access_token.return_value = MOCK_TOKEN
-    mock_get_athlete.return_value = stravalib.model.Athlete(
-      firstname='Aaron',
-      lastname='Schroeder',
-    )
-    mock_stats.return_value = stravalib.model.AthleteStats(
-      all_run_totals=stravalib.model.ActivityTotals(count=10)
-    )
-
-    db.session.add(StravaAccount(strava_id=1, expires_at=0))
-    db.session.commit()
-    self.client.get('/settings/strava')
-
-    # TODO: Finish this test
-  
-  def test_displays_multiple_accounts(self):
-    pass
-
-
 class TestRevoke(AuthenticatedFlaskTestCase):
   @patch('stravalib.Client.get_athlete')
   @patch('stravalib.Client.refresh_access_token')
