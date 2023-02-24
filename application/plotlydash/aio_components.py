@@ -17,8 +17,7 @@ from application.plotlydash.figure_layout import (
   AXIS_LAYOUT, TRACE_LAYOUT
 )
 from application.plotlydash.plots import Plotter
-from application.util import labels, units
-import power.util as putil
+from application.util import labels, power, units
 
 
 MAP_ID = 'map'
@@ -700,10 +699,8 @@ class TssDivAIO(html.Div):
     if not validate_time_str(ngp_str) or not validate_time_str(ftp_str):
       raise PreventUpdate
 
-    ngp_secs_per_mile = units.string_to_seconds(ngp_str)
-    ftp_secs_per_mile = units.string_to_seconds(ftp_str)
-
-    intensity_factor = ftp_secs_per_mile / ngp_secs_per_mile
+    intensity_factor = power.intensity_factor(
+      units.pace_to_speed(ngp_str), units.pace_to_speed(ftp_str))
     
     return round(intensity_factor, 3)
 
@@ -746,8 +743,8 @@ class StatsDivAIO(dbc.Accordion):
     
     # WIP
     # from power.algorithms import trainingpeaks
-    # ngp_rolling = power.util.sma(ngp_array, 30)
-    # ngp_val = power.util.lactate_norm(ngp_rolling[29:])
+    # ngp_rolling = power.sma(ngp_array, 30)
+    # ngp_val = power.lactate_norm(ngp_rolling[29:])
     # ngp_val = trainingpeaks.ngp_val(ngp_array)  # best option; assumes 1 sec samples
     # tss = trainingpeaks.training_stress_score(ngp_val, ftp, duration_secs)
     # tss = trainingpeaks.training_stress_score(v_array, g_array)  # assumes 1-second samples
@@ -774,13 +771,13 @@ class StatsDivAIO(dbc.Accordion):
     # Apply a 30-sec rolling average.
     window = 30
     ngp_rolling = pd.Series(ngp_1sec).rolling(window).mean()
-    # ngp_sma = putil.sma(
+    # ngp_sma = power.sma(
     #   df['NGP'], 
     #   window,
     #   time_series=df['time']
     # )
 
-    ngp_ms = putil.lactate_norm(ngp_rolling[29:])
+    ngp_ms = power.lactate_norm(ngp_rolling[29:])
 
     df_stats = self._calc_stats_df(df)
 

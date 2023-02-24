@@ -7,7 +7,7 @@ import dash_bootstrap_components as dbc
 import pandas as pd
 import plotly.graph_objs as go
 
-from application.models import Activity
+from application.models import Activity, AdminUser
 from application.plotlydash.layout import COLORS
 from application.util.dataframe import calc_ctl_atl
 
@@ -17,7 +17,29 @@ dash.register_page(__name__, path_template='/stress',
 
 
 def layout(**_):
-  df = Activity.load_summary_df()
+  return dbc.Container(
+    [
+      html.H1('Training Stress'),
+      html.Hr(),
+      dcc.Loading(
+        id='stress-graph-loading',
+        type='default',
+        children=html.Div(id='stress-graph-container',
+          style={'min-height': '450px'}),
+      ),
+    ],
+    id='dash-container',
+    fluid=True,
+  )
+
+
+@callback(
+  Output('stress-graph-container', 'children'),
+  Input('dash-container', 'id')
+)
+def draw_graph(_):
+  
+  df = Activity.load_table_as_df()
 
   if len(df) == 0:
     return dbc.Container(
@@ -28,21 +50,9 @@ def layout(**_):
       ]
     )
 
-  df_padded = calc_ctl_atl(df)
+  df_padded = calc_ctl_atl(df, AdminUser().settings.ftp_ms)
 
-  return dbc.Container(
-    [
-      html.H1('Training Stress'),
-      html.Hr(),
-      TssGraph(df_padded, id='stress-graph'),
-      dcc.Store(
-        id='total-seconds',
-        data=(df['recorded'].max() - df['recorded'].min()).total_seconds()
-      )
-    ],
-    id='dash-container',
-    fluid=True,
-  )
+  return TssGraph(df_padded, id='stress-graph')
 
 
 def TssGraph(df, id=None):

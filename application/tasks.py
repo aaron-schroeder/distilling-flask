@@ -11,8 +11,7 @@ from stravalib.exc import RateLimitExceeded
 from application import celery
 from application.models import db, Activity, AdminUser, StravaAccount
 from application.util.dataframe import calc_power
-from application.util import readers
-import power.util as putil
+from application.util import power, readers
 
 
 def est_15_min_rate(strava_client):
@@ -168,13 +167,12 @@ def async_save_strava_activity(self, account_id, activity_id, handle_overlap='ex
       # Apply a 30-sec rolling average.
       window = 30
       ngp_rolling = pd.Series(ngp_1sec).rolling(window).mean()          
-      ngp_ms = putil.lactate_norm(ngp_rolling[29:])
+      ngp_scalar = power.lactate_norm(ngp_rolling[29:])
 
-      # cp_ms = 1609.34 / (6 * 60 + 30)  # 6:30 mile
-      intensity_factor = ngp_ms / AdminUser().ftp_ms
+      total_seconds = df['time'].iloc[-1] - df['time'].iloc[0]
 
-      total_hours = (df['time'].iloc[-1] - df['time'].iloc[0]) / 3600
-      tss = 100.0 * total_hours * intensity_factor ** 2
+      tss = power.training_stress_score(
+        ngp_scalar, AdminUser().settings.ftp_ms, total_seconds)
     elif 'speed' in df.columns:
       # TODO: Add capabilities for flat-ground TSS.
       pass
