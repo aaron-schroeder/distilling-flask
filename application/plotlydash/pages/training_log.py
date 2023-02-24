@@ -7,8 +7,9 @@ import dash_bootstrap_components as dbc
 import numpy as np
 import plotly.graph_objs as go
 
-from application.models import Activity
+from application.models import Activity, AdminUser
 from application.util import units
+from application.util.power import training_stress_score
 
 
 dash.register_page(__name__, path_template='/',
@@ -55,13 +56,12 @@ def layout(**_):
         className='mb-3 pb-2 border-bottom',
         style={'position': 'sticky', 'top': 0, 'zIndex': 1, 'background-color': 'white'}
       ),
-      # html.Hr(),
-      # CalendarDivAIO(aio_id='log'),
-      html.Div(id='calendar-rows'),
+      dcc.Loading(html.Div(id='calendar-rows'), style={'min-height': '480px'}),
       dbc.Row(
         dbc.Button(
           'Show 3 prior weeks',
           id='add-weeks',
+          n_clicks=0,
           color='primary',
           style={'width': 'fit-content'}
         ),
@@ -80,20 +80,16 @@ def layout(**_):
   State('calendar-rows', 'children'),
 )
 def update_calendar(n_clicks, children):
-  
-  n_clicks = n_clicks or 0
 
-  # Load dates and TSS from db into DF.
-  # TODO: Consider querying the database for dates, rather than
-  # loading them all into a DataFrame.
-  df = Activity.load_summary_df()
+  df = Activity.load_table_as_df()
 
   if len(df) == 0:
     return html.Div('No activities have been saved yet.')
   
   df['weekday'] = df['recorded'].dt.weekday
 
-  # ** Coming soon: Special calendar view for current week **
+  df['tss'] = training_stress_score(
+    df['ngp_ms'], AdminUser().settings.ftp_ms, df['elapsed_time_s'])
 
   children = children or []
   today = datetime.datetime.today().date()
@@ -250,7 +246,7 @@ def create_week_cal(df_week):
 
   fig.add_trace(dict(
     x=df_week['weekday'],
-    y=[2 for d in df_week['weekday']],
+    y=[2 for _ in df_week['weekday']],
     text=[f'<a href="/saved/{id}">{d / units.M_PER_MI:.1f}</a>' for id, d in zip(df_week['id'], df_week['distance_m'])],
     name='easy', # they are all easy right now
     mode='markers+text',
@@ -278,7 +274,6 @@ def create_week_cal(df_week):
       (df_week['distance_m'] / df_week['moving_time_s']).apply(units.speed_to_pace),
       (df_week['distance_m'] / df_week['elapsed_time_s']).apply(units.speed_to_pace),
       df_week['elevation_m'] * units.FT_PER_M,
-      df_week['tss'],
     ])),
     hovertemplate=
       '<span style="font-size:11px; color: #6D6D78">'+

@@ -13,7 +13,7 @@ import sqlalchemy as sa
 from stravalib.exc import RateLimitExceeded
 
 from application import db, login
-from application.util import units
+from application.util import power, units
 
 
 CLIENT_ID = os.environ.get('STRAVA_CLIENT_ID')
@@ -123,13 +123,13 @@ class Activity(db.Model):
   def intensity_factor(self):
     if self.ngp_ms:
       # return self.ngp_ms / AdminUser().get_ftp_ms(self.recorded)
-      return self.ngp_ms / AdminUser().settings.ftp_ms
-      # return self.ngp_ms / units.pace_to_speed('6:30')
+      return power.intensity_factor(self.ngp_ms, AdminUser().settings.ftp_ms)
 
   @property
   def tss(self):
-    if self.intensity_factor:
-      return 100.0 * (self.elapsed_time_s / 3600) * self.intensity_factor ** 2
+    if self.ngp_ms:
+      return power.training_stress_score(
+        self.ngp_ms, AdminUser().settings.ftp_ms, self.elapsed_time_s)
 
   @property
   def relative_url(self):
@@ -148,13 +148,16 @@ class Activity(db.Model):
     ]
 
   @classmethod
-  def load_summary_df(cls):
+  def load_table_as_df(cls, fields=None):
 
-    fields = ['recorded', 'tss', 'title', 'elapsed_time_s', 'moving_time_s',
-              'elevation_m', 'distance_m', 'id', 'description', 'strava_acct_id']
-    df = pd.DataFrame(
-      [[getattr(a, field) for field in fields] for a in cls.query.all()], 
-      columns=fields
+    fields = fields or ['recorded', 'title', 'elapsed_time_s',
+      'moving_time_s', 'elevation_m', 'distance_m', 'id', 'description',
+      'strava_acct_id']
+
+    # see also: pd.read_sql_query()
+    df = pd.read_sql_table(
+      cls.__tablename__,
+      db.engine
     )
 
     if not len(df):

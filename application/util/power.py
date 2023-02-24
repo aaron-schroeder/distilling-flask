@@ -1,6 +1,18 @@
-import math
-
 import pandas as pd
+
+
+def training_stress_score(ngp, ftp, elapsed_time):
+  """
+  Args:
+    ngp (float): normalized graded pace for the activity in m/s
+    ftp (float): functional threshold pace of the athlete
+    elapsed_time_s (float): elapsed time in seconds
+  """
+  return 100.0 * (elapsed_time / 3600) * intensity_factor(ngp, ftp) ** 2
+
+
+def intensity_factor(ngp, ftp):
+  return ngp / ftp
 
 
 def sma(x_series, window_len, time_series=None):
