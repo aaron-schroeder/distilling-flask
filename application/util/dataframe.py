@@ -5,6 +5,7 @@ import pandas as pd
 from specialsauce.sources import minetti, strava, trainingpeaks
 
 from application.plotlydash.figure_layout import GRADE, SPEED
+from application.util.power import training_stress_score
 
 
 def calc_power(df):
@@ -15,11 +16,20 @@ def calc_power(df):
     df['GAP'] = df[SPEED] * strava.gap_speed_factor(df[GRADE]/100)
 
 
-def calc_ctl_atl(df):
+def calc_ctl_atl(df, ftp):
   """Add power-related columns to the DataFrame.
   
-  For more, see boulderhikes.views.ActivityListView
+  Args:
+    df (pandas.DataFrame): each row represents an activity, and each
+      column represents a summary statistic. The following columns
+      are required:
+        - 'recorded': the datetime each activity began
+        - 'ngp_ms': normalized graded pace for each activity in m/s
+        - 'elapsed_time_s':
+    ftp (float): the athlete's functional threshold pace in m/s.
 
+  NOTE: This function currently has the limitation of accepting a single
+  unchanging FTP value for the athlete's entire training history.
   """
   num_days = (df['recorded'].dt.date.max() - df['recorded'].dt.date.min()).days
   recorded_full = []
@@ -34,6 +44,9 @@ def calc_ctl_atl(df):
 
   # Add a row representing the current time.
   recorded_full.append(pd.Timestamp.now(tz.gettz('America/Denver')))
+
+  if 'tss' not in df.columns:
+    df['tss'] = training_stress_score(df['ngp_ms'], ftp, df['elapsed_time_s'])
 
   df_padded = df.set_index('recorded'
     ).reindex(pd.DatetimeIndex(recorded_full)

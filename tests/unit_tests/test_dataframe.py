@@ -19,7 +19,7 @@ class TestCalcCtlAtl(unittest.TestCase):
       for i in range(n)
     ])
 
-    result = calc_ctl_atl(df)
+    result = calc_ctl_atl(df, 4.0)
 
     self.assertIsInstance(result, pd.DataFrame)
     self.assertEqual(len(result), n + 1)
@@ -38,10 +38,7 @@ class TestCalcCtlAtl(unittest.TestCase):
       for i in range(n)
     ])
 
-    result = calc_ctl_atl(df)
+    result = calc_ctl_atl(df, 4.0)
 
     self.assertEqual(len(result), 2 * n)
-    self.assertEqual(
-      (result['tss'].iloc[1::2] == 0.0).sum(),
-      n
-    )
+    self.assertEqual((result['tss'].iloc[1::2] == 0.0).sum(), n)
