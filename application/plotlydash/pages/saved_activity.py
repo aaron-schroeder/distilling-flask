@@ -89,3 +89,5 @@ def layout(activity_id=None, **_):
       FigureDivAIO(df=df, aio_id='saved'),
     ]
   )
+
+  return layout_container
