@@ -11,7 +11,7 @@ import pandas as pd
 from scipy.interpolate import interp1d
 from stravalib.exc import RateLimitExceeded
 
-from application.models import AdminUser
+from application.models import UserSettings
 from application.plotlydash.figure_layout import (
   LAT, LON, ELEVATION, GRADE, SPEED, CADENCE, HEARTRATE, POWER,
   AXIS_LAYOUT, TRACE_LAYOUT
@@ -790,7 +790,7 @@ class StatsDivAIO(dbc.Accordion):
         dbc.AccordionItem(
           TssDivAIO(
             aio_id=aio_id,
-            ftp=AdminUser().settings.ftp_ms,
+            ftp=UserSettings.ftp_ms,
             ngp=ngp_ms,
             total_time=df['time'].iloc[-1]-df['time'].iloc[0]
           ),

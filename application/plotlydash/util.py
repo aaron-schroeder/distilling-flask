@@ -5,28 +5,9 @@ import uuid
 import dash
 from dash import Dash, dcc, html, page_registry
 import dash_bootstrap_components as dbc
-from flask_login import current_user
 
 from application.plotlydash.aio_components import FigureDivAIO, StatsDivAIO
 from application.util.dataframe import calc_power
-
-
-def layout_login_required(layout_func):
-  @wraps(layout_func)
-  def decorated_function(*args, **kwargs):
-    # TODO: Find a permafix for this hack. Noticing it probably won't hold
-    # up `layout_login_required` decorates an already-decorated layout
-    # function.
-    registry_entry = dash.page_registry[layout_func.__module__]
-    rel_url = registry_entry['relative_path']
-    if not current_user.is_authenticated:
-      return dcc.Location(
-        pathname=f'/login', 
-        search='?next=' + quote(rel_url),
-        id=str(uuid.uuid4())
-      )
-    return layout_func(*args, **kwargs)
-  return decorated_function
 
 
 def create_dash_app(df):

@@ -6,13 +6,12 @@ import sys
 
 from dateutil import tz
 from flask import current_app
-from flask_login import UserMixin
 import pandas as pd
 import pytz
 import sqlalchemy as sa
 from stravalib.exc import RateLimitExceeded
 
-from application import db, login
+from application import db
 from application.util import power, units
 
 
@@ -122,14 +121,13 @@ class Activity(db.Model):
   @property
   def intensity_factor(self):
     if self.ngp_ms:
-      # return self.ngp_ms / AdminUser().get_ftp_ms(self.recorded)
-      return power.intensity_factor(self.ngp_ms, AdminUser().settings.ftp_ms)
+      return power.intensity_factor(self.ngp_ms, UserSettings.ftp_ms)
 
   @property
   def tss(self):
     if self.ngp_ms:
       return power.training_stress_score(
-        self.ngp_ms, AdminUser().settings.ftp_ms, self.elapsed_time_s)
+        self.ngp_ms, UserSettings.ftp_ms, self.elapsed_time_s)
 
   @property
   def relative_url(self):
@@ -175,7 +173,7 @@ class Activity(db.Model):
       return '<Activity {}>'.format(self.id)
 
 
-class AdminUser(UserMixin):
+class AdminUser:
   id = 1
 
   def check_password(self, password):
@@ -200,11 +198,6 @@ class AdminUser(UserMixin):
 
   def __repr__(self):
     return '<Admin User>'
-
-
-@login.user_loader
-def load_user(id):
-  return AdminUser()
 
 
 def cached_import(module_path, class_name):

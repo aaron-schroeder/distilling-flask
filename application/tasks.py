@@ -9,7 +9,7 @@ from sqlalchemy.exc import IntegrityError
 from stravalib.exc import RateLimitExceeded
 
 from application import celery
-from application.models import db, Activity, AdminUser, StravaAccount
+from application.models import db, Activity, StravaAccount, UserSettings
 from application.util.dataframe import calc_power
 from application.util import power, readers
 
@@ -172,7 +172,7 @@ def async_save_strava_activity(self, account_id, activity_id, handle_overlap='ex
       total_seconds = df['time'].iloc[-1] - df['time'].iloc[0]
 
       tss = power.training_stress_score(
-        ngp_scalar, AdminUser().settings.ftp_ms, total_seconds)
+        ngp_scalar, UserSettings.ftp_ms, total_seconds)
     elif 'speed' in df.columns:
       # TODO: Add capabilities for flat-ground TSS.
       pass

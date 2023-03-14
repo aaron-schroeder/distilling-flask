@@ -2,7 +2,6 @@ import os
 from urllib.parse import urljoin
 
 from flask import flash, redirect, render_template, request, url_for
-from flask_login import login_required
 from stravalib.exc import RateLimitExceeded
 
 from application.models import db, StravaAccount
@@ -16,7 +15,6 @@ CLIENT_SECRET = os.environ.get('STRAVA_CLIENT_SECRET')
 
 
 @strava_api.route('/authorize')
-@login_required
 def authorize():
 
   server_url = os.environ.get(
@@ -35,9 +33,7 @@ def authorize():
 
 
 @strava_api.route('/callback')
-@login_required
 def handle_code():
-
   if request.args.get('error') is not None:
     # Handles user clicking "cancel" button, resulting in a response like:
     # http://localhost:5000/strava/redirect?state=&error=access_denied
@@ -115,7 +111,6 @@ def handle_code():
 
 
 @strava_api.route('/revoke')
-@login_required
 def revoke():
   
   strava_account = StravaAccount.query.get(request.args.get('id'))
@@ -140,7 +135,6 @@ def revoke():
 
 
 @strava_api.route('/status')
-@login_required
 def show_strava_status():
   # Doesn't matter whose token I use
   strava_account = StravaAccount.query.first()

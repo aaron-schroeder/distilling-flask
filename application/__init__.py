@@ -1,9 +1,7 @@
 import os
 
 from celery import Celery
-import dash
 from flask import Flask
-from flask_login import LoginManager
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 
@@ -12,7 +10,6 @@ from application import messages
 
 
 db = SQLAlchemy()
-login = LoginManager()
 celery = Celery(__name__, broker=Config.CELERY_BROKER_URL)
 migrate = Migrate()
 
@@ -65,11 +62,6 @@ def create_app(config_name='dev'):
       dash_css=dash_app._generate_css_dist_html(),
       favicon_url = f"{dash_app.get_asset_url(dash_app._favicon)}"
     )
-
-  # Flask-Login
-  login.init_app(app)
-  login.login_view = dash.page_registry['pages.login']['relative_path']
-  login.login_message_category = messages.INFO
 
   # flask-migrate
   migrate.init_app(app, db)

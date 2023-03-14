@@ -3,10 +3,9 @@ from dash import html, callback, Input, Output, State
 from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
 
-from application.models import db, AdminUser
+from application.models import db, UserSettings
 from application.plotlydash.aio_components import TimeInput, SettingsLabel
 from application.plotlydash.layout import SettingsContainer
-from application.plotlydash.util import layout_login_required
 from application.util import units
 
 
@@ -14,10 +13,13 @@ dash.register_page(__name__, path_template='/settings',
   title='User Settings', name='User Settings')
 
 
-@layout_login_required
+def load_user_settings():
+  return db.session.execute(db.select(UserSettings)).scalar_one()
+  
+
 def layout(**_):
 
-  user_settings_cur = AdminUser().settings  # models.UserSettings instance
+  user_settings = load_user_settings()
 
   return SettingsContainer(
     dbc.Form(
@@ -28,7 +30,7 @@ def layout(**_):
             dbc.Col(dbc.InputGroup([
               TimeInput(
                 id='cp-user',
-                seconds=units.M_PER_MI / user_settings_cur.cp_ms,
+                seconds=units.M_PER_MI / user_settings.cp_ms,
               ),
               dbc.InputGroupText('per mile')
             ]))
@@ -41,7 +43,7 @@ def layout(**_):
             dbc.Col(dbc.InputGroup([
               TimeInput(
                 id='ftp-user',
-                seconds=units.M_PER_MI / user_settings_cur.ftp_ms,
+                seconds=units.M_PER_MI / user_settings.ftp_ms,
                 disabled=True,
               ),
               dbc.InputGroupText('per mile')
@@ -94,7 +96,7 @@ def update_user(n_clicks, cp_string):
   if not n_clicks:
     raise PreventUpdate
 
-  user_settings = AdminUser().settings
+  user_settings = load_user_settings()
   user_settings.cp_ms = units.pace_to_speed(cp_string)
 
   try:

@@ -7,7 +7,6 @@ from stravalib.exc import RateLimitExceeded
 
 from application import tasks
 from application.models import Activity, StravaAccount
-from application.plotlydash.util import layout_login_required
 from application.util import units
 
 
@@ -18,7 +17,6 @@ dash.register_page(__name__, path_template='/strava/activities',
 PAGE_SIZE = 25
 
 
-@layout_login_required
 def layout(**url_queries):
 
   strava_id = url_queries.get('id')

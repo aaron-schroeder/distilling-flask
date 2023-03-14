@@ -5,7 +5,6 @@ import pandas as pd
 
 from application.models import db, Activity, StravaAccount
 from application.plotlydash.layout import COLORS
-from application.plotlydash.util import layout_login_required
 from application.util import units
 
 
@@ -16,7 +15,6 @@ dash.register_page(__name__, path_template='/saved-list',
 PAGE_SIZE = 25
 
 
-@layout_login_required
 def layout(**url_queries):
 
   style_data_conditional = [

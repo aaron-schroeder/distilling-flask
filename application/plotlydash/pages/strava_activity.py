@@ -11,7 +11,6 @@ from sqlalchemy.exc import IntegrityError
 
 from application.models import db, Activity, StravaAccount
 from application.plotlydash.aio_components import FigureDivAIO, StatsDivAIO
-from application.plotlydash.util import layout_login_required
 from application.util import readers, units
 from application.util.dataframe import calc_power
 
@@ -20,7 +19,6 @@ dash.register_page(__name__, path_template='/strava/activity/<activity_id>',
   title='Strava Activity Dashboard', name='Strava Activity Dashboard')
 
 
-@layout_login_required
 def layout(activity_id=None, **queries):
   strava_acct = StravaAccount.query.get(queries.get('id') or queries.get('strava_id'))
 

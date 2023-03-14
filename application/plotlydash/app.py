@@ -2,7 +2,6 @@ import dash
 from dash import Dash, html, Input, Output, State
 import dash_bootstrap_components as dbc
 from flask import get_flashed_messages
-from flask_login import current_user
 
 
 NAVBAR_EXPAND = 'lg'
@@ -100,29 +99,16 @@ def add_dash_app_to_flask(server):
     Input(dash.dash._ID_CONTENT, 'children')
   )
   def update_nav_item_end(_):
-    if current_user.is_authenticated:
-      return dbc.DropdownMenu(
-        [
-          dbc.DropdownMenuItem('Settings', href='/settings', external_link=True),
-          dbc.DropdownMenuItem('Log Out', href='/logout', external_link=True),
-        ],
-        nav=True,
-        in_navbar=True,
-        label='User',
-        align_end=True,
-      )
-    else:
-      return dbc.Col(
-        dbc.Button(
-          'Log in',
-          href='/login',
-          color='primary',
-          class_name=f'ms-0 ms-{NAVBAR_EXPAND}-2',
-          size='sm'
-        ),
-        width='auto',
-        class_name='d-flex align-items-center',
-      )
+    return dbc.DropdownMenu(
+      [
+        dbc.DropdownMenuItem('Settings', href='/settings', external_link=True),
+        dbc.DropdownMenuItem('Log Out', href='/logout', external_link=True),
+      ],
+      nav=True,
+      in_navbar=True,
+      label='User',
+      align_end=True,
+    )
 
   @dash_app.callback(
     Output('status-container', 'children'),

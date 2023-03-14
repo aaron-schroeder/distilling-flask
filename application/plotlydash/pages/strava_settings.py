@@ -7,7 +7,6 @@ from flask import get_flashed_messages, url_for
 from application.models import db, StravaAccount
 from application.plotlydash.aio_components import StravaAccountRow
 from application.plotlydash.layout import SettingsContainer
-from application.plotlydash.util import layout_login_required
 from application.util import units
 
 
@@ -15,7 +14,6 @@ dash.register_page(__name__, path_template='/settings/strava',
   title='Manage Strava Accounts', name='Manage Strava Accounts')
 
 
-@layout_login_required
 def layout(**_):
 
   strava_account_rows = [

@@ -16,7 +16,6 @@ import pandas as pd
 
 from application.plotlydash.aio_components import FigureDivAIO, StatsDivAIO
 from application.plotlydash.layout import SettingsContainer
-from application.plotlydash.util import layout_login_required
 from application.util import readers
 from application.util.dataframe import calc_power
 
@@ -25,7 +24,6 @@ dash.register_page(__name__, path_template='/analyze-file',
   title='Analyze an activity file', name='Analyze an activity file')
 
 
-@layout_login_required
 def layout(**_):
 
   return SettingsContainer(
