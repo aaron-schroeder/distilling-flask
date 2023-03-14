@@ -43,14 +43,12 @@ def cli():
 
 
 @cli.command()
-@click.argument('project_name')
-def startproject(project_name):
+@click.argument('app_name')
+def startapp(app_name):
   """Creates a distilling-flask project directory structure
   for the given project name in the current directory.
   """
-  print(f'df startproject {project_name}')
-
-  top_dir = os.path.join(os.getcwd(), project_name)
+  top_dir = os.path.join(os.getcwd(), app_name)
   try:
     os.makedirs(top_dir)
   except FileExistsError:
@@ -58,15 +56,14 @@ def startproject(project_name):
   except OSError as e:
     raise CommandError(e)
   
-  base_name = 'project_name'
+  base_name = 'app_name'
 
-  template_dir = os.path.join(distilling_flask.__path__[0], 'conf', 'project_template')
-  print(template_dir)
+  template_dir = os.path.join(distilling_flask.__path__[0], 'conf', 'app_template')
   prefix_length = len(template_dir) + 1
 
   for root, dirs, files in os.walk(template_dir):
     path_rest = root[prefix_length:]
-    relative_dir = path_rest.replace(base_name, project_name)
+    relative_dir = path_rest.replace(base_name, app_name)
     if relative_dir:
       target_dir = os.path.join(top_dir, relative_dir)
       os.makedirs(target_dir, exist_ok=True)
@@ -81,7 +78,7 @@ def startproject(project_name):
         continue
       old_path = os.path.join(root, filename)
       new_path = os.path.join(
-        top_dir, relative_dir, filename.replace(base_name, project_name)
+        top_dir, relative_dir, filename.replace(base_name, app_name)
       )
 
       for old_suffix, new_suffix in (".py-tpl", ".py"),:
