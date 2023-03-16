@@ -12,7 +12,9 @@ from distilling_flask import messages
 
 db = SQLAlchemy()
 celery = Celery(__name__, broker=Config.CELERY_BROKER_URL)
-migrate = Migrate()
+
+basedir = os.path.dirname(os.path.abspath(__file__))
+migrate = Migrate(directory=os.path.join(basedir, 'migrations'))
 
 
 def create_app(config_name='dev'):
@@ -37,12 +39,6 @@ def create_app(config_name='dev'):
 
     database_path = os.path.join(BASE_DATA_DIR, 'distilling.sqlite')
     app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{database_path}'
-
-  # ensure the instance folder exists
-  try:
-    os.makedirs(app.instance_path)
-  except OSError:
-    pass
 
   # SQLAlchemy
   db.init_app(app)
