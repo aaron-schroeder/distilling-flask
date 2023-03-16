@@ -3,11 +3,16 @@ import os
 import shutil
 
 import click
+from flask import current_app
+from flask.cli import FlaskGroup, with_appcontext
 
-import application as distilling_flask
-from application import create_app
-from application.models import db, Activity, StravaAccount
-from application.util import units
+import distilling_flask as distilling_flask
+from distilling_flask import create_app
+from distilling_flask.models import db, Activity, StravaAccount
+from distilling_flask.util import units
+
+
+_MIGRATION_DIR = os.path.join(distilling_flask.__path__[0], 'migrations')
 
 
 class CommandError(Exception):
@@ -33,18 +38,37 @@ class CommandError(Exception):
 
 
 @click.group(
-  # cls=FlaskGroup,
-  # create_app=create_app,
+  cls=FlaskGroup,
+  create_app=create_app,
   # add_default_commands=False,
 )
+def context_cli():
+  pass
+
+@context_cli.command()
+@with_appcontext
+def start():
+  # _setup_env()
+
+  # _apply_database_migrations()
+  # AKA:
+  # connection_created.connect(_set_sqlite_fix_pragma)
+  # if not is_database_synchronized(DEFAULT_DB_ALIAS):
+  from flask_migrate import upgrade as _upgrade
+  print('Initializing database..')
+  _upgrade(directory=_MIGRATION_DIR)
+
+
+
+@click.group()
 def cli():
-  """Management script for the distilling-flask application."""
+  """Management script for the distilling-flask distilling_flask."""
   pass
 
 
 @cli.command()
 @click.argument('app_name')
-def startapp(app_name):
+def init(app_name):
   """Creates a distilling-flask project directory structure
   for the given project name in the current directory.
   """
@@ -110,7 +134,7 @@ def startapp(app_name):
       # self.apply_umask(old_path, new_path)
       # self.make_writeable(new_path)
 
-@cli.command()
+@context_cli.command()
 @click.option(
   '--saved_activity_count',
   default=20,
@@ -139,9 +163,10 @@ def startapp(app_name):
 )
 # @click.option(
 #   '--client',
-#   default='application.util.mock_stravalib.SimDevClient'
+#   default='distilling_flask.util.mock_stravalib.SimDevClient'
 # )
-def rundummy(
+@with_appcontext
+def seed(
   saved_activity_count,
   strava_activity_count,
   short_limit,
@@ -153,58 +178,54 @@ def rundummy(
   """Run the development server with a mocked strava API."""
   print('mocking stravalib')
 
-  app = create_app(config_name='dummy')
-
+  # TODO: Figure out where this gets implemented.
   # app.config['STRAVALIB_CLIENT'] = client
-  app.config['MOCK_STRAVALIB_ACTIVITY_COUNT'] = strava_activity_count
-  app.config['MOCK_STRAVALIB_SHORT_LIMIT'] = short_limit
-  app.config['MOCK_STRAVALIB_LONG_LIMIT'] = long_limit
-  app.config['MOCK_STRAVALIB_SHORT_USAGE'] = short_usage
-  app.config['MOCK_STRAVALIB_LONG_USAGE'] = long_usage
+  # current_app.config['MOCK_STRAVALIB_ACTIVITY_COUNT'] = strava_activity_count
+  # current_app.config['MOCK_STRAVALIB_SHORT_LIMIT'] = short_limit
+  # current_app.config['MOCK_STRAVALIB_LONG_LIMIT'] = long_limit
+  # current_app.config['MOCK_STRAVALIB_SHORT_USAGE'] = short_usage
+  # current_app.config['MOCK_STRAVALIB_LONG_USAGE'] = long_usage
   
-  with app.app_context():
-    db.drop_all()
-    from flask_migrate import stamp as _stamp
-    _stamp(revision='base')
+  db.drop_all()
+  from flask_migrate import stamp as _stamp
+  _stamp(directory=_MIGRATION_DIR, revision='base')
 
-    from flask_migrate import upgrade as _upgrade
-    _upgrade()
-    
-    # Spoof a StravaAccount that has authorized with strava.
-    # This will only be used with mockstravalib, not the real thing.
-    db.session.add(
-      StravaAccount(
-        strava_id=123,
-        access_token='some_access_token',
-        refresh_token='some_refresh_token',
-        expires_at=0,
+  from flask_migrate import upgrade as _upgrade
+  _upgrade(directory=_MIGRATION_DIR)
+  
+  # Spoof a StravaAccount that has authorized with strava.
+  # This will only be used with mockstravalib, not the real thing.
+  db.session.add(
+    StravaAccount(
+      strava_id=123,
+      access_token='some_access_token',
+      refresh_token='some_refresh_token',
+      expires_at=0,
+    )
+  )
+  db.session.commit()
+
+  # optionally pre-populate the DB with dummy activities
+  if saved_activity_count:
+    db.session.add_all(
+      Activity(
+        id=i,
+        title=f'Activity {i}',
+        description='',
+        created=datetime.datetime.now(),
+        recorded=datetime.datetime.now() - datetime.timedelta(days=i),
+        tz_local='UTC',
+        strava_id=i,
+        strava_acct_id=123,
+        distance_m=10000,
+        elevation_m=500,
+        elapsed_time_s=3600,
+        moving_time_s=3600,
+        ngp_ms=units.pace_to_speed('8:30')
       )
+      for i in range(saved_activity_count)
     )
     db.session.commit()
-
-    # optionally pre-populate the DB with dummy activities
-    if saved_activity_count:
-      db.session.add_all(
-        Activity(
-          id=i,
-          title=f'Activity {i}',
-          description='',
-          created=datetime.datetime.now(),
-          recorded=datetime.datetime.now() - datetime.timedelta(days=i),
-          tz_local='UTC',
-          strava_id=i,
-          strava_acct_id=123,
-          distance_m=10000,
-          elevation_m=500,
-          elapsed_time_s=3600,
-          moving_time_s=3600,
-          ngp_ms=units.pace_to_speed('8:30')
-        )
-        for i in range(saved_activity_count)
-      )
-      db.session.commit()
-
-  app.run()
 
 
 @cli.command()

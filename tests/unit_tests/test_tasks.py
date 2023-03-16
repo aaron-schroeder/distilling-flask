@@ -9,8 +9,8 @@ Things required by each test:
 """
 import unittest
 
-from application.tasks import est_15_min_rate
-from application.util.mock_stravalib import SimDevClient, SimProdClient
+from distilling_flask.tasks import est_15_min_rate
+from distilling_flask.util.mock_stravalib import SimDevClient, SimProdClient
 
 
 class TestEstRate(unittest.TestCase):

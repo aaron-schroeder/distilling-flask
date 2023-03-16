@@ -9,13 +9,16 @@ setup(
   author='Aaron Schroeder',
   author_email='aaron@trailzealot.com',
   license=None,
-  packages=find_packages(),
+  packages=find_packages(exclude=['tests*']),
   install_requires=[
+    'dash>=2.5.0',
+    'dash-bootstrap-components>=1.0.0',
     'Flask>=2.1.0',
   ],
   entry_points={
     'console_scripts': [
-      'df=application.cli:cli',
+      'df=distilling_flask.cli:cli',
+      'dfc=distilling_flask.cli:context_cli'
     ],
   },
 )

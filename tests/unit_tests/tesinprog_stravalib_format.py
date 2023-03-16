@@ -6,7 +6,7 @@ from urllib.parse import urlparse, parse_qs
 from flask import url_for
 import stravalib
 
-from application.util import mock_stravalib
+from distilling_flask.util import mock_stravalib
 from tests import settings
 from tests.util import get_chromedriver, strava_auth_flow
 

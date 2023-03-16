@@ -11,13 +11,13 @@ import pandas as pd
 from scipy.interpolate import interp1d
 from stravalib.exc import RateLimitExceeded
 
-from application.models import UserSettings
-from application.plotlydash.figure_layout import (
+from distilling_flask.models import UserSettings
+from distilling_flask.plotlydash.figure_layout import (
   LAT, LON, ELEVATION, GRADE, SPEED, CADENCE, HEARTRATE, POWER,
   AXIS_LAYOUT, TRACE_LAYOUT
 )
-from application.plotlydash.plots import Plotter
-from application.util import labels, power, units
+from distilling_flask.plotlydash.plots import Plotter
+from distilling_flask.util import labels, power, units
 
 
 MAP_ID = 'map'

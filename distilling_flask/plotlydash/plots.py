@@ -8,7 +8,7 @@ from dash import dcc, html
 import dash_bootstrap_components as dbc
 import plotly.graph_objs as go
 
-from application.util import units
+from distilling_flask.util import units
 
 
 class Plotter(object):
@@ -109,7 +109,7 @@ class Plotter(object):
     
     TODO:
       * Allow map customization. Both size and content. Maybe outsource
-        to other functions, maybe another module in the application.
+        to other functions, maybe another module in the distilling_flask.
         Depends how many functions there are.
     """
     layout_dict = dict(

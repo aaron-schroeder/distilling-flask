@@ -8,10 +8,10 @@ from scipy.interpolate import interp1d
 from sqlalchemy.exc import IntegrityError
 from stravalib.exc import RateLimitExceeded
 
-from application import celery
-from application.models import db, Activity, StravaAccount, UserSettings
-from application.util.dataframe import calc_power
-from application.util import power, readers
+from distilling_flask import celery
+from distilling_flask.models import db, Activity, StravaAccount, UserSettings
+from distilling_flask.util.dataframe import calc_power
+from distilling_flask.util import power, readers
 
 
 def est_15_min_rate(strava_client):

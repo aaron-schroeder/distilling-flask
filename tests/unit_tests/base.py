@@ -8,8 +8,8 @@ import unittest
 
 from flask_login import FlaskLoginClient
 
-from application import create_app, db
-from application.models import Activity, AdminUser, StravaAccount
+from distilling_flask import create_app, db
+from distilling_flask.models import Activity, AdminUser, StravaAccount
 
 
 BASEDIR = os.path.abspath(os.path.dirname(__file__))
@@ -20,7 +20,7 @@ class FlaskTestCase(unittest.TestCase):
     """
     Refs:
       https://coddyschool.com/upload/Flask_Web_Development_Developing.pdf#page=221
-      https://stackoverflow.com/questions/60111814/flask-application-was-not-able-to-create-a-url-adapter-for-request
+      https://stackoverflow.com/questions/60111814/flask-distilling_flask-was-not-able-to-create-a-url-adapter-for-request
     """
     self.app = create_app(config_name='test')
     self.app.test_client_class = FlaskLoginClient

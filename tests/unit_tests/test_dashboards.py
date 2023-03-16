@@ -4,8 +4,8 @@ import stravalib
 import unittest
 from unittest.mock import patch
 
-from application.models import db, AdminUser, StravaAccount
-from application.util.mock_stravalib import (
+from distilling_flask.models import db, AdminUser, StravaAccount
+from distilling_flask.util.mock_stravalib import (
   MOCK_TOKEN, 
   BatchedResultsIterator as MockBatchIterator
 )

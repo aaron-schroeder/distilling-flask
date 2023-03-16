@@ -6,9 +6,9 @@ from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
 from stravalib.exc import RateLimitExceeded
 
-from application.models import Activity
-from application.plotlydash.aio_components import FigureDivAIO, StatsDivAIO
-from application.util import dataframe, readers, units
+from distilling_flask.models import Activity
+from distilling_flask.plotlydash.aio_components import FigureDivAIO, StatsDivAIO
+from distilling_flask.util import dataframe, readers, units
 
 
 dash.register_page(__name__, path_template='/saved/<activity_id>',

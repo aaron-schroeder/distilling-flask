@@ -7,9 +7,9 @@ import dash_bootstrap_components as dbc
 import numpy as np
 import plotly.graph_objs as go
 
-from application.models import Activity, AdminUser
-from application.util import units
-from application.util.power import training_stress_score
+from distilling_flask.models import Activity, AdminUser
+from distilling_flask.util import units
+from distilling_flask.util.power import training_stress_score
 
 
 dash.register_page(__name__, path_template='/',

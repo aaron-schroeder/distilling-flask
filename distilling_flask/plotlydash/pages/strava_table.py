@@ -5,9 +5,9 @@ import dash_bootstrap_components as dbc
 import pandas as pd
 from stravalib.exc import RateLimitExceeded
 
-from application import tasks
-from application.models import Activity, StravaAccount
-from application.util import units
+from distilling_flask import tasks
+from distilling_flask.models import Activity, StravaAccount
+from distilling_flask.util import units
 
 
 dash.register_page(__name__, path_template='/strava/activities',

@@ -4,8 +4,8 @@ from dateutil import tz
 import pandas as pd
 from specialsauce.sources import minetti, strava, trainingpeaks
 
-from application.plotlydash.figure_layout import GRADE, SPEED
-from application.util.power import training_stress_score
+from distilling_flask.plotlydash.figure_layout import GRADE, SPEED
+from distilling_flask.util.power import training_stress_score
 
 
 def calc_power(df):

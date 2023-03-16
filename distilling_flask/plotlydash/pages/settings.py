@@ -3,10 +3,10 @@ from dash import html, callback, Input, Output, State
 from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
 
-from application.models import db, UserSettings
-from application.plotlydash.aio_components import TimeInput, SettingsLabel
-from application.plotlydash.layout import SettingsContainer
-from application.util import units
+from distilling_flask.models import db, UserSettings
+from distilling_flask.plotlydash.aio_components import TimeInput, SettingsLabel
+from distilling_flask.plotlydash.layout import SettingsContainer
+from distilling_flask.util import units
 
 
 dash.register_page(__name__, path_template='/settings',

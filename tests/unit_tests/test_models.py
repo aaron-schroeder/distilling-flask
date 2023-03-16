@@ -3,9 +3,9 @@ import datetime
 import pytz
 from sqlalchemy import exc
 
-from application import db
-from application.models import Activity, AdminUser, StravaAccount, UserSettings
-from application.util import units
+from distilling_flask import db
+from distilling_flask.models import Activity, AdminUser, StravaAccount, UserSettings
+from distilling_flask.util import units
 from .base import FlaskTestCase
 
 

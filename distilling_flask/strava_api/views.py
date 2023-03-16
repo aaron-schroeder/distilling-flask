@@ -4,9 +4,9 @@ from urllib.parse import urljoin
 from flask import flash, redirect, render_template, request, url_for
 from stravalib.exc import RateLimitExceeded
 
-from application.models import db, StravaAccount
-from application.util import units
-from application import messages
+from distilling_flask.models import db, StravaAccount
+from distilling_flask.util import units
+from distilling_flask import messages
 from . import strava_api
 
 

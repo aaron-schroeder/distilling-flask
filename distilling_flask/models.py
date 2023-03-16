@@ -11,8 +11,8 @@ import pytz
 import sqlalchemy as sa
 from stravalib.exc import RateLimitExceeded
 
-from application import db
-from application.util import power, units
+from distilling_flask import db
+from distilling_flask.util import power, units
 
 
 CLIENT_ID = os.environ.get('STRAVA_CLIENT_ID')
@@ -312,7 +312,7 @@ class StravaAccount(db.Model):
     try:
       _athlete = self.client.get_athlete()
     except RateLimitExceeded:
-      from application.util.mock_stravalib import DummyClass
+      from distilling_flask.util.mock_stravalib import DummyClass
       
       _athlete = DummyClass(
         profile=None,

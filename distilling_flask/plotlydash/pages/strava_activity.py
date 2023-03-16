@@ -9,10 +9,10 @@ import dateutil
 import pandas as pd
 from sqlalchemy.exc import IntegrityError
 
-from application.models import db, Activity, StravaAccount
-from application.plotlydash.aio_components import FigureDivAIO, StatsDivAIO
-from application.util import readers, units
-from application.util.dataframe import calc_power
+from distilling_flask.models import db, Activity, StravaAccount
+from distilling_flask.plotlydash.aio_components import FigureDivAIO, StatsDivAIO
+from distilling_flask.util import readers, units
+from distilling_flask.util.dataframe import calc_power
 
 
 dash.register_page(__name__, path_template='/strava/activity/<activity_id>',

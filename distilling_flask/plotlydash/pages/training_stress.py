@@ -7,9 +7,9 @@ import dash_bootstrap_components as dbc
 import pandas as pd
 import plotly.graph_objs as go
 
-from application.models import Activity, AdminUser
-from application.plotlydash.layout import COLORS
-from application.util.dataframe import calc_ctl_atl
+from distilling_flask.models import Activity, AdminUser
+from distilling_flask.plotlydash.layout import COLORS
+from distilling_flask.util.dataframe import calc_ctl_atl
 
 
 dash.register_page(__name__, path_template='/stress',

@@ -4,10 +4,10 @@ from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
 from flask import get_flashed_messages, url_for
 
-from application.models import db, StravaAccount
-from application.plotlydash.aio_components import StravaAccountRow
-from application.plotlydash.layout import SettingsContainer
-from application.util import units
+from distilling_flask.models import db, StravaAccount
+from distilling_flask.plotlydash.aio_components import StravaAccountRow
+from distilling_flask.plotlydash.layout import SettingsContainer
+from distilling_flask.util import units
 
 
 dash.register_page(__name__, path_template='/settings/strava',

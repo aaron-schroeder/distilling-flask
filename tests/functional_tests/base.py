@@ -15,9 +15,9 @@ from selenium.common.exceptions import (
 )
 from selenium.webdriver.common.by import By
 
-from application import create_app
-from application.models import db, StravaAccount
-from application.util import mock_stravalib
+from distilling_flask import create_app
+from distilling_flask.models import db, StravaAccount
+from distilling_flask.util import mock_stravalib
 from tests.util import get_chromedriver, strava_auth_flow, wait_for_element
 from tests import settings
 
@@ -51,7 +51,7 @@ class LiveServerTestCase(unittest.TestCase):
 
     self.app = self.create_app()
     self.app.config['STRAVA_API_BACKEND'] = (
-      'application.util.mock_stravalib.Client' if settings.SKIP_STRAVA_API 
+      'distilling_flask.util.mock_stravalib.Client' if settings.SKIP_STRAVA_API 
       else 'stravalib.Client'
     )
     

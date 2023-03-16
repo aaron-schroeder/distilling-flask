@@ -1,6 +1,6 @@
 import unittest
 
-from application.plotlydash.aio_components import TimeInput
+from distilling_flask.plotlydash.aio_components import TimeInput
 
 
 class TestTimeInput(unittest.TestCase):

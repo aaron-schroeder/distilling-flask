@@ -4,7 +4,7 @@ import unittest
 from dateutil import tz
 import pandas as pd
 
-from application.util.dataframe import calc_ctl_atl
+from distilling_flask.util.dataframe import calc_ctl_atl
 
 
 class TestCalcCtlAtl(unittest.TestCase):

@@ -6,8 +6,8 @@ import dash
 from dash import Dash, dcc, html, page_registry
 import dash_bootstrap_components as dbc
 
-from application.plotlydash.aio_components import FigureDivAIO, StatsDivAIO
-from application.util.dataframe import calc_power
+from distilling_flask.plotlydash.aio_components import FigureDivAIO, StatsDivAIO
+from distilling_flask.util.dataframe import calc_power
 
 
 def create_dash_app(df):

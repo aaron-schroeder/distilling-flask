@@ -14,10 +14,10 @@ from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
 import pandas as pd
 
-from application.plotlydash.aio_components import FigureDivAIO, StatsDivAIO
-from application.plotlydash.layout import SettingsContainer
-from application.util import readers
-from application.util.dataframe import calc_power
+from distilling_flask.plotlydash.aio_components import FigureDivAIO, StatsDivAIO
+from distilling_flask.plotlydash.layout import SettingsContainer
+from distilling_flask.util import readers
+from distilling_flask.util.dataframe import calc_power
 
 
 dash.register_page(__name__, path_template='/analyze-file',

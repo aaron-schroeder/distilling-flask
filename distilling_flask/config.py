@@ -1,10 +1,12 @@
 import os
 
-# from dotenv import load_dotenv
+from appdirs import user_config_dir, user_data_dir, user_cache_dir
 
 
-# BASEDIR = os.path.abspath(os.path.dirname(__file__))
-# load_dotenv(os.path.join(BASEDIR, '.env'))
+def get_data_dir():
+    data_dir = user_data_dir(appname='distilling_flask')
+    os.makedirs(data_dir, exist_ok=True)
+    return data_dir
 
 
 class Config:
@@ -24,14 +26,15 @@ class Config:
   # Prefer --debug arg? Or envvar?
   DEBUG = True
 
-  FLASK_APP = 'application'
+  FLASK_APP = 'distilling_flask'
 
-  path = os.path.dirname( os.path.realpath(__file__) )
-  database_path = os.path.join(path, 'mydb.sqlite')
-  SQLALCHEMY_DATABASE_URI = os.environ.get(
-    'DATABASE_URL',
-    f'sqlite:///{database_path}'
-  )
+  # Base path for media root and other uploaded files
+  # BASE_DATA_DIR = os.environ.get('BASE_DATA_DIR', get_data_dir())
+  BASE_DATA_DIR = get_data_dir()
+  os.makedirs(BASE_DATA_DIR, exist_ok=True)
+
+  DATABASE_NAME_DEFAULT = os.path.join(BASE_DATA_DIR, 'distilling_flask.sqlite')
+  SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
 
   SQLALCHEMY_ECHO = True
   SQLALCHEMY_TRACK_MODIFICATIONS = False
@@ -57,12 +60,12 @@ class TestingConfig(Config):
 
 
 class DummyConfig(Config):
-  SQLALCHEMY_DATABASE_URI = 'sqlite:///dummy.db'
-  # STRAVA_API_BACKEND = 'application.util.mock_stravalib.Client'
-  # STRAVA_API_BACKEND = 'application.util.mock_stravalib.LowLimitClient'
-  # STRAVA_API_BACKEND = 'application.util.mock_stravalib.SimProdClient'
+  SQLALCHEMY_DATABASE_URI = 'sqlite://'
+  # STRAVA_API_BACKEND = 'distilling_flask.util.mock_stravalib.Client'
+  # STRAVA_API_BACKEND = 'distilling_flask.util.mock_stravalib.LowLimitClient'
+  # STRAVA_API_BACKEND = 'distilling_flask.util.mock_stravalib.SimProdClient'
 
-  STRAVALIB_CLIENT = 'application.util.mock_stravalib.Client'
+  STRAVALIB_CLIENT = 'distilling_flask.util.mock_stravalib.Client'
   MOCK_STRAVALIB_ACTIVITY_COUNT = 100
   MOCK_STRAVALIB_SHORT_LIMIT = 100
   MOCK_STRAVALIB_LONG_LIMIT = 1000
