@@ -1,13 +1,11 @@
 import datetime
 import os
-import shutil
 
 import click
 from flask import current_app
-from flask.cli import FlaskGroup, with_appcontext
+from flask.cli import with_appcontext
 
 import distilling_flask as distilling_flask
-from distilling_flask import create_app
 from distilling_flask.models import db, Activity, StravaAccount
 from distilling_flask.util import units
 
@@ -37,15 +35,13 @@ class CommandError(Exception):
     super().__init__(*args, **kwargs)
 
 
-@click.group(
-  cls=FlaskGroup,
-  create_app=create_app,
-  # add_default_commands=False,
-)
-def context_cli():
+@click.group()
+def cli():
+  """Management script for the distilling-flask application."""
   pass
 
-@context_cli.command()
+
+@cli.command()
 @with_appcontext
 def start():
   # _setup_env()
@@ -59,82 +55,7 @@ def start():
   _upgrade(directory=_MIGRATION_DIR)
 
 
-
-@click.group()
-def cli():
-  """Management script for the distilling-flask distilling_flask."""
-  pass
-
-
 @cli.command()
-@click.argument('app_name')
-def init(app_name):
-  """Creates a distilling-flask project directory structure
-  for the given project name in the current directory.
-  """
-  top_dir = os.path.join(os.getcwd(), app_name)
-  try:
-    os.makedirs(top_dir)
-  except FileExistsError:
-    raise CommandError(f'{top_dir} already exists')
-  except OSError as e:
-    raise CommandError(e)
-  
-  base_name = 'app_name'
-
-  template_dir = os.path.join(distilling_flask.__path__[0], 'conf', 'app_template')
-  prefix_length = len(template_dir) + 1
-
-  for root, dirs, files in os.walk(template_dir):
-    path_rest = root[prefix_length:]
-    relative_dir = path_rest.replace(base_name, app_name)
-    if relative_dir:
-      target_dir = os.path.join(top_dir, relative_dir)
-      os.makedirs(target_dir, exist_ok=True)
-
-    for dirname in dirs[:]:
-      if dirname.startswith(".") or dirname == "__pycache__":
-        dirs.remove(dirname)
-
-    for filename in files:
-      if filename.endswith((".pyo", ".pyc", ".py.class")):
-        # Ignore some files as they cause various breakages.
-        continue
-      old_path = os.path.join(root, filename)
-      new_path = os.path.join(
-        top_dir, relative_dir, filename.replace(base_name, app_name)
-      )
-
-      for old_suffix, new_suffix in (".py-tpl", ".py"),:
-          if new_path.endswith(old_suffix):
-            new_path = new_path[:-len(old_suffix)] + new_suffix
-            break  # Only rewrite once
-
-      if os.path.exists(new_path):
-        raise CommandError(
-          f'{new_path} already exists. Overlaying a project into an existing '
-          'directory won\'t replace conflicting files.'
-        )
-      
-      # # Only render the Python files, as we don't want to
-      # # accidentally render Django templates files
-      # if new_path.endswith(extensions) or filename in extra_files:
-      #   with open(old_path, encoding="utf-8") as template_file:
-      #     content = template_file.read()
-      #   template = Engine().from_string(content)
-      #   content = template.render(context)
-      #   with open(new_path, "w", encoding="utf-8") as new_file:
-      #     new_file.write(content)
-      # else:
-      shutil.copyfile(old_path, new_path)
-
-      # if self.verbosity >= 2:
-      # self.stdout.write("Creating %s" % new_path)
-
-      # self.apply_umask(old_path, new_path)
-      # self.make_writeable(new_path)
-
-@context_cli.command()
 @click.option(
   '--saved_activity_count',
   default=20,
@@ -226,9 +147,4 @@ def seed(
       for i in range(saved_activity_count)
     )
     db.session.commit()
-
-
-@cli.command()
-def rundev():
-  app = create_app(config_name='dev')
-  app.run()
+  

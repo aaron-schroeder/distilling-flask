@@ -2,28 +2,8 @@
 *.ipynb
 _wsgi.py
 data/
-application/activity_files/original/*?.*
-application/activity_files/csv/*?.*
-application/dataframe_operations.py
-application/mapmatching.py
-application/osmp.py
-application/extracalc.py
-requirements_extra.txt
-application/templates/activity_detail.html
-application/templates/get_started.html
-application/templates/strava_log_rip.html
-application/templates/strava_log_rip_new.mht
-application/templates/strava.js
-application/plotlydash/assets_old/
-application/plotlydash/dashboard_upload_hr.py
-application/plotlydash/assets/application-a6dca5129ff0d670197be3f1fd67f96c98ae27018525299caf35d314bd1ef4da
-run_app*.py
-run_dash*.py
-*_next.py
-out/
-plot_power.py
 
-# Secret
+# Secrets
 tokens.json
 client_secrets.json
 strava_credentials.json
@@ -145,6 +125,7 @@ ENV/
 env.bak/
 venv.bak/
 pythonenv*
+.flaskenv
 
 # Spyder project settings
 .spyderproject
