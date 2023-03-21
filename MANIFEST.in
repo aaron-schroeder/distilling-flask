@@ -1,0 +1,2 @@
+include distilling_flask/migrations/*
+include distilling_flask/migrations/versions/*

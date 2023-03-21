@@ -10,6 +10,7 @@ setup(
   author_email='aaron@trailzealot.com',
   license=None,
   packages=find_packages(exclude=['tests*']),
+  include_package_data=True,
   install_requires=[
     'dash>=2.5.0',
     'dash-bootstrap-components>=1.0.0',
