@@ -27,18 +27,6 @@ def create_app(config_name='dev'):
   app = Flask(__name__)
 
   app.config.from_object(config[config_name])
-  
-  if not app.config['SQLALCHEMY_DATABASE_URI']:
-
-    from distilling_flask.util.io import get_data_dir
-    
-    # Base path for media root and other uploaded files
-    BASE_DATA_DIR = get_data_dir()
-    # os.makedirs(BASE_DATA_DIR, exist_ok=True)
-    # logger.info('=> Database and media directory: %s', BASE_DATA_DIR)
-
-    database_path = os.path.join(BASE_DATA_DIR, 'distilling.sqlite')
-    app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{database_path}'
 
   # SQLAlchemy
   db.init_app(app)
