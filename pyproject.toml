@@ -1,0 +1,32 @@
+# pyproject.toml
+
+[build-system]
+requires = ['setuptools>=61.0.0', 'wheel']
+build-backend = 'setuptools.build_meta'
+
+[project]
+name = 'distilling_flask'
+version = '0.0.1-alpha.1'
+description = 'Personal running data analysis and visualization, powered by Flask, Dash, and Pandas.'
+readme = { file = 'README.md', content-type = 'text/markdown' }
+requires-python = '>=3.8'
+authors = [{name = 'Aaron Schroeder', email = 'aaron@trailzealot.com'}]
+license = {file = 'LICENSE'}
+classifiers = [
+    'License :: OSI Approved :: MIT License',
+    'Programming Language :: Python',
+    'Programming Language :: Python :: 3',
+]
+dependencies = [
+    'dash>=2.5.0',
+    'dash-bootstrap-components>=1.0.0',
+    'Flask>=2.1.0',
+]
+
+[project.urls]
+Homepage = 'https://github.com/aaron-schroeder/distilling-flask'
+
+[tool.setuptools.packages.find]
+# where = ['distilling_flask']  # list of folders that contain the packages (["."] by default)
+include = ["distilling_flask*"]  # package names should match these glob patterns (["*"] by default)
+# exclude = ["tests*"]  # exclude packages matching these glob patterns (empty by default)
