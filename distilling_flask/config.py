@@ -21,7 +21,7 @@ class Config:
   
   # Deprecated:
   # https://flask.palletsprojects.com/en/2.2.x/config/#ENV
-  # ENV = 'development'  
+  ENV = 'development'
   
   # Prefer --debug arg? Or envvar?
   DEBUG = True
@@ -38,7 +38,6 @@ class Config:
   SQLALCHEMY_TRACK_MODIFICATIONS = False
 
   CELERY_BROKER_URL = 'redis://localhost:6379/0'
-  # CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
 
   STRAVALIB_CLIENT = os.environ.get('STRAVALIB_CLIENT', 'stravalib.Client')
 
@@ -73,6 +72,7 @@ class DummyConfig(Config):
 
 class ProductionConfig(Config):
   DEBUG = False  # just in case
+  ENV = 'production'
   SECRET_KEY = os.environ.get('SECRET_KEY') # don't set a default value
 
 
