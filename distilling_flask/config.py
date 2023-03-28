@@ -41,6 +41,10 @@ class Config:
 
   STRAVALIB_CLIENT = os.environ.get('STRAVALIB_CLIENT', 'stravalib.Client')
 
+  DISTILLING_FLASK_LOCAL_FILES_DOCUMENT_ROOT = os.environ.get(
+    'DISTILLING_FLASK_LOCAL_FILES_DOCUMENT_ROOT'
+  )
+
 
 class TestingConfig(Config):
   """
