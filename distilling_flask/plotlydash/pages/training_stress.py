@@ -1,4 +1,4 @@
-import datetime
+import os
 
 import dash
 from dash import callback, dcc, html, Input, Output, State
@@ -52,6 +52,8 @@ def draw_graph(_):
     )
 
   df_padded = calc_ctl_atl(df, AdminUser().settings.ftp_ms)
+
+  print(df_padded.columns)
 
   return TssGraph(df_padded, id='stress-graph')
 
@@ -138,11 +140,13 @@ def TssGraph(df, id=None):
     )
   )
 
-  # df_nondummy_tss = df.loc[~df['strava_acct_id'].isnull(), :]
+  strava_acct_id_nm = 'import_storage_id' if os.getenv('ff_rename') else 'strava_acct_id'
+
+  # df_nondummy_tss = df.loc[~df[strava_acct_id_nm].isnull(), :]
   df_tss = df.loc[df['tss'] > 0, :]
   strava_id_list = [
     id if pd.notnull(id) else None
-    for id in df_tss['strava_acct_id']
+    for id in df_tss[strava_acct_id_nm]
   ]
   colors_by_id = {
     strava_acct_id: COLORS['USERS'][i]
@@ -153,7 +157,7 @@ def TssGraph(df, id=None):
     y=df_tss['tss'], 
     name='TSS',
     text=df_tss['title'],
-    customdata=df_tss['strava_acct_id'],
+    customdata=df_tss[strava_acct_id_nm],
     hovertemplate='%{y}<br>%{x}<br>%{text}<br>Strava Account #%{customdata}',
     mode='markers',
     marker_color=[colors_by_id[id] for id in strava_id_list],

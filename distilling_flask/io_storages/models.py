@@ -1,7 +1,7 @@
 import datetime
 import os
 from pathlib import Path
-import re
+import warnings
 
 from sqlalchemy.sql import func
 from sqlalchemy.orm import declared_attr
@@ -13,16 +13,26 @@ from distilling_flask.util.redis import redis_connected
 class Storage(db.Model):
   __abstract__ = True
   
-  # id = 
-  strava_id = db.Column(
-    db.Integer,
-    primary_key=True
-  )
+  if os.getenv('ff_rename'):
+    id = db.Column(
+      db.Integer,
+      primary_key=True
+    )
+    @property
+    def strava_id(self):
+      # warnings.warn(
+      print('The use of `strava_id` for StravaImportStorage is '
+                    'deprecated in favor of `id`.')
+      return self.id
+  else:
+    strava_id = db.Column(
+      db.Integer,
+      primary_key=True
+    )
 
   @declared_attr
   def entities(self):
     return db.relationship('ImportStorageEntity', backref='import_storage', lazy='dynamic')
-  # entities = db.relationship('ImportStorageEntity', backref='import_storage', lazy='dynamic')
   # created_at = models.DateTimeField(_('created at'), auto_now_add=True, help_text='Creation time')
   # last_sync = models.DateTimeField(_('last sync'), null=True, blank=True, help_text='Last sync finished time')
   # last_sync_count = models.PositiveIntegerField(
@@ -131,8 +141,16 @@ class ImportStorageEntity(db.Model):
   __abstract__ = True
 
   id = db.Column(db.Integer, primary_key=True)
-  strava_id = db.Column(db.String, nullable=False, doc='External entity key')
-  # key = db.Column(db.String, nullable=False, doc='External entity key')
+  if os.getenv('ff_rename'):
+    key = db.Column(db.String, nullable=False, unique=True, doc='External entity key')
+    @property
+    def strava_id(self):
+      # warnings.warn(
+      print('The use of `strava_id` for StravaApiActivity is '
+                    'deprecated in favor of `key`.')
+      return self.key
+  else:
+    strava_id = db.Column(db.String, nullable=False, doc='External entity key')
   object_exists = db.Column(db.Boolean, default=True,
     doc='Whether object under external entity still exists')
   created_at = db.Column(db.DateTime(timezone=True), server_default=func.now(),
@@ -144,11 +162,9 @@ class ImportStorageEntity(db.Model):
   def strava_acct_id(self):
     return db.Column(db.Integer, db.ForeignKey('import_storage.id'))
 
-  @declared_attr
-  def strava_acct_id(self):
-    # def import_storage_id(self):
-    return db.Column(db.Integer, db.ForeignKey('import_storage.id'))
-  # import_storage_id = db.Column(db.Integer, db.ForeignKey('import_storage.id'))
+  # @declared_attr
+  # def import_storage_id(self):
+  #   return db.Column(db.Integer, db.ForeignKey('import_storage.id'))
 
   @classmethod
   def exists(cls, key, storage):

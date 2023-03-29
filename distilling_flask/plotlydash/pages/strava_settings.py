@@ -18,7 +18,7 @@ dash.register_page(__name__, path_template='/settings/strava',
 def layout(**_):
 
   strava_account_rows = [
-    StravaAccountRow(strava_account) 
+    StravaAccountRow(strava_account)
     for strava_account in StravaImportStorage.query.all()
   ]
 

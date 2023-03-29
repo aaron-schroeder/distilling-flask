@@ -3,6 +3,7 @@ import enum
 from functools import cached_property
 import json
 import os
+import warnings
 
 from dateutil import tz
 import pandas as pd
@@ -16,11 +17,8 @@ from distilling_flask.io_storages.models import (
   ImportStorage,
   ImportStorageEntity
 )
+from distilling_flask.io_storages.strava import util
 from distilling_flask.util import power
-
-
-CLIENT_ID = os.environ.get('STRAVA_CLIENT_ID')
-CLIENT_SECRET = os.environ.get('STRAVA_CLIENT_SECRET')
 
 
 ActivityTypeEnum = enum.Enum('ActivityTypeEnum', 
@@ -39,45 +37,32 @@ class StravaStorageMixin:
 
   def get_client(
     self,
-    access_token=None,
+    # access_token=None,
     client_id=None,
     client_secret=None,
     validate_connection=False
   ):
-    access_token = access_token or os.environ.get('STRAVA_ACCESS_TOKEN')
-    client_id = client_id or CLIENT_ID
-    client_secret = client_secret or CLIENT_SECRET
-    
-    client = stravalib.Client()
-
-    if access_token:
-      client.access_token = access_token
-    elif client_id and client_secret:
-      if not self.token_expired:
-        client.access_token = self.access_token
-      else:
-        try:
-          token = client.refresh_access_token(
-            client_id,
-            client_secret,
-            self.refresh_token
-          )
-        except Exception as e:
-          print('ahhhhhhhhhhhhhhhhhhhhhhhhhhHHHHHHHH')
-          pass
-        else:
-          self.access_token = token['access_token']
-          self.refresh_token = token['refresh_token']
-          self.expires_at = token['expires_at']
-          db.session.commit()
-
+    # access_token = access_token or os.getenv('STRAVA_ACCESS_TOKEN')
+    client_id = client_id or os.getenv('STRAVA_CLIENT_ID')
+    client_secret = client_secret or os.getenv('STRAVA_CLIENT_SECRET')
+    client = util.get_client()
+    if self.token_expired:
+      token = client.refresh_access_token(
+        client_id,
+        client_secret,
+        self.refresh_token
+      )
+      self.access_token = token['access_token']
+      self.refresh_token = token['refresh_token']
+      self.expires_at = token['expires_at']
+      db.session.commit()
     if validate_connection:
       self.validate_connection(client)
-
     return client
   
   def validate_connection(self, client=None):
-    # logger.debug('validate_connection')
+    # logger.debug(
+    print('validate_connection')
     if client is None:
       client = self.get_client()
 
@@ -93,7 +78,14 @@ class StravaImportStorage(StravaStorageMixin, ImportStorage):
 
   __tablename__ = 'strava_account'
 
-  entities = db.relationship('StravaApiActivity', backref='import_storage', lazy='dynamic')
+  entities = db.relationship(
+    'StravaApiActivity',
+    backref='import_storage' if os.getenv('ff_rename') else 'strava_acct', 
+    lazy='dynamic')
+  @property
+  def activities(self):
+    print('StravaApiAccount: `activities` is deprecated in favor of `entities`.')
+    return self.entities
 
   # def iterkeys(self):
   #   client = self.get_client()
@@ -124,58 +116,9 @@ class StravaImportStorage(StravaStorageMixin, ImportStorage):
   #     'streams': activity_streams.to_dict(),
   #   }
 
-
-  # def get_token(self):
-
-  #   if datetime.datetime.utcnow() < datetime.datetime.utcfromtimestamp(self.expires_at):
-  #     return dict(
-  #       access_token=self.access_token,
-  #       refresh_token=self.refresh_token,
-  #       expires_at=self.expires_at,
-  #     )
-
-  #   print('refreshing expired token')
-  #   token = self.get_client().refresh_access_token(
-  #     client_id=CLIENT_ID,
-  #     client_secret=CLIENT_SECRET,
-  #     refresh_token=self.refresh_token
-  #   )
-
-  #   self.access_token = token['access_token']
-  #   self.refresh_token = token['refresh_token']
-  #   self.expires_at = token['expires_at']
-  #   db.session.commit()
-
-  #   return token
-
   @property
   def has_authorized(self):
     return self.access_token is not None
-
-  # @property
-  # def client(self):
-  #   token = self.get_token()
-  #   return self.get_client(access_token=token['access_token'])
-
-  # @staticmethod
-  # def get_client(backend=None, access_token=None):
-  #   """Load a strava connection backend and return an instance of it.
-  #   If backend is None (default), use `config.STRAVALIB_CLIENT`, or
-  #   finally default to stravalib.
-  #   """
-  #   backend = backend or current_app.config.get('STRAVALIB_CLIENT')
-  #   klass = import_string(backend or 'stravalib.Client')
-  #   for cfg_name, cfg_val in current_app.config.items():
-  #     if (
-  #       cfg_name.startswith('MOCK_STRAVALIB_') 
-  #       and current_app.config.get(cfg_name)
-  #     ):
-  #       setattr(
-  #         klass,
-  #         cfg_name.split('MOCK_STRAVALIB')[1].lower(),
-  #         cfg_val
-  #       )
-  #   return klass(access_token=access_token)
 
   # @cached_property
   # def athlete(self):
@@ -236,20 +179,24 @@ class StravaApiActivity(ImportStorageEntity):
   # summary = db.Column(db.BLOB)
   # streams = db.Column(db.BLOB)
 
-  # import_storage_id = db.Column(
-  strava_acct_id = db.Column(
-    db.Integer,
-    # TODO: How to make this required?
-    db.ForeignKey('strava_account.strava_id')
-    # db.ForeignKey('strava_import_storage.strava_id')
-    # db.ForeignKey('strava_import_storage.id')
-  )
-
-  # strava_id = db.Column(
-  #   db.BigInteger,
-  #   unique=True,
-  #   nullable=True,
-  # )
+  if os.getenv('ff_rename'):
+    import_storage_id = db.Column(
+      db.Integer,
+      # TODO: How to make this required?
+      db.ForeignKey('strava_account.id')
+      # db.ForeignKey('strava_import_storage.id')
+    )
+    @property
+    def strava_acct_id(self):
+      # warnings.warn(
+      print('The use of `strava_acct_id` for StravaApiActivity is '
+            'deprecated in favor of `import_storage_id`.')
+      return self.import_storage_id
+  else:
+    strava_acct_id = db.Column(
+      db.Integer,
+      db.ForeignKey('strava_account.strava_id')
+    )
 
   title = db.Column(
     db.String(255),
@@ -281,10 +228,6 @@ class StravaApiActivity(ImportStorageEntity):
     nullable=False,
     default='UTC',
   )
-
-  # Maybe (strava, file upload, etc)
-  # String
-  # data_source = ...
 
   # Nullable because not every activity has latlons, so getting vals 
   # might not be possible.
@@ -354,10 +297,12 @@ class StravaApiActivity(ImportStorageEntity):
 
   @classmethod
   def load_table_as_df(cls, fields=None):
-
-    fields = fields or ['recorded', 'title', 'elapsed_time_s',
+    strava_storage_id = 'import_storage_id' if os.getenv('ff_rename') else 'strava_acct_id'
+    default_fields = ['recorded', 'title', 'elapsed_time_s',
       'moving_time_s', 'elevation_m', 'distance_m', 'id', 'description',
-      'strava_acct_id']
+      strava_storage_id]
+
+    fields = fields or default_fields
 
     # see also: pd.read_sql_query()
     df = pd.read_sql_table(

@@ -9,7 +9,7 @@ from sqlalchemy.exc import IntegrityError
 from stravalib.exc import RateLimitExceeded
 
 from distilling_flask import celery
-from distilling_flask.models import db, UserSettings
+from distilling_flask.models import db, AdminUser
 from distilling_flask.io_storages.strava.models import StravaImportStorage, StravaApiActivity
 from distilling_flask.util.dataframe import calc_power
 from distilling_flask.util import power, readers
@@ -38,7 +38,7 @@ def async_save_all_strava_activities(self, strava_account_id, handle_overlap='ex
   """Master task that (hopefully) spawns a task for each activity."""
   strava_acct = StravaImportStorage.query.get(strava_account_id)
   saved_strava_activity_ids = [saved_activity.strava_id for saved_activity in strava_acct.activities.all()]
-  client = strava_acct.client
+  client = strava_acct.get_client()
 
   try:
     # activity_ids = [activity.id for activity in client.get_activities()]
@@ -95,7 +95,7 @@ def async_save_selected_strava_activities(self, strava_account_id, strava_activi
 def async_save_strava_activity(self, account_id, activity_id, handle_overlap='existing'):
 
   strava_acct = StravaImportStorage.query.get(account_id)
-  client = strava_acct.client
+  client = strava_acct.get_client()
   
   try:
     activity = client.get_activity(activity_id)
@@ -173,7 +173,7 @@ def async_save_strava_activity(self, account_id, activity_id, handle_overlap='ex
       total_seconds = df['time'].iloc[-1] - df['time'].iloc[0]
 
       tss = power.training_stress_score(
-        ngp_scalar, UserSettings.ftp_ms, total_seconds)
+        ngp_scalar, AdminUser().settings.ftp_ms, total_seconds)
     elif 'speed' in df.columns:
       # TODO: Add capabilities for flat-ground TSS.
       pass

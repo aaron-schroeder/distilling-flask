@@ -138,20 +138,13 @@ def layout(**url_queries):
 def update_table(page_current, page_size, sort_by, strava_id):
   if strava_id is None:
     raise PreventUpdate
-  
   strava_acct = StravaImportStorage.query.get(strava_id)
-  
+  client = strava_acct.get_client()
   try:
-    activities = strava_acct.client.get_activities(limit=page_size)
+    activities = client.get_activities(limit=page_size)
   except RateLimitExceeded as e:
-    # layout_container.children.append(html.Div(
-    print(
-      f'Strava API rate limit exceeded: '
-      f'{e.limit} requests in {e.timeout} seconds.'
-    )
-    # ))
-    # return layout_container
-    
+    print(f'Strava API rate limit exceeded: '
+          f'{e.limit} requests in {e.timeout} seconds.')   
     raise PreventUpdate
   
   activities.per_page = min(page_size, 200)

@@ -1,4 +1,5 @@
 import math
+import os
 import re
 import uuid
 
@@ -11,7 +12,7 @@ import pandas as pd
 from scipy.interpolate import interp1d
 from stravalib.exc import RateLimitExceeded
 
-from distilling_flask.models import UserSettings
+from distilling_flask.models import AdminUser
 from distilling_flask.plotlydash.figure_layout import (
   LAT, LON, ELEVATION, GRADE, SPEED, CADENCE, HEARTRATE, POWER,
   AXIS_LAYOUT, TRACE_LAYOUT
@@ -790,7 +791,7 @@ class StatsDivAIO(dbc.Accordion):
         dbc.AccordionItem(
           TssDivAIO(
             aio_id=aio_id,
-            ftp=UserSettings.ftp_ms,
+            ftp=AdminUser().settings.ftp_ms,
             ngp=ngp_ms,
             total_time=df['time'].iloc[-1]-df['time'].iloc[0]
           ),
@@ -891,36 +892,39 @@ class StravaAccountRow(dbc.Row):
                 children=[
                   html.Div(
                     className='flex-shrink-0',
-                    children=html.A(
-                      href=strava_account.url,
-                      children=html.Img(
-                        src=strava_account.profile_picture_url,
-                        alt='Athlete Profile Picture',
-                        className='img-fluid',
-                        style={'width': '180px', 'border_radius': '10px'}
-                      )
-                    )                    
+                    # children=html.A(
+                    #   href=strava_account.url,
+                    #   children=html.Img(
+                    #     src=strava_account.profile_picture_url,
+                    #     alt='Athlete Profile Picture',
+                    #     className='img-fluid',
+                    #     style={'width': '180px', 'border_radius': '10px'}
+                    #   )
+                    # )
                   ),
                   html.Div(
                     className='flex-grow-1 ms-3',
                     children=[
+                      # html.A(
+                      #   href=strava_account.url,
+                      #   children=html.H5(
+                      #     className='mb-1',
+                      #     children=f'{strava_account.firstname} {strava_account.lastname}'
+                      #   )
+                      # ),
                       html.A(
                         href=strava_account.url,
-                        children=html.H5(
-                          className='mb-1',
-                          children=f'{strava_account.firstname} {strava_account.lastname}'
-                        )
+                        children=html.P(
+                          className='mb-2 pb-1',
+                          style={'color': '#2b2a2'},
+                          children=f'Strava Account #{strava_account.strava_id}'
+                        ),
                       ),
-                      html.P(
-                        className='mb-2 pb-1',
-                        style={'color': '#2b2a2'},
-                        children=f'Strava Account #{strava_account.strava_id}'
-                      ),
-                      html.P(
-                        className='mb-2 pb-1',
-                        style={'color': '#2b2a2'},
-                        children=f'{strava_account.athlete.city}, {strava_account.athlete.state}, {strava_account.athlete.country}'
-                      ),
+                      # html.P(
+                      #   className='mb-2 pb-1',
+                      #   style={'color': '#2b2a2'},
+                      #   children=f'{strava_account.athlete.city}, {strava_account.athlete.state}, {strava_account.athlete.country}'
+                      # ),
                       html.Div(
                         className='d-flex justify-content-start '
                                   'rounded-3 p-2 mb-2',
@@ -931,10 +935,10 @@ class StravaAccountRow(dbc.Row):
                               className='small text-muted mb-1',
                               children='Runs'
                             ),
-                            html.P(
-                              className='mb-0',
-                              children=strava_account.run_count
-                            ),
+                            # html.P(
+                            #   className='mb-0',
+                            #   children=strava_account.run_count
+                            # ),
                           ]),
                           html.Div(
                             className='px-3',
@@ -943,10 +947,10 @@ class StravaAccountRow(dbc.Row):
                                 className='small text-muted mb-1',
                                 children='Followers'
                               ),
-                              html.P(
-                                className='mb-0',
-                                children=strava_account.follower_count
-                              ),                              
+                              # html.P(
+                              #   className='mb-0',
+                              #   children=strava_account.follower_count
+                              # ),                              
                             ]
                           )
                         ]

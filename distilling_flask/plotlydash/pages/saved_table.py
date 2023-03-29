@@ -1,6 +1,7 @@
 import dash
 from dash import dash_table, html, Input, Output
 import dash_bootstrap_components as dbc
+import os
 import pandas as pd
 
 from distilling_flask import db
@@ -126,7 +127,7 @@ def update_table(page_current, page_size, sort_by):
       'Elevation': activity.elevation_m,
       'TSS': activity.tss,
       '_internal_id': activity.id,
-      '_strava_acct_id': activity.strava_acct_id,
+      '_strava_acct_id': activity.import_storage_id if os.getenv('ff_rename') else activity.strava_acct_id,
       # 'Overlap': str(Activity.find_overlap_ids(
       #   activity.start_date,
       #   activity.start_date + activity.elapsed_time,

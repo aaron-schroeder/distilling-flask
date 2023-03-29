@@ -9,6 +9,7 @@ from distilling_flask.util import units
 from distilling_flask import messages
 from distilling_flask.io_storages.strava import strava
 from distilling_flask.io_storages.strava.models import StravaImportStorage
+from distilling_flask.io_storages.strava.util import get_client
 
 
 CLIENT_ID = os.environ.get('STRAVA_CLIENT_ID')
@@ -23,7 +24,7 @@ def authorize():
     'http://localhost:5000'
   )
 
-  return redirect(StravaImportStorage.get_client().authorization_url(
+  return redirect(get_client().authorization_url(
     CLIENT_ID,
     scope=['activity:read_all'],
     redirect_uri=urljoin(
@@ -60,15 +61,15 @@ def handle_code():
       )
     )
 
-  token = StravaImportStorage.get_client().exchange_code_for_token(
+  client = get_client()
+  token = client.exchange_code_for_token(
     client_id=CLIENT_ID,
     client_secret=CLIENT_SECRET,
     code=request.args.get('code'),
   )
-  athlete = StravaImportStorage.get_client(access_token=token['access_token']).get_athlete()
-  strava_acct = StravaImportStorage.query.get(athlete.id)
+  athlete = client.get_athlete()
 
-  if strava_acct:
+  if StravaImportStorage.query.get(athlete.id) is not None:
     # The user had already authorized this strava account.
     # But the action they just took provides us with a fresh token.
     strava_acct.access_token = token['access_token']
@@ -78,7 +79,7 @@ def handle_code():
 
     return render_template(
       'strava_api/callback_duplicate.html',
-      strava_name=f'{strava_acct.firstname} {strava_acct.lastname}'
+      strava_name=f'{athlete.firstname} {athlete.lastname}'
     )
 
   # This account doesn't exist in our database, so register it.
@@ -104,7 +105,7 @@ def handle_code():
   # strava page and there would be a little helpful tour of strava-enabled
   # features.
   flash(
-    f'Strava account for {strava_acct.firstname} {strava_acct.lastname} '
+    f'Strava account for {athlete.firstname} {athlete.lastname} '
     f'was successfully linked!',
     category=messages.SUCCESS
   )
@@ -137,13 +138,17 @@ def revoke():
 
 @strava.route('/status')
 def show_strava_status():
+  # TODO: Find a way to RL display status without burning through
+  # a dummy request every time. I'm thinking it can be a database 
+  # or redis entry.
+
   # Doesn't matter whose token I use
   strava_account = StravaImportStorage.query.first()
 
   if not strava_account:
     return 'No strava accounts are authorized yet', 200
 
-  client = strava_account.client
+  client = get_client()
 
   try:
     client.get_athlete()

@@ -26,7 +26,7 @@ def layout(activity_id=None, **queries):
   if activity_id is None or strava_acct is None:
     return dbc.Container([])  # TODO: add help text
 
-  client = strava_acct.client
+  client = strava_acct.get_client()
 
   activity = client.get_activity(activity_id)
 
