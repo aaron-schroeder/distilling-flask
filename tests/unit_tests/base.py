@@ -9,7 +9,8 @@ import unittest
 from flask_login import FlaskLoginClient
 
 from distilling_flask import create_app, db
-from distilling_flask.models import Activity, AdminUser, StravaAccount
+from distilling_flask.models import AdminUser
+from distilling_flask.io_storages.strava.models import StravaImportStorage, StravaApiActivity
 
 
 BASEDIR = os.path.abspath(os.path.dirname(__file__))
@@ -38,7 +39,7 @@ class FlaskTestCase(unittest.TestCase):
     self.test_request_context.pop()
 
   def create_activity(self, **kwargs):
-    act = Activity(
+    act = StravaApiActivity(
       title=kwargs.get('title', 'title'),
       description=kwargs.get('description', 'description'),
       created=kwargs.get('created', datetime.datetime.utcnow()),
@@ -69,6 +70,6 @@ class LoggedInFlaskTestCase(FlaskTestCase):
 class AuthenticatedFlaskTestCase(LoggedInFlaskTestCase):
   def setUp(self):
     super().setUp()
-    self.strava_acct = StravaAccount(strava_id=1, expires_at=0)
+    self.strava_acct = StravaImportStorage(strava_id=1, expires_at=0)
     db.session.add(self.strava_acct)
     db.session.commit()

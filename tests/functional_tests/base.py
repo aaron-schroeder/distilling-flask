@@ -15,8 +15,8 @@ from selenium.common.exceptions import (
 )
 from selenium.webdriver.common.by import By
 
-from distilling_flask import create_app
-from distilling_flask.models import db, StravaAccount
+from distilling_flask import create_app, db
+from distilling_flask.io_storages.strava.models import StravaImportStorage
 from distilling_flask.util import mock_stravalib
 from tests.util import get_chromedriver, strava_auth_flow, wait_for_element
 from tests import settings
@@ -84,7 +84,7 @@ class LiveServerTestCase(unittest.TestCase):
       # Spoof a StravaAccount that has authorized with strava.
       # This will only be used with mockstravatalk, not the real thing.
       db.session.add(
-        StravaAccount(
+        StravaImportStorage(
           strava_id=123,
           access_token='some_access_token',
           refresh_token='some_refresh_token',

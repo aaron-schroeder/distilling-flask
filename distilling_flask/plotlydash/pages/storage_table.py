@@ -1,11 +1,6 @@
 import dash
-from dash import dash_table, html, Input, Output
+from dash import dash_table, html
 import dash_bootstrap_components as dbc
-import pandas as pd
-
-from distilling_flask.models import db, Activity, StravaAccount
-from distilling_flask.plotlydash.layout import COLORS
-from distilling_flask.util import units
 
 
 dash.register_page(__name__, path_template='/storage-table',

@@ -7,7 +7,9 @@ import dash_bootstrap_components as dbc
 import numpy as np
 import plotly.graph_objs as go
 
-from distilling_flask.models import Activity, AdminUser
+from distilling_flask.models import AdminUser
+from distilling_flask.io_storages.strava.models import StravaImportStorage, StravaApiActivity
+
 from distilling_flask.util import units
 from distilling_flask.util.power import training_stress_score
 
@@ -81,7 +83,7 @@ def layout(**_):
 )
 def update_calendar(n_clicks, children):
 
-  df = Activity.load_table_as_df()
+  df = StravaApiActivity.load_table_as_df()
 
   if len(df) == 0:
     return html.Div('No activities have been saved yet.')

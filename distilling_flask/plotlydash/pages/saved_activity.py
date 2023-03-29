@@ -6,7 +6,7 @@ from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
 from stravalib.exc import RateLimitExceeded
 
-from distilling_flask.models import Activity
+from distilling_flask.io_storages.strava.models import StravaApiActivity
 from distilling_flask.plotlydash.aio_components import FigureDivAIO, StatsDivAIO
 from distilling_flask.util import dataframe, readers, units
 
@@ -19,7 +19,7 @@ def layout(activity_id=None, **_):
   if activity_id is None:
     return html.Div([])
 
-  activity = Activity.query.get(activity_id)
+  activity = StravaApiActivity.query.get(activity_id)
 
   elapsed_time_str = units.seconds_to_string(
     activity.elapsed_time_s,

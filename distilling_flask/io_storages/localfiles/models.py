@@ -1,15 +1,21 @@
 import os
 from pathlib import Path
 import re
+import zlib
 
 from distilling_flask import db
-from distilling_flask.io_storages.models import ImportStorage, ImportStorageLink
+from distilling_flask.io_storages.models import (
+  ImportStorage,
+  ImportStorageEntity
+)
 
 
-class LocalFilesImportStorage(ImportStorage):
+class LocalFilesImportStorageMixin:
   path = db.Column(db.Text)
   # regex_filter = db.Column(db.Text)
 
+
+class LocalFilesImportStorage(LocalFilesImportStorageMixin, ImportStorage):
   def validate_connection(self):
     path = Path(self.path)
     if not path.exists():
@@ -24,34 +30,52 @@ class LocalFilesImportStorage(ImportStorage):
   def iterkeys(self):
     path = Path(self.path)
     regex = re.compile(str(self.regex_filter)) if self.regex_filter else None
-    # For better control of imported tasks, file reading has been changed to ascending order of filenames.
-    # In other words, the task IDs are sorted by filename order.
+    # For better control of imported entities, file reading has been changed to ascending order of filenames.
+    # In other words, the LocalFile IDs are sorted by filename order.
     for file in sorted(path.rglob('*'), key=os.path.basename):
       if file.is_file():
         key = file.name
         if regex and not regex.match(key):
-          # logger.debug(key + ' is skipped by regex filter')
+          # logger.debug(
+          print(key + ' is skipped by regex filter')
           continue
         yield str(file)
 
   def get_data(self, key):
-    raise NotImplementedError
-    path = Path(key)
-    # try:
-    #     with open(path, encoding='utf8') as f:
-    #         value = json.load(f)
-    # except (UnicodeDecodeError, json.decoder.JSONDecodeError):
-    #     raise ValueError(
-    #         f"Can\'t import JSON-formatted tasks from {key}. If you're trying to import binary objects, "
-    #         f"perhaps you've forgot to enable \"Treat every bucket object as a source file\" option?")
+    filepath = Path(key)
+    with open(filepath, 'rb') as f:
+      document = zlib.compress(f.read())
+    return {'document': document}
 
-    # if not isinstance(value, dict):
-    #     raise ValueError(f"Error on key {key}: For {self.__class__.__name__} your JSON file must be a dictionary with one task.")  # noqa
-    # return value
-
-  def scan_and_create_links(self):
-    return self._scan_and_create_links(LocalFilesImportStorageLink)
+  def scan_and_create_entities(self):
+    return self._scan_and_create_entities(LocalFile)
   
 
-class LocalFilesImportStorageLink(ImportStorageLink):
-  pass
+class LocalFile(ImportStorageEntity):
+  import_storage_id = db.Column(
+    db.Integer,
+    db.ForeignKey('local_files_import_storage.id'),
+  )
+  document = db.Column(db.BLOB)
+
+  # @property
+  # def format(self):
+  #   file_format = None
+  #   try:
+  #     file_format = os.path.splitext(self.filepath)[-1]
+  #   except:
+  #     pass
+  #   finally:
+  #     # logger.debug(
+  #     print('Get file format ' + str(file_format))
+  #   return file_format
+
+  # @property
+  # def content(self):
+  #   # cache file body
+  #   if hasattr(self, '_file_body'):
+  #     body = getattr(self, '_file_body')
+  #   else:
+  #     body = self.document  # TODO: Handle decompression
+  #     setattr(self, '_file_body', body)
+  #   return body

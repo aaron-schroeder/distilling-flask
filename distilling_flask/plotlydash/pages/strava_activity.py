@@ -9,7 +9,8 @@ import dateutil
 import pandas as pd
 from sqlalchemy.exc import IntegrityError
 
-from distilling_flask.models import db, Activity, StravaAccount
+from distilling_flask import db
+from distilling_flask.io_storages.strava.models import StravaImportStorage, StravaApiActivity
 from distilling_flask.plotlydash.aio_components import FigureDivAIO, StatsDivAIO
 from distilling_flask.util import readers, units
 from distilling_flask.util.dataframe import calc_power
@@ -20,7 +21,7 @@ dash.register_page(__name__, path_template='/strava/activity/<activity_id>',
 
 
 def layout(activity_id=None, **queries):
-  strava_acct = StravaAccount.query.get(queries.get('id') or queries.get('strava_id'))
+  strava_acct = StravaImportStorage.query.get(queries.get('id') or queries.get('strava_id'))
 
   if activity_id is None or strava_acct is None:
     return dbc.Container([])  # TODO: add help text
@@ -105,7 +106,7 @@ def save_activity(
 
   # Create a new activity record in the database
   try:
-    new_act = Activity(
+    new_act = StravaApiActivity(
       title=activity_data['name'],
       description=activity_data['description'],
       created=datetime.datetime.utcnow(),  

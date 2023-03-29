@@ -4,7 +4,8 @@ import pytz
 from sqlalchemy import exc
 
 from distilling_flask import db
-from distilling_flask.models import Activity, AdminUser, StravaAccount, UserSettings
+from distilling_flask.models import AdminUser, UserSettings
+from distilling_flask.io_storages.strava.models import StravaImportStorage, StravaApiActivity
 from distilling_flask.util import units
 from .base import FlaskTestCase
 
@@ -15,7 +16,7 @@ class ActivityModelTest(FlaskTestCase):
     self.create_activity(title='The first (ever) Activity item')
     self.create_activity(title='Activity the second')
 
-    saved_items = Activity.query.all()
+    saved_items = StravaApiActivity.query.all()
     self.assertEqual(len(saved_items), 2)
 
     first_saved_item = saved_items[0]
@@ -24,12 +25,12 @@ class ActivityModelTest(FlaskTestCase):
     self.assertEqual(second_saved_item.title, 'Activity the second')
 
   def test_cannot_save_empty_activity(self):
-    db.session.add(Activity())
+    db.session.add(StravaApiActivity())
     with self.assertRaisesRegex(exc.IntegrityError, 'NOT NULL constraint failed'):
       db.session.commit()
 
   def test_cannot_save_duplicate_strava_activity(self):
-    act_1 = Activity(
+    act_1 = StravaApiActivity(
       title='Strava activity',
       description='',
       created=datetime.datetime.utcnow(),
@@ -39,7 +40,7 @@ class ActivityModelTest(FlaskTestCase):
       elapsed_time_s=3660,
       strava_id=1,
     )
-    act_2 = Activity(
+    act_2 = StravaApiActivity(
       title='Duplicate Strava activity',
       description='',
       created=datetime.datetime.utcnow(),
@@ -70,28 +71,28 @@ class ActivityModelTest(FlaskTestCase):
 
     # Prospective: |______|
     # Saved:            |______|      |______| 
-    self.assertTrue(len(Activity.find_overlap_ids(
+    self.assertTrue(len(StravaApiActivity.find_overlap_ids(
       datetime.datetime(2019, 12, 4, hour=7, minute=30, tzinfo=pytz.UTC),
       datetime.datetime(2019, 12, 4, hour=8, minute=30, tzinfo=pytz.UTC),
     )))
 
     # Prospective:     |______|
     # Saved:       |______|      |______| 
-    self.assertTrue(len(Activity.find_overlap_ids(
+    self.assertTrue(len(StravaApiActivity.find_overlap_ids(
       datetime.datetime(2019, 12, 4, hour=8, minute=30, tzinfo=pytz.UTC),
       datetime.datetime(2019, 12, 4, hour=9, minute=30, tzinfo=pytz.UTC),
     )))
 
     # Prospective:   |__|
     # Saved:       |______|      |______| 
-    self.assertTrue(len(Activity.find_overlap_ids(
+    self.assertTrue(len(StravaApiActivity.find_overlap_ids(
       datetime.datetime(2019, 12, 4, hour=8, minute=15, tzinfo=pytz.UTC),
       datetime.datetime(2019, 12, 4, hour=8, minute=45, tzinfo=pytz.UTC),
     )))
 
     # Prospective: |__________|
     # Saved:         |______|      |______| 
-    self.assertTrue(len(Activity.find_overlap_ids(
+    self.assertTrue(len(StravaApiActivity.find_overlap_ids(
       datetime.datetime(2019, 12, 4, hour=7, minute=45, tzinfo=pytz.UTC),
       datetime.datetime(2019, 12, 4, hour=9, minute=15, tzinfo=pytz.UTC),
     )))
@@ -101,21 +102,21 @@ class ActivityModelTest(FlaskTestCase):
 
     # Prospective: |______|
     # Saved:                |______|          |______|
-    self.assertFalse(len(Activity.find_overlap_ids(
+    self.assertFalse(len(StravaApiActivity.find_overlap_ids(
       datetime.datetime(2019, 12, 4, hour=6, minute=30, tzinfo=pytz.UTC),
       datetime.datetime(2019, 12, 4, hour=7, minute=30, tzinfo=pytz.UTC),
     )))
 
     # Prospective:                            |______|
     # Saved:       |______|          |______| 
-    self.assertFalse(len(Activity.find_overlap_ids(
+    self.assertFalse(len(StravaApiActivity.find_overlap_ids(
       datetime.datetime(2019, 12, 4, hour=12, minute=30, tzinfo=pytz.UTC),
       datetime.datetime(2019, 12, 4, hour=13, minute=30, tzinfo=pytz.UTC),
     )))
 
     # Prospective:          |______|
     # Saved:       |______|          |______| 
-    self.assertFalse(len(Activity.find_overlap_ids(
+    self.assertFalse(len(StravaApiActivity.find_overlap_ids(
       datetime.datetime(2019, 12, 4, hour=9, minute=30, tzinfo=pytz.UTC),
       datetime.datetime(2019, 12, 4, hour=10, minute=30, tzinfo=pytz.UTC),
     )))
@@ -126,7 +127,7 @@ class ActivityModelTest(FlaskTestCase):
     # Prospective:          |__________|
     # Saved:           |______|      |______| 
     self.assertEqual(
-      len(Activity.find_overlap_ids(
+      len(StravaApiActivity.find_overlap_ids(
         datetime.datetime(2019, 12, 4, hour=8, minute=45, tzinfo=pytz.UTC),
         datetime.datetime(2019, 12, 4, hour=12, minute=15, tzinfo=pytz.UTC),
       )),
@@ -196,20 +197,20 @@ class AdminUserModelTest(FlaskTestCase):
     self.assertEqual(user_2.id, 1)
 
 
-class StravaAccountModelTest(FlaskTestCase):
+class StravaImportStorageModelTest(FlaskTestCase):
 
   def test_account_is_valid_with_id_only(self):
-    strava_acct = StravaAccount()
+    strava_acct = StravaImportStorage()
     db.session.add(strava_acct)
     db.session.commit()  # should not raise
-    self.assertEqual(StravaAccount.query.count(), 1)
+    self.assertEqual(StravaImportStorage.query.count(), 1)
     self.assertIsNotNone(strava_acct.strava_id)
 
     user = AdminUser()
     self.assertIs(strava_acct, user.strava_accounts[0])
 
   def test_access_token(self):
-    strava_acct = StravaAccount(
+    strava_acct = StravaImportStorage(
       access_token='4190a7feccff6acaeb6a78cadda52e65de85a75es'
     )
     db.session.add(strava_acct)

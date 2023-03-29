@@ -3,7 +3,8 @@ from unittest.mock import Mock, patch
 from flask import url_for
 import stravalib
 
-from distilling_flask.models import db, AdminUser, StravaAccount
+
+from distilling_flask.models import AdminUser
 from distilling_flask.util.mock_stravalib import MOCK_TOKEN
 from .base import LoggedInFlaskTestCase, AuthenticatedFlaskTestCase
 

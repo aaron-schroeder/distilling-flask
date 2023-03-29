@@ -1,7 +1,7 @@
 """Test tasks with mocked-out stravalib Client
 
 Things required by each test:
-- db containing a StravaAccount with dummy strava stuff
+- db containing a StravaImportStorage with dummy strava stuff
 - Access to the ID of that dummy acct
 - stravalib client swapped for mock_stravalib Client in ANY code that is
   triggered by the code under test.

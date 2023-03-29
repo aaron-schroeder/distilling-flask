@@ -4,7 +4,8 @@ from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
 from flask import get_flashed_messages, url_for
 
-from distilling_flask.models import db, StravaAccount
+from distilling_flask.models import db
+from distilling_flask.io_storages.strava.models import StravaImportStorage
 from distilling_flask.plotlydash.aio_components import StravaAccountRow
 from distilling_flask.plotlydash.layout import SettingsContainer
 from distilling_flask.util import units
@@ -18,7 +19,7 @@ def layout(**_):
 
   strava_account_rows = [
     StravaAccountRow(strava_account) 
-    for strava_account in StravaAccount.query.all()
+    for strava_account in StravaImportStorage.query.all()
   ]
 
   connect_btn_text = (

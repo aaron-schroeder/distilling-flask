@@ -3,7 +3,8 @@ from dash import dash_table, html, Input, Output
 import dash_bootstrap_components as dbc
 import pandas as pd
 
-from distilling_flask.models import db, Activity, StravaAccount
+from distilling_flask import db
+from distilling_flask.io_storages.strava.models import StravaApiActivity, StravaImportStorage
 from distilling_flask.plotlydash.layout import COLORS
 from distilling_flask.util import units
 
@@ -28,7 +29,7 @@ def layout(**url_queries):
       'if': {'filter_query': f'{{_strava_acct_id}} = {strava_acct.strava_id}'},
       'backgroundColor': COLORS['USERS'][i]
     }
-    for i, strava_acct in enumerate(StravaAccount.query.all()) 
+    for i, strava_acct in enumerate(StravaImportStorage.query.all()) 
   ])
 
   out = dbc.Container(
@@ -82,12 +83,12 @@ def update_table(page_current, page_size, sort_by):
 
   column_map = {
     'Sport': None,
-    'TSS': Activity.tss,
-    'Date': Activity.recorded,
-    'Title': Activity.title,
-    'Time': Activity.elapsed_time_s,
-    'Distance': Activity.distance_m,
-    'Elevation': Activity.elevation_m
+    'TSS': StravaApiActivity.tss,
+    'Date': StravaApiActivity.recorded,
+    'Title': StravaApiActivity.title,
+    'Time': StravaApiActivity.elapsed_time_s,
+    'Distance': StravaApiActivity.distance_m,
+    'Elevation': StravaApiActivity.elevation_m
   }
 
   order_by_args = []
@@ -104,13 +105,16 @@ def update_table(page_current, page_size, sort_by):
     else:  # desc
       order_by_args.append(order_by_col.desc())
 
-  order_by_args.append(Activity.recorded.desc())
+  order_by_args.append(StravaApiActivity.recorded.desc())
 
   page = db.paginate(
-    db.select(Activity).order_by(*order_by_args),
+    db.select(StravaApiActivity).order_by(*order_by_args),
     page=page_current + 1,
     per_page=page_size
   )
+
+  if page.total == 0:
+    return ([], [], 0)
   
   dfs = pd.DataFrame([
     {

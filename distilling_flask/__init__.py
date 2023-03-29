@@ -18,7 +18,7 @@ migrate = Migrate(directory=os.path.join(basedir, 'migrations'))
 
 
 def create_app(config_name='dev'):
-  """Construct core Flask distilling_flask with embedded Dash apps.
+  """Construct core Flask app with embedded Dash apps.
 
   The distilling_flask factory function. Flask auto-detects `create_app`
   and `make_app`.
@@ -37,8 +37,8 @@ def create_app(config_name='dev'):
   from distilling_flask.main import main as main_blueprint
   app.register_blueprint(main_blueprint)
 
-  from distilling_flask.strava_api import strava_api as strava_api_blueprint
-  app.register_blueprint(strava_api_blueprint, url_prefix='/strava')
+  from distilling_flask.io_storages.strava import strava as strava_blueprint
+  app.register_blueprint(strava_blueprint, url_prefix='/strava')
 
   with app.app_context():
     # Add various dashboards using this Flask app as a server.
@@ -50,6 +50,8 @@ def create_app(config_name='dev'):
     
     # SQLAlchemy
     from distilling_flask import models
+    # from distilling_flask.io_storages.strava.models import StravaImportStorage  # , StravaApiActivity
+    # from distilling_flask.io_storages.localfiles.models import LocalFilesImportStorage, LocalFile
 
   # Synchronize html imports across flask and dash apps
   @app.context_processor

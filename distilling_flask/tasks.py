@@ -9,7 +9,8 @@ from sqlalchemy.exc import IntegrityError
 from stravalib.exc import RateLimitExceeded
 
 from distilling_flask import celery
-from distilling_flask.models import db, Activity, StravaAccount, UserSettings
+from distilling_flask.models import db, UserSettings
+from distilling_flask.io_storages.strava.models import StravaImportStorage, StravaApiActivity
 from distilling_flask.util.dataframe import calc_power
 from distilling_flask.util import power, readers
 
@@ -35,7 +36,7 @@ def est_15_min_rate(strava_client):
 @celery.task(bind=True)
 def async_save_all_strava_activities(self, strava_account_id, handle_overlap='existing'):
   """Master task that (hopefully) spawns a task for each activity."""
-  strava_acct = StravaAccount.query.get(strava_account_id)
+  strava_acct = StravaImportStorage.query.get(strava_account_id)
   saved_strava_activity_ids = [saved_activity.strava_id for saved_activity in strava_acct.activities.all()]
   client = strava_acct.client
 
@@ -74,7 +75,7 @@ def async_save_all_strava_activities(self, strava_account_id, handle_overlap='ex
 
 @celery.task(bind=True)
 def async_save_selected_strava_activities(self, strava_account_id, strava_activity_ids, handle_overlap='existing'):
-  strava_acct = StravaAccount.query.get(strava_account_id)
+  strava_acct = StravaImportStorage.query.get(strava_account_id)
   saved_strava_activity_ids = [saved_activity.strava_id for saved_activity in strava_acct.activities.all()]
 
   run_in_parallel = group(
@@ -93,7 +94,7 @@ def async_save_selected_strava_activities(self, strava_account_id, strava_activi
 @celery.task(bind=True)
 def async_save_strava_activity(self, account_id, activity_id, handle_overlap='existing'):
 
-  strava_acct = StravaAccount.query.get(account_id)
+  strava_acct = StravaImportStorage.query.get(account_id)
   client = strava_acct.client
   
   try:
@@ -111,12 +112,12 @@ def async_save_strava_activity(self, account_id, activity_id, handle_overlap='ex
 
   # check for saved activity with identical strava id;
   # if it exists, skip saving the new activity
-  if Activity.query.filter_by(strava_id=activity.id).count():
+  if StravaApiActivity.query.filter_by(strava_id=activity.id).count():
     print(f'Saved activity with strava id {activity.id} already exists...skipping.')
     return
 
   # check for overlapping saved activities and handle accordingly
-  overlap_ids = Activity.find_overlap_ids(
+  overlap_ids = StravaApiActivity.find_overlap_ids(
     activity.start_date,
     activity.start_date + activity.elapsed_time
   )
@@ -131,7 +132,7 @@ def async_save_strava_activity(self, account_id, activity_id, handle_overlap='ex
     elif handle_overlap == 'incoming':
       print('Deleting existing activities and saving incoming strava activity.')
       for saved_activity_id in overlap_ids:
-        db.session.delete(Activity.query.get(saved_activity_id))
+        db.session.delete(StravaApiActivity.query.get(saved_activity_id))
         db.session.commit()
   else:
     print('No overlaps detected')
@@ -179,7 +180,7 @@ def async_save_strava_activity(self, account_id, activity_id, handle_overlap='ex
 
   activity_data = activity.to_dict()
 
-  db.session.add(Activity(
+  db.session.add(StravaApiActivity(
     title=activity_data['name'],
     description=activity_data['description'],
     created=datetime.datetime.utcnow(),  

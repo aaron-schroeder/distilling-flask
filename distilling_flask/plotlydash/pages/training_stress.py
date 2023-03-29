@@ -7,7 +7,8 @@ import dash_bootstrap_components as dbc
 import pandas as pd
 import plotly.graph_objs as go
 
-from distilling_flask.models import Activity, AdminUser
+from distilling_flask.models import AdminUser
+from distilling_flask.io_storages.strava.models import StravaApiActivity
 from distilling_flask.plotlydash.layout import COLORS
 from distilling_flask.util.dataframe import calc_ctl_atl
 
@@ -39,7 +40,7 @@ def layout(**_):
 )
 def draw_graph(_):
   
-  df = Activity.load_table_as_df()
+  df = StravaApiActivity.load_table_as_df()
 
   if len(df) == 0:
     return dbc.Container(

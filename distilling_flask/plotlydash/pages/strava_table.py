@@ -6,7 +6,7 @@ import pandas as pd
 from stravalib.exc import RateLimitExceeded
 
 from distilling_flask import tasks
-from distilling_flask.models import Activity, StravaAccount
+from distilling_flask.io_storages.strava.models import StravaImportStorage, StravaApiActivity
 from distilling_flask.util import units
 
 
@@ -21,7 +21,7 @@ def layout(**url_queries):
 
   strava_id = url_queries.get('id')
 
-  if StravaAccount.query.get(strava_id) is None:
+  if StravaImportStorage.query.get(strava_id) is None:
     return html.Div([])  # todo: add help text
     # return redirect(url_for('strava_api.authorize'))
 
@@ -139,7 +139,7 @@ def update_table(page_current, page_size, sort_by, strava_id):
   if strava_id is None:
     raise PreventUpdate
   
-  strava_acct = StravaAccount.query.get(strava_id)
+  strava_acct = StravaImportStorage.query.get(strava_id)
   
   try:
     activities = strava_acct.client.get_activities(limit=page_size)
@@ -168,7 +168,7 @@ def update_table(page_current, page_size, sort_by, strava_id):
       'Elevation': activity.total_elevation_gain.to("foot").magnitude,
       'Saved': str(activity.id in saved_activity_id_list),
       'Id': activity.id,
-      'Overlap': str(Activity.find_overlap_ids(
+      'Overlap': str(StravaApiActivity.find_overlap_ids(
         activity.start_date,
         activity.start_date + activity.elapsed_time,
       ))

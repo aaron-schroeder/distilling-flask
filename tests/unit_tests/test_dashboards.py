@@ -4,7 +4,8 @@ import stravalib
 import unittest
 from unittest.mock import patch
 
-from distilling_flask.models import db, AdminUser, StravaAccount
+from distilling_flask.models import db, AdminUser
+from distilling_flask.io_storages.strava.models import StravaImportStorage
 from distilling_flask.util.mock_stravalib import (
   MOCK_TOKEN, 
   BatchedResultsIterator as MockBatchIterator
@@ -155,7 +156,7 @@ class TestManageAccounts(LoggedInFlaskTestCase):
       all_run_totals=stravalib.model.ActivityTotals(count=10)
     )
 
-    db.session.add(StravaAccount(strava_id=1, expires_at=0))
+    db.session.add(StravaImportStorage(strava_id=1, expires_at=0))
     db.session.commit()
     self.client.get('/settings/strava')
 

@@ -4,17 +4,18 @@ from urllib.parse import urljoin
 from flask import flash, redirect, render_template, request, url_for
 from stravalib.exc import RateLimitExceeded
 
-from distilling_flask.models import db, StravaAccount
+from distilling_flask import db
 from distilling_flask.util import units
 from distilling_flask import messages
-from . import strava_api
+from distilling_flask.io_storages.strava import strava
+from distilling_flask.io_storages.strava.models import StravaImportStorage
 
 
 CLIENT_ID = os.environ.get('STRAVA_CLIENT_ID')
 CLIENT_SECRET = os.environ.get('STRAVA_CLIENT_SECRET')
 
 
-@strava_api.route('/authorize')
+@strava.route('/authorize')
 def authorize():
 
   server_url = os.environ.get(
@@ -22,7 +23,7 @@ def authorize():
     'http://localhost:5000'
   )
 
-  return redirect(StravaAccount.get_client().authorization_url(
+  return redirect(StravaImportStorage.get_client().authorization_url(
     CLIENT_ID,
     scope=['activity:read_all'],
     redirect_uri=urljoin(
@@ -32,7 +33,7 @@ def authorize():
   ))
 
 
-@strava_api.route('/callback')
+@strava.route('/callback')
 def handle_code():
   if request.args.get('error') is not None:
     # Handles user clicking "cancel" button, resulting in a response like:
@@ -59,13 +60,13 @@ def handle_code():
       )
     )
 
-  token = StravaAccount.get_client().exchange_code_for_token(
+  token = StravaImportStorage.get_client().exchange_code_for_token(
     client_id=CLIENT_ID,
     client_secret=CLIENT_SECRET,
     code=request.args.get('code'),
   )
-  athlete = StravaAccount.get_client(access_token=token['access_token']).get_athlete()
-  strava_acct = StravaAccount.query.get(athlete.id)
+  athlete = StravaImportStorage.get_client(access_token=token['access_token']).get_athlete()
+  strava_acct = StravaImportStorage.query.get(athlete.id)
 
   if strava_acct:
     # The user had already authorized this strava account.
@@ -81,7 +82,7 @@ def handle_code():
     )
 
   # This account doesn't exist in our database, so register it.
-  strava_acct = StravaAccount(
+  strava_acct = StravaImportStorage(
     strava_id=athlete.id,
     access_token=token['access_token'],
     refresh_token=token['refresh_token'],
@@ -110,10 +111,10 @@ def handle_code():
   return redirect('/settings/strava')
 
 
-@strava_api.route('/revoke')
+@strava.route('/revoke')
 def revoke():
   
-  strava_account = StravaAccount.query.get(request.args.get('id'))
+  strava_account = StravaImportStorage.query.get(request.args.get('id'))
   
   if strava_account is None:
     flash(
@@ -134,10 +135,10 @@ def revoke():
   return redirect('/settings/strava')
 
 
-@strava_api.route('/status')
+@strava.route('/status')
 def show_strava_status():
   # Doesn't matter whose token I use
-  strava_account = StravaAccount.query.first()
+  strava_account = StravaImportStorage.query.first()
 
   if not strava_account:
     return 'No strava accounts are authorized yet', 200

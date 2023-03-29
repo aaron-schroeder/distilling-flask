@@ -6,7 +6,8 @@ from flask import current_app
 from flask.cli import with_appcontext
 
 import distilling_flask as distilling_flask
-from distilling_flask.models import db, Activity, StravaAccount
+from distilling_flask import db
+from distilling_flask.io_storages.strava.models import StravaApiActivity, StravaImportStorage
 from distilling_flask.util import units
 
 
@@ -117,7 +118,7 @@ def seed(
   # Spoof a StravaAccount that has authorized with strava.
   # This will only be used with mockstravalib, not the real thing.
   db.session.add(
-    StravaAccount(
+    StravaImportStorage(
       strava_id=123,
       access_token='some_access_token',
       refresh_token='some_refresh_token',
@@ -129,7 +130,7 @@ def seed(
   # optionally pre-populate the DB with dummy activities
   if saved_activity_count:
     db.session.add_all(
-      Activity(
+      StravaApiActivity(
         id=i,
         title=f'Activity {i}',
         description='',
