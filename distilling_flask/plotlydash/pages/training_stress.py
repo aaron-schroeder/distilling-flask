@@ -11,6 +11,7 @@ from distilling_flask.models import AdminUser
 from distilling_flask.io_storages.strava.models import StravaApiActivity
 from distilling_flask.plotlydash.layout import COLORS
 from distilling_flask.util.dataframe import calc_ctl_atl
+from distilling_flask.util.feature_flags import flag_set
 
 
 dash.register_page(__name__, path_template='/stress',
@@ -52,8 +53,6 @@ def draw_graph(_):
     )
 
   df_padded = calc_ctl_atl(df, AdminUser().settings.ftp_ms)
-
-  print(df_padded.columns)
 
   return TssGraph(df_padded, id='stress-graph')
 
@@ -140,7 +139,7 @@ def TssGraph(df, id=None):
     )
   )
 
-  strava_acct_id_nm = 'import_storage_id' if os.getenv('ff_rename') else 'strava_acct_id'
+  strava_acct_id_nm = 'import_storage_id' if flag_set('ff_rename') else 'strava_acct_id'
 
   # df_nondummy_tss = df.loc[~df[strava_acct_id_nm].isnull(), :]
   df_tss = df.loc[df['tss'] > 0, :]

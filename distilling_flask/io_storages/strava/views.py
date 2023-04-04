@@ -10,6 +10,7 @@ from distilling_flask import messages
 from distilling_flask.io_storages.strava import strava
 from distilling_flask.io_storages.strava.models import StravaImportStorage
 from distilling_flask.io_storages.strava.util import get_client
+from distilling_flask.util.feature_flags import flag_set
 
 
 CLIENT_ID = os.environ.get('STRAVA_CLIENT_ID')
@@ -83,16 +84,24 @@ def handle_code():
     )
 
   # This account doesn't exist in our database, so register it.
-  strava_acct = StravaImportStorage(
-    strava_id=athlete.id,
-    access_token=token['access_token'],
-    refresh_token=token['refresh_token'],
-    expires_at=token['expires_at'],
-    # _=token['athlete']['firstname'],
-    # _=token['athlete']['lastname'],
-    # _=token['athlete']['profile_medium'],
-    # _=token['athlete']['profile'],
-  )
+  if flag_set('ff_rename'):
+    strava_acct = StravaImportStorage(
+      id=athlete.id,
+      access_token=token['access_token'],
+      refresh_token=token['refresh_token'],
+      expires_at=token['expires_at'],
+      # _=token['athlete']['firstname'],
+      # _=token['athlete']['lastname'],
+      # _=token['athlete']['profile_medium'],
+      # _=token['athlete']['profile'],
+    )
+  else:
+    strava_acct = StravaImportStorage(
+      strava_id=athlete.id,
+      access_token=token['access_token'],
+      refresh_token=token['refresh_token'],
+      expires_at=token['expires_at'],
+    )
   db.session.add(strava_acct)
   db.session.commit()
 
@@ -125,7 +134,7 @@ def revoke():
     return redirect('/settings/strava')
 
   msg_success = (
-    f'Strava account for {strava_account.firstname} {strava_account.lastname} '
+    f'Strava account #{strava_account.id} '
      'was unlinked successfully.'
   )
 

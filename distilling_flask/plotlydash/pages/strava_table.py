@@ -19,7 +19,7 @@ PAGE_SIZE = 25
 
 def layout(**url_queries):
 
-  strava_id = url_queries.get('id')
+  strava_id = url_queries.get('id')  # irrelevant as of ff_rename
 
   if StravaImportStorage.query.get(strava_id) is None:
     return html.Div([])  # todo: add help text
@@ -174,7 +174,7 @@ def update_table(page_current, page_size, sort_by, strava_id):
     # Sort is applied
     dfs = df.sort_values(
       sort_by[0]['column_id'],
-      ascending=sort_by[0]['direction'] == 'asc'
+      ascending=(sort_by[0]['direction'] == 'asc')
     )
   else:
     # No sort is applied

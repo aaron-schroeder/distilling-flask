@@ -1,14 +1,10 @@
-import datetime
 import os
-import sys
 
-from flask import current_app
-import pandas as pd
 import sqlalchemy as sa
 
 from distilling_flask import db
-# from distilling_flask.io_storages.strava.models import StravaImportStorage
-from distilling_flask.util import power, units
+from distilling_flask.util import units
+from distilling_flask.util.feature_flags import flag_set
 
 
 class AdminUser:
@@ -28,12 +24,16 @@ class AdminUser:
 
   @property
   def strava_accounts(self):
+    # return db.session.scalars(db.select(StravaImportStorage)).all()
     # return StravaImportStorage.query.all()
-    return []  # HACK
+    return []  # HACK to get around circular import for now
 
   @property
   def settings(self):
-    return UserSettings.query.get(self.id)
+    if flag_set('ff_rename'):
+      return UserSettings()
+    else:
+      return UserSettings.query.get(self.id)
 
   def __repr__(self):
     return '<Admin User>'

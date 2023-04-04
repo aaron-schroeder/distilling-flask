@@ -34,7 +34,7 @@ class Config:
       BASE_DATA_DIR = get_data_dir()
       SQLALCHEMY_DATABASE_URI = f'sqlite:///{os.path.join(BASE_DATA_DIR, "distilling_flask.sqlite")}'
 
-  SQLALCHEMY_ECHO = True
+  SQLALCHEMY_ECHO = os.getenv('SQLALCHEMY_ECHO', True)
   SQLALCHEMY_TRACK_MODIFICATIONS = False
 
   REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/0')

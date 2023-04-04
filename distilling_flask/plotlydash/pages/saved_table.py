@@ -1,13 +1,14 @@
 import dash
-from dash import dash_table, html, Input, Output
+from dash import dash_table, dcc, html, Input, Output, State, ctx
+from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
-import os
 import pandas as pd
 
 from distilling_flask import db
 from distilling_flask.io_storages.strava.models import StravaApiActivity, StravaImportStorage
 from distilling_flask.plotlydash.layout import COLORS
 from distilling_flask.util import units
+from distilling_flask.util.feature_flags import flag_set
 
 
 dash.register_page(__name__, path_template='/saved-list',
@@ -27,7 +28,7 @@ def layout(**url_queries):
   ]
   style_data_conditional.extend([
     {
-      'if': {'filter_query': f'{{_strava_acct_id}} = {strava_acct.strava_id}'},
+      'if': {'filter_query': f'{{import_storage_id}} = {strava_acct.id}'},
       'backgroundColor': COLORS['USERS'][i]
     }
     for i, strava_acct in enumerate(StravaImportStorage.query.all()) 
@@ -35,7 +36,47 @@ def layout(**url_queries):
 
   out = dbc.Container(
     [
-      html.H1('Saved Activities'),
+      html.H1('Strava API Activities'),
+      dbc.Form(
+        [
+          dbc.Label('Which activities to keep in the case of overlap?'),
+          dbc.RadioItems(
+            id='overlap-choice',
+            options=[
+              {'label': 'Existing', 'value': 'existing'},
+              {'label': 'Incoming', 'value': 'incoming', 'disabled': True},
+              {'label': 'Both', 'value': 'both', 'disabled': True}
+            ],
+            value='existing',
+            inline=True
+          ),
+          dbc.Checklist(
+            id='save-options',
+            options=[
+              {
+                'label': 'Save walks and hikes as runs?',
+                'value': 'add-walks',
+                'disabled': True,
+              },
+              # {
+              #   'label': 'Add bike rides?',
+              #   'value': 'add-rides',
+              #   'disabled': True,
+              # },
+            ],
+            value=['add-walks'],
+          ),
+          dbc.Button(
+            'Sync',
+            id='save-all',
+            type='submit',
+            class_name='me-2',
+            # disabled=True,
+          ),
+        ],
+        class_name='my-4'
+      ),
+
       dash_table.DataTable(
         id='datatable-saved',
         cell_selectable=False,
@@ -79,34 +120,35 @@ def layout(**url_queries):
   Input('datatable-saved', 'page_current'),
   Input('datatable-saved', 'page_size'),
   Input('datatable-saved', 'sort_by'),
+  Input('save-all', 'n_clicks'),
+  State('overlap-choice', 'value')
 )
-def update_table(page_current, page_size, sort_by):
+def update_table(page_current, page_size, sort_by, n_clicks, overlap_choice):
+  # if not ctx.triggered_id:
+    # raise PreventUpdate
 
-  column_map = {
-    'Sport': None,
-    'TSS': StravaApiActivity.tss,
-    'Date': StravaApiActivity.recorded,
-    'Title': StravaApiActivity.title,
-    'Time': StravaApiActivity.elapsed_time_s,
-    'Distance': StravaApiActivity.distance_m,
-    'Elevation': StravaApiActivity.elevation_m
-  }
+  # First, sync the db if requested.
+  if ctx.triggered_id == 'save-all':
+    # TODO: Display an animation or flash a message like:
+    # flash('Activities will be added in the background.')
+    for storage in db.session.scalars(db.select(StravaImportStorage)).all():
+      storage.sync()
 
   order_by_args = []
+  if (
+    sort_by and len(sort_by)
+    and (order_by_col := getattr(StravaApiActivity, sort_by[0]['column_id'], None))
+    # and isinstance(order_by_col, sqlalchemy.orm.attributes.InstrumentedAttribute)
+  ):
+    # order_by_col = getattr(StravaApiActivity, sort_by[0]['column_id'], None)
+    # order_by_col = sort_by[0]['column_id']
+    # order_by_col = column_map.get(sort_by[0]['column_id'])
 
-  if sort_by and len(sort_by):
     # Sort is applied
-    order_by_col = column_map.get(sort_by[0]['column_id'])
     direction = sort_by[0]['direction']
-
-    if order_by_col is None:
-      pass
-    elif direction == 'asc':
-      order_by_args.append(order_by_col.asc())
-    else:  # desc
-      order_by_args.append(order_by_col.desc())
-
-  order_by_args.append(StravaApiActivity.recorded.desc())
+    order_by_args.append(getattr(order_by_col, direction)())
+  # order_by_args.append(StravaApiActivity.recorded.desc())
+  order_by_args.append(StravaApiActivity.created.desc())
 
   page = db.paginate(
     db.select(StravaApiActivity).order_by(*order_by_args),
@@ -119,6 +161,10 @@ def update_table(page_current, page_size, sort_by):
   
   dfs = pd.DataFrame([
     {
+      'id': activity.id,
+      'key': activity.key,
+      'import_storage_id': activity.import_storage_id,
+      # Pretty titles based on properties
       'Sport': 'Run*',
       'Date': activity.recorded,
       'Title': f'[{activity.title}]({activity.relative_url})',
@@ -126,28 +172,32 @@ def update_table(page_current, page_size, sort_by):
       'Distance': activity.distance_m,
       'Elevation': activity.elevation_m,
       'TSS': activity.tss,
-      '_internal_id': activity.id,
-      '_strava_acct_id': activity.import_storage_id if os.getenv('ff_rename') else activity.strava_acct_id,
-      # 'Overlap': str(Activity.find_overlap_ids(
+      # 'Saved': str(activity.id in saved_activity_id_list),
+      # 'Id': activity.id,
+      # 'Overlap': str(StravaApiActivity.find_overlap_ids(
       #   activity.start_date,
       #   activity.start_date + activity.elapsed_time,
       # ))
     }
     for activity in page
-  ])
+  ]).dropna(axis=1)
 
-  dfs['Distance'] = dfs['Distance'].apply(lambda meters: f'{meters/units.M_PER_MI:.2f} mi')
-  dfs['Elevation'] = dfs['Elevation'].apply(lambda meters: f'{meters*units.FT_PER_M:.0f} ft')
-  dfs['TSS'] = dfs['TSS'].apply(lambda tss: f'{tss:.1f}')
+  if dfs.dtypes['Date'] == 'datetime64[ns]':
+    dfs['Date'] = dfs['Date'].dt.strftime(date_format='%a, %m/%d/%Y %H:%M:%S')
+  if 'Distance' in dfs.columns:
+    dfs['Distance'] = dfs['Distance'].apply(lambda meters: f'{meters/units.M_PER_MI:.2f} mi')
+  if 'Elevation' in dfs.columns:
+    dfs['Elevation'] = dfs['Elevation'].apply(lambda meters: f'{meters*units.FT_PER_M:.0f} ft')
+  if 'TSS' in dfs.columns:
+    dfs['TSS'] = dfs['TSS'].apply(lambda tss: f'{tss:.1f}')
   # eg "Sat, 12/31/2022 20:10:00"
-  dfs['Date'] = dfs['Date'].dt.strftime(date_format='%a, %m/%d/%Y %H:%M:%S')
 
   return (
     [
       {'name': c, 'id': c, 'presentation': 'markdown'} if c == 'Title'
       else {'name': c, 'id': c}
       for c in dfs.columns
-      if c not in ['_internal_id', '_strava_acct_id']
+      # if c not in ['_internal_id', '_strava_acct_id']
     ],
     dfs.to_dict('records'),
     page.pages

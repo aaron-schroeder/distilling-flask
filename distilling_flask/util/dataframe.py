@@ -31,6 +31,14 @@ def calc_ctl_atl(df, ftp):
   NOTE: This function currently has the limitation of accepting a single
   unchanging FTP value for the athlete's entire training history.
   """
+  # NOTE: Issues arise if there are two 
+  # activities with identical 'recorded' values (which are not necessarily
+  # unique in the current db schema). 
+  # HACK:
+  df = df.drop_duplicates(
+    subset=[c for c in df.columns if c not in ('id', 'created')],
+    ignore_index=True)
+
   num_days = (df['recorded'].dt.date.max() - df['recorded'].dt.date.min()).days
   recorded_full = []
   for i in range(num_days + 1):

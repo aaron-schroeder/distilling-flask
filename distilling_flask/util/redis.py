@@ -2,19 +2,8 @@ from flask import current_app
 import redis
 
 
-try:
-  _redis = redis.Redis.from_url(current_app.config.REDIS_URL)
-  _redis.ping()
-  # logger.debug(
-  print('=> Redis is connected successfully.')
-except:
-  # logger.debug(
-  print('=> Redis is not connected.')
-  _redis = None
-
-
 def redis_healthcheck():
-  if not _redis:
+  if not (_redis := redis.Redis.from_url(current_app.config.get('REDIS_URL', None))):
     return False
   try:
     _redis.ping()

@@ -1,4 +1,5 @@
 from importlib import import_module
+import math
 import sys
 
 from flask import current_app
@@ -58,3 +59,20 @@ def get_client(backend=None, access_token=None):
         cfg_val
       )
   return klass(access_token=access_token)
+
+
+def est_15_min_rate(strava_client):
+  # Whether we are rate-limited or not, we just got current info
+  # on the rate limit status.
+  rate_limit_status = strava_client.protocol.rate_limiter.rules[0].rate_limits
+
+  # Create groups of activities to be added. 
+  # Split into 15-minute waves (because of 15-min limit),
+  # but ultimately decide the rate based on the daily limit.
+  # (In the future, we can be smarter about which limit will
+  # be hit first.)
+  rate_hourly_max = min(
+    (rate_limit_status['long']['limit'] - 5) / (24 * 3),
+    (rate_limit_status['short']['limit']- 5) / (0.25 * 3)
+  )
+  return math.floor(rate_hourly_max * 0.25)

@@ -7,6 +7,7 @@ from distilling_flask.models import db, UserSettings
 from distilling_flask.plotlydash.aio_components import TimeInput, SettingsLabel
 from distilling_flask.plotlydash.layout import SettingsContainer
 from distilling_flask.util import units
+from distilling_flask.util.feature_flags import flag_set
 
 
 dash.register_page(__name__, path_template='/settings',
@@ -14,7 +15,10 @@ dash.register_page(__name__, path_template='/settings',
 
 
 def load_user_settings():
-  return db.session.execute(db.select(UserSettings)).scalar_one()
+  if flag_set('ff_rename'):
+    return UserSettings(cp_ms=float(str(UserSettings.cp_ms.server_default.arg)))
+  else:
+    return db.session.execute(db.select(UserSettings)).scalar_one()
   
 
 def layout(**_):

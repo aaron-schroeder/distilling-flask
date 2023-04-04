@@ -1,28 +1,30 @@
 import datetime
-import enum
-from functools import cached_property
+# import enum
 import json
 import os
-import warnings
+import zlib
 
-from dateutil import tz
+from celery import group
+import dateutil
 import pandas as pd
 import pytz
-import stravalib
+from scipy.interpolate import interp1d
 from stravalib.exc import RateLimitExceeded
 
-from distilling_flask import db
+from distilling_flask import celery, db
 from distilling_flask.models import AdminUser
 from distilling_flask.io_storages.models import (
   ImportStorage,
   ImportStorageEntity
 )
 from distilling_flask.io_storages.strava import util
-from distilling_flask.util import power
+from distilling_flask.util import power, readers
+from distilling_flask.util.dataframe import calc_power
+from distilling_flask.util.feature_flags import flag_set
 
 
-ActivityTypeEnum = enum.Enum('ActivityTypeEnum', 
-  {f.upper(): f for f in stravalib.model.Activity.TYPES})
+# ActivityTypeEnum = enum.Enum('ActivityTypeEnum', 
+#   {f.upper(): f for f in stravalib.model.Activity.TYPES})
 
 
 class StravaStorageMixin:
@@ -72,100 +74,122 @@ class StravaStorageMixin:
   @property
   def token_expired(self):
     return datetime.datetime.utcnow() < datetime.datetime.utcfromtimestamp(self.expires_at)
-  
+
 
 class StravaImportStorage(StravaStorageMixin, ImportStorage):
-
   __tablename__ = 'strava_account'
 
   entities = db.relationship(
     'StravaApiActivity',
-    backref='import_storage' if os.getenv('ff_rename') else 'strava_acct', 
+    backref='import_storage' if flag_set('ff_rename') else 'strava_acct', 
     lazy='dynamic')
+
   @property
   def activities(self):
-    print('StravaApiAccount: `activities` is deprecated in favor of `entities`.')
+    print('StravaApiActivity: `activities` is deprecated in favor of `entities`.')
     return self.entities
 
-  # def iterkeys(self):
-  #   client = self.get_client()
-  #   for activity in client.get_activities():
-  #     yield activity.id
-  #     # if self.activity_type and activity.type != self.activity_type:
-  #     #   # logger.debug(
-  #     #   print(key + ' is skipped because it is not a ' + activity_type)
-  #     #   continue
+  def iterkeys(self):
+    client = self.get_client()
+    for activity in client.get_activities():
+      yield activity.id
+      # if self.activity_type and activity.type != self.activity_type:
+      #   # logger.debug(
+      #   print(key + ' is skipped because it is not a ' + activity_type)
+      #   continue
 
-  # def scan_and_create_entities(self):
-  #   return self._scan_and_create_entities(StravaApiActivity)
+  def scan_and_create_entities(self):
+    return self._scan_and_create_entities(StravaApiActivity)
 
-  # def get_data(self, key):
-  #   """
-  #   `key` refers to Strava activity ID here.
-  #   """
-  #   client = self.get_client()
+  def get_data(self, key):
+    """
+    `key` refers to Strava activity ID here.
+
+    NOTE: I just want raw responses. Can Stravalib do that?
+    Or should I throw stravalib out and interface with/test
+    the Strava API directly?? It now seems like stravalib
+    implements abstractions that I don't really want to take
+    advantage of anymore.
     
-  #   activity_summary = client.get_activity(key)
-  #   activity_streams = client.get_activity_streams(key, types=(
-  #     'time', 'latlng', 'distance', 'altitude', 'velocity_smooth',
-  #     'heartrate', 'cadence', 'watts', 'temp', 'moving', 'grade_smooth'
-  #   ))
+    Big decision though; TBD.
 
-  #   return {
-  #     'summary': activity_summary.to_dict(),
-  #     'streams': activity_streams.to_dict(),
-  #   }
+    Follow-up: I think Stravalib will still be useful for convenience methods
+    like refresh_access_token, as well as (potentially) providing a
+    smoother interface for data I load from a stored doc.
+    """
+    client = self.get_client()
+    summary_data = client.protocol.get(
+      '/activities/{id}',
+      id=key,
+      # include_all_efforts=include_all_efforts,
+    )
+    data = dict(
+      created=datetime.datetime.utcnow(),  
+      # # ngp_ms=ngp_scalar,
+    )
+    data['key' if flag_set('ff_rename') else 'strava_id'] = key  # summary_data['id'] too
+    data['import_storage_id' if flag_set('ff_rename') else 'strava_acct_id'] = self.id
+    
+    if flag_set('ff_rename'):
+      # activity_summary = client.get_activity(key)
+      # summary_data = activity_summary.to_dict()
+      # data['summary'] = json.dumps(summary_data).encode('utf-8')
+      data['summary_compressed'] = zlib.compress(json.dumps(summary_data).encode('utf-8'))
+
+      # Not working yet
+      stream_data = client.protocol.get(
+        f'/activities/{key}/streams/time,latlng,distance,altitude,'
+        f'velocity_smooth,heartrate,cadence,watts,temp,moving,grade_smooth',
+      )
+      # data['streams'] = json.dumps(stream_data).encode('utf-8')
+      data['streams_compressed'] = zlib.compress(json.dumps(stream_data).encode('utf-8'))
+    else:
+      # activity_streams = client.get_activity_streams(key, types=(
+      #   'time', 'latlng', 'distance', 'altitude', 'velocity_smooth',
+      #   'heartrate', 'cadence', 'watts', 'temp', 'moving', 'grade_smooth'
+      # ))
+      # if activity_streams:
+      #   df = readers.from_strava_streams(activity_streams)
+      #   calc_power(df)
+      #   ngp_scalar = None
+      #   if 'NGP' in df.columns:
+      #     # Resample the NGP stream at 1 sec intervals
+      #     # TODO: Figure out how/where to make this repeatable.
+      #     # 1sec even samples make the math so much easier.
+      #     interp_fn = interp1d(df['time'], df['NGP'], kind='linear')
+      #     ngp_1sec = interp_fn([i for i in range(df['time'].max())])
+
+      #     # Apply a 30-sec rolling average.
+      #     window = 30
+      #     ngp_rolling = pd.Series(ngp_1sec).rolling(window).mean()          
+      #     ngp_scalar = power.lactate_norm(ngp_rolling[29:])
+      #   elif 'speed' in df.columns:
+      #     # TODO: Add capabilities for flat-ground TSS.
+      #     pass
+      data.update(dict(
+        title=summary_data['name'], # or `activity_summary.name`
+        description=summary_data['description'],
+        recorded=dateutil.parser.isoparse(summary_data['start_date']),
+        moving_time_s=summary_data['moving_time'],
+        elapsed_time_s=summary_data['elapsed_time'],
+        # Fields below here not required
+        tz_local=summary_data['timezone'],
+        distance_m=summary_data['distance'],
+        elevation_m=summary_data['total_elevation_gain'],
+      ))
+
+    # Debug
+    # for k, v in data.items():
+    #   if k == 'summary':
+    #     print(f'{k}: {{big ol doc}}')
+    #   else:
+    #     print(f'{k}:{v}')
+    
+    return data
 
   @property
   def has_authorized(self):
     return self.access_token is not None
-
-  # @cached_property
-  # def athlete(self):
-  #   try:
-  #     _athlete = self.client.get_athlete()
-  #   except RateLimitExceeded:
-  #     from distilling_flask.util.mock_stravalib import DummyClass
-      
-  #     _athlete = DummyClass(
-  #       profile=None,
-  #       firstname='Rate',
-  #       lastname='Limit',
-  #       follower_count=None,
-  #       email=None,
-  #       city=None,
-  #       state=None,
-  #       country=None,
-  #       stats=DummyClass(
-  #         all_run_totals=DummyClass(count=1)
-  #       )
-  #     )
-    
-  #   return _athlete
-
-  # @property
-  # def profile_picture_url(self):
-  #   return self.athlete.profile
-
-  # @property
-  # def firstname(self):
-  #   return self.athlete.firstname
-
-  # @property
-  # def lastname(self):
-  #   return self.athlete.lastname
-
-  # @property
-  # def run_count(self):
-  #   return self.athlete.stats.all_run_totals.count
-
-  # @property
-  # def follower_count(self):
-  #   return self.athlete.follower_count
-
-  # @property
-  # def email(self):
-  #   return self.athlete.email
 
   @property
   def url(self):
@@ -176,91 +200,89 @@ class StravaApiActivity(ImportStorageEntity):
   __tablename__ = 'activity'
   __abstract__ = False
 
-  # summary = db.Column(db.BLOB)
-  # streams = db.Column(db.BLOB)
-
-  if os.getenv('ff_rename'):
+  if flag_set('ff_rename'):
     import_storage_id = db.Column(
-      db.Integer,
-      # TODO: How to make this required?
-      db.ForeignKey('strava_account.id')
-      # db.ForeignKey('strava_import_storage.id')
-    )
+      # db.Integer, db.ForeignKey('strava_import_storage.id'))
+      db.Integer, db.ForeignKey('strava_account.id'))
+    
     @property
     def strava_acct_id(self):
-      # warnings.warn(
-      print('The use of `strava_acct_id` for StravaApiActivity is '
-            'deprecated in favor of `import_storage_id`.')
+      print(f'Use of `strava_acct_id` for StravaApiActivity is '
+          f'deprecated in favor of `import_storage_id`.')
       return self.import_storage_id
   else:
     strava_acct_id = db.Column(
-      db.Integer,
-      db.ForeignKey('strava_account.strava_id')
-    )
+      db.Integer, db.ForeignKey('strava_account.id'))
 
-  title = db.Column(
-    db.String(255),
-    unique=False,
-    nullable=True,  # Why force it?
-  )
+  title = property(lambda self: self.summary.get('name'))  \
+          if flag_set('ff_rename')  \
+          else db.Column(
+            db.String(255),
+            unique=False,
+            nullable=True,
+          )
 
-  description = db.Column(
-    db.Text,
-    unique=False,
-    nullable=True,
-  )
+  description = property(lambda self: self.summary['description'])  \
+                if flag_set('ff_rename')  \
+                else db.Column(
+                  db.Text,
+                  unique=False,
+                  nullable=True,
+                )
 
-  created = db.Column(
-    db.DateTime,
-    unique=False,
-    nullable=False
-  )
+  recorded = property(lambda self: dateutil.parser.isoparse(self.summary['start_date']))  \
+             if flag_set('ff_rename')  \
+             else db.Column(
+               db.DateTime,
+               unique=False,
+               nullable=False
+             )
 
-  recorded = db.Column(
-    db.DateTime,
-    unique=False,
-    nullable=False
-  )
-
-  tz_local = db.Column(
-    db.String(40),  # I checked and 32 is max length
-    unique=False,
-    nullable=False,
-    default='UTC',
-  )
+  tz_local = property(lambda self: self.summary['timezone'])  \
+          if flag_set('ff_rename')  \
+          else db.Column(
+            db.String(40),
+            unique=False,
+            nullable=False,
+            default='UTC',
+          )
 
   # Nullable because not every activity has latlons, so getting vals 
   # might not be possible.
-  distance_m = db.Column(
-    db.Float,
-    unique=False,
-    nullable=True,
-  )
+  distance_m = property(lambda self: float(self.summary['distance']))  \
+               if flag_set('ff_rename')  \
+               else db.Column(
+                 db.Float,
+                 unique=False,
+                 nullable=True,
+               )
 
   # Figured rounding to the nearest meter isn't a loss of precision.
   # Nullable because not every activity has latlons, so getting vals 
   # might not be possible.
-  elevation_m = db.Column(
-    db.Integer,
-    unique=False,
-    nullable=True,
-  )
+  elevation_m = property(lambda self: int(self.summary['total_elevation_gain']))  \
+          if flag_set('ff_rename')  \
+          else db.Column(
+      db.Integer,
+      unique=False,
+      nullable=True,
+    )
 
-  # I think this should be required. All activities should have time as
-  # a bare minimum.
-  elapsed_time_s = db.Column(
-    db.Integer,
-    unique=False,
-    nullable=False,
-  )
+  elapsed_time_s = property(lambda self: int(self.summary['elapsed_time']))  \
+          if flag_set('ff_rename')  \
+          else db.Column(
+      db.Integer,
+      unique=False,
+      nullable=False,
+    )
 
-  # I think this should be required. Can be the same as elapsed_time_s
-  # in a pinch.
-  moving_time_s = db.Column(
-    db.Integer,
-    unique=False,
-    nullable=False,
-  )
+  moving_time_s = property(lambda self: int(self.summary['moving_time']))  \
+          if flag_set('ff_rename')  \
+          else db.Column(
+      db.Integer,
+      unique=False,
+      nullable=False,
+    )
 
   ngp_ms = db.Column(
     db.Float,
@@ -268,6 +290,27 @@ class StravaApiActivity(ImportStorageEntity):
     nullable=True
   )
 
+  if flag_set('ff_rename'):
+    summary_compressed = db.Column(db.BLOB)
+    streams_compressed = db.Column(db.BLOB)
+
+    @property
+    def summary(self):
+      if not getattr(self, '_summary', False):
+        self._summary = json.loads(zlib.decompress(self.summary_compressed))
+      return self._summary
+    
+    @property
+    def streams(self):
+      if not getattr(self, '_streams', False):
+        self._streams = json.loads(zlib.decompress(self.streams_compressed))
+      return self._streams
+  
+    # # NOTE: This is just a first stab at backwards-compatibility with db schema.
+    # summary_compressed = db.Column(db.BLOB)   \
+    #                     if flag_set('ff_rename')  \
+    #                     else None 
+    
   @property
   def intensity_factor(self):
     if self.ngp_ms:
@@ -296,30 +339,255 @@ class StravaApiActivity(ImportStorageEntity):
     ]
 
   @classmethod
-  def load_table_as_df(cls, fields=None):
-    strava_storage_id = 'import_storage_id' if os.getenv('ff_rename') else 'strava_acct_id'
-    default_fields = ['recorded', 'title', 'elapsed_time_s',
-      'moving_time_s', 'elevation_m', 'distance_m', 'id', 'description',
-      strava_storage_id]
-
-    fields = fields or default_fields
-
-    # see also: pd.read_sql_query()
-    df = pd.read_sql_table(
-      cls.__tablename__,
-      db.engine
-    )
+  def load_table_as_df(cls):
+    if flag_set('ff_rename'):
+      df = pd.DataFrame([
+        {
+          'id': activity.id,
+          'created': activity.created,
+          'title': activity.title,
+          'description': activity.description,
+          'recorded': activity.recorded,
+          'tz_local': activity.tz_local,
+          'distance_m': activity.distance_m,
+          'elevation_m': activity.elevation_m,
+          'elapsed_time_s': activity.elapsed_time_s,
+          'moving_time_s': activity.moving_time_s,
+          'ngp_ms': activity.ngp_ms,
+          # 'intensity_factor': activity.intensity_factor,
+          # 'tss': activity.tss,
+          'import_storage_id': activity.import_storage_id, 
+        }
+        for activity in db.session.scalars(db.select(cls)).all()
+      ])
+    else:
+      # see also: pd.read_sql_query()
+      df = pd.read_sql_table(
+        cls.__tablename__,
+        db.engine
+      )
+      df['recorded'] = df['recorded'].dt.tz_localize(dateutil.tz.tzutc())
 
     if not len(df):
       return df
 
-    df = df.sort_values(by='recorded', axis=0)
-
-    # For now, convert to my tz - suggests setting TZ by user,
-    # not by activity.
-    df['recorded'] = df['recorded'].dt.tz_localize(tz.tzutc()).dt.tz_convert(tz.gettz('America/Denver'))
+    # Standard practices seem to suggest setting TZ by user, not by activity.
+    # For now, convert to my tz.
+    if 'recorded' in df.columns:
+      df['recorded'] = df['recorded'].dt.tz_convert(dateutil.tz.gettz('America/Denver'))
+      df = df.sort_values(by='recorded', axis=0)
 
     return df
 
   def __repr__(self):
       return '<Activity {}>'.format(self.id)
+
+
+if flag_set('ff_rename'):
+
+  @celery.task(bind=True)
+  def async_save_strava_activity(self, storage_id, entity_id, handle_overlap='existing'):
+    storage = db.session.get(StravaImportStorage, storage_id)
+    try:
+      data = storage.get_data(entity_id)
+    except RateLimitExceeded:
+      # This generates retries in 3, 9, and 27 minutes.
+      self.retry(countdown=180 * 3 ** self.request.retries,
+                 max_retries=3)
+    db.session.add(StravaApiActivity(**data))
+    db.session.commit()
+
+
+  @celery.task(bind=True)
+  def sync_strava_background(self, storage_id, handle_overlap='existing'):
+    """Master task that spawns a task for each activity."""
+    storage = db.session.get(StravaImportStorage, storage_id)
+
+    # for key in storage.iterkeys():
+    #   if StravaApiActivity.exists(key, storage):
+    #     pass
+
+    # saved_strava_activity_ids = [saved_activity.key 
+    #                              for saved_activity in storage.entities.all()]
+    try:
+      activity_ids = list(k for k in storage.iterkeys()
+                          if not StravaApiActivity.exists(k, storage))
+    except RateLimitExceeded:
+      # This generates retries in 1, 3, and 9 minutes.
+      self.retry(countdown=60 * 3 ** self.request.retries,
+                 max_retries=3)
+
+    client = storage.get_client()
+    num_15_max = util.est_15_min_rate(client)
+    for chunk_index, i in enumerate(range(0, len(activity_ids), num_15_max)):
+      activity_ids_15_min = activity_ids[i:i + num_15_max]
+      group_15_min = group(
+        async_save_strava_activity.s(
+          storage_id,
+          strava_activity_id,
+          handle_overlap=handle_overlap
+        )
+        for strava_activity_id in activity_ids_15_min
+      )
+      group_15_min.apply_async(countdown=15 * 60 * chunk_index)
+
+else:
+  from distilling_flask.io_storages.strava.models import StravaImportStorage, StravaApiActivity
+
+  @celery.task(bind=True)
+  def async_save_strava_activity(self, account_id, activity_id, handle_overlap='existing'):
+
+    strava_acct = StravaImportStorage.query.get(account_id)
+    client = strava_acct.get_client()
+    
+    try:
+      activity = client.get_activity(activity_id)
+    except RateLimitExceeded:
+      # This generates retries in 3, 9, and 27 minutes.
+      self.retry(
+        countdown=180 * 3 ** self.request.retries,
+        max_retries=3,
+      )
+
+    if activity.type not in ('Run', 'Walk', 'Hike'):
+      print(f"Throwing out a {activity_data['type']}")
+      return
+
+    # check for saved activity with identical strava id;
+    # if it exists, skip saving the new activity
+    if StravaApiActivity.query.filter_by(strava_id=activity.id).count():
+      print(f'Saved activity with strava id {activity.id} already exists...skipping.')
+      return
+
+    # check for overlapping saved activities and handle accordingly
+    overlap_ids = StravaApiActivity.find_overlap_ids(
+      activity.start_date,
+      activity.start_date + activity.elapsed_time
+    )
+    if len(overlap_ids):
+      print('Overlapping existing activities detected.')
+      if handle_overlap == 'existing':
+        print('Keeping existing activities; not saving incoming strava activity.')
+        return
+      elif handle_overlap == 'both':
+        print('Keeping existing activities AND saving incoming strava activity.')
+        pass
+      elif handle_overlap == 'incoming':
+        print('Deleting existing activities and saving incoming strava activity.')
+        for saved_activity_id in overlap_ids:
+          db.session.delete(StravaApiActivity.query.get(saved_activity_id))
+          db.session.commit()
+    else:
+      print('No overlaps detected')
+      pass
+    
+    try:
+      activity_streams = client.get_activity_streams(
+        activity_id,
+        types=['time', 'latlng', 'distance', 'altitude', 'velocity_smooth',
+            'heartrate', 'cadence', 'watts', 'temp', 'moving',
+            'grade_smooth']
+      )
+    except RateLimitExceeded:
+      self.retry(
+        countdown=180 * 3 ** self.request.retries,
+        max_retries=3,
+      )
+
+    if activity_streams:
+      df = readers.from_strava_streams(activity_streams)
+      calc_power(df)
+      ngp_scalar = None
+      if 'NGP' in df.columns:
+        # Resample the NGP stream at 1 sec intervals
+        # TODO: Figure out how/where to make this repeatable.
+        # 1sec even samples make the math so much easier.
+        interp_fn = interp1d(df['time'], df['NGP'], kind='linear')
+        ngp_1sec = interp_fn([i for i in range(df['time'].max())])
+
+        # Apply a 30-sec rolling average.
+        window = 30
+        ngp_rolling = pd.Series(ngp_1sec).rolling(window).mean()          
+        ngp_scalar = power.lactate_norm(ngp_rolling[29:])
+      elif 'speed' in df.columns:
+        # TODO: Add capabilities for flat-ground TSS.
+        pass
+
+    activity_data = activity.to_dict()
+
+    db.session.add(StravaApiActivity(
+      title=activity_data['name'],
+      description=activity_data['description'],
+      created=datetime.datetime.utcnow(),  
+      recorded=dateutil.parser.isoparse(activity_data['start_date']),
+      tz_local=activity_data['timezone'],
+      moving_time_s=activity_data['moving_time'],
+      elapsed_time_s=activity_data['elapsed_time'],
+      # Fields below here not required
+      strava_id=activity_data['id'],
+      strava_acct_id=strava_acct.strava_id,
+      distance_m=activity_data['distance'],
+      elevation_m=activity_data['total_elevation_gain'],
+      ngp_ms=ngp_scalar,
+      # intensity_factor=intensity_factor,
+      # tss=tss,
+    ))
+    db.session.commit()
+
+
+@celery.task(bind=True)
+def async_save_all_strava_activities(self, strava_account_id, handle_overlap='existing'):
+  """Master task that (hopefully) spawns a task for each activity."""
+  strava_acct = StravaImportStorage.query.get(strava_account_id)
+  saved_strava_activity_ids = [saved_activity.strava_id for saved_activity in strava_acct.activities.all()]
+  client = strava_acct.get_client()
+
+  try:
+    # activity_ids = [activity.id for activity in client.get_activities()]
+    # activity_dicts = [activity.to_dict() for activity in client.get_activities()]
+    activity_ids = [
+      activity.id 
+      for activity in client.get_activities()
+      if (
+        activity.type in ('Run', 'Walk', 'Hike')
+        and activity.id not in saved_strava_activity_ids
+      )
+    ]
+
+  except RateLimitExceeded:
+    # This generates retries in 1, 3, and 9 minutes.
+    self.retry(
+      countdown=60 * 3 ** self.request.retries,
+      max_retries=3,
+    )
+
+  num_15_max = util.est_15_min_rate(client)
+  for chunk_index, i in enumerate(range(0, len(activity_ids), num_15_max)):
+    activity_ids_15_min = activity_ids[i:i + num_15_max]
+    group_15_min = group(
+      async_save_strava_activity.s(
+        strava_account_id,
+        strava_activity_id,
+        handle_overlap=handle_overlap
+      )
+      for strava_activity_id in activity_ids_15_min
+    )
+    group_15_min.apply_async(countdown=15 * 60 * chunk_index)
+
+
+@celery.task(bind=True)
+def async_save_selected_strava_activities(self, strava_account_id, strava_activity_ids, handle_overlap='existing'):
+  strava_acct = StravaImportStorage.query.get(strava_account_id)
+  saved_strava_activity_ids = [saved_activity.strava_id for saved_activity in strava_acct.activities.all()]
+
+  run_in_parallel = group(
+    async_save_strava_activity.s(
+      strava_account_id,
+      strava_activity_id,
+      handle_overlap=handle_overlap
+    )
+    for strava_activity_id in strava_activity_ids
+    if strava_activity_id not in saved_strava_activity_ids
+  )
+
+  return run_in_parallel.delay()

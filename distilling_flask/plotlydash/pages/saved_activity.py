@@ -9,6 +9,7 @@ from stravalib.exc import RateLimitExceeded
 from distilling_flask.io_storages.strava.models import StravaApiActivity
 from distilling_flask.plotlydash.aio_components import FigureDivAIO, StatsDivAIO
 from distilling_flask.util import dataframe, readers, units
+from distilling_flask.util.feature_flags import flag_set
 
 
 dash.register_page(__name__, path_template='/saved/<activity_id>',
@@ -47,7 +48,9 @@ def layout(activity_id=None, **_):
           md=2,
         ),
         dbc.Col(
-          f"TSS: {activity.tss:.0f} (IF: {activity.intensity_factor:.2f})",
+          f"TSS: {activity.tss:.0f} (IF: {activity.intensity_factor:.2f})"
+            if activity.tss and activity.intensity_factor
+            else 'TSS: ?? (IF: ??)',
           width=12,
           md=3,
         ),
@@ -58,7 +61,7 @@ def layout(activity_id=None, **_):
     id='dash-container',
   )
 
-  strava_account = activity.import_storage if os.getenv('ff_rename') else activity.strava_acct
+  strava_account = activity.import_storage if flag_set('ff_rename') else activity.strava_acct
   if not strava_account or not strava_account.has_authorized:
     layout_container.children.append(html.Div(
       'The owner of this app is not currently granting '
@@ -66,25 +69,28 @@ def layout(activity_id=None, **_):
     ))
     return layout_container
 
-  client = strava_account.get_client()
+  if flag_set('ff_rename'):
+    df = readers.from_strava_streams(activity.streams)
+  else:
+    client = strava_account.get_client()
 
-  try:
-    activity_id = activity.strava_id
-    # activity_id = activity.id if os.getenv('ff_rename') else activity.strava_id
-    df = readers.from_strava_streams(client.get_activity_streams(
-      activity_id,
-      types=['time', 'latlng', 'distance', 'altitude', 'velocity_smooth',
-        'heartrate', 'cadence', 'watts', 'temp', 'moving', 'grade_smooth']
-    ))
-  except RateLimitExceeded as e:
-    layout_container.children.append(html.Div(
-      f'Strava API rate limit exceeded: '
-      f'{e.limit} requests in {e.timeout} seconds.'
-    ))
-    return layout_container
+    try:
+      activity_id = activity.strava_id
+      # activity_id = activity.id if flag_set('ff_rename') else activity.strava_id
+      df = readers.from_strava_streams(client.get_activity_streams(
+        activity_id,
+        types=['time', 'latlng', 'distance', 'altitude', 'velocity_smooth',
+          'heartrate', 'cadence', 'watts', 'temp', 'moving', 'grade_smooth']
+      ))
+    except RateLimitExceeded as e:
+      layout_container.children.append(html.Div(
+        f'Strava API rate limit exceeded: '
+        f'{e.limit} requests in {e.timeout} seconds.'
+      ))
+      return layout_container
 
-  # Add additional calculated columns to the DataFrame
-  dataframe.calc_power(df)
+    # Add additional calculated columns to the DataFrame
+    dataframe.calc_power(df)
 
   layout_container.children.extend([
       StatsDivAIO(df=df, aio_id='saved', className='mb-4'),

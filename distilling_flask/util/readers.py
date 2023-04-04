@@ -3,6 +3,8 @@ import io
 
 import pandas as pd
 
+from distilling_flask.util.feature_flags import flag_set
+
 
 # Keep these names straight, in one place.
 TIME = 'time'
@@ -26,9 +28,10 @@ def from_strava_streams(streams):
       as returned by `stravalib.Client.get_activity_streams()`.
 
   """
-  stream_data_dict = {key: stream.data for key, stream in streams.items()}
+  if not flag_set('ff_rename'):
+    streams = {key: stream.data for key, stream in streams.items()}
 
-  df = pd.DataFrame.from_dict(stream_data_dict)
+  df = pd.DataFrame.from_dict(streams)
 
   # Rename streams to standard names if they are there, ignore if not.
   df = df.rename(columns=dict(
