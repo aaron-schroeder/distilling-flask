@@ -2,13 +2,10 @@
 Ref:
   https://www.obeythetestinggoat.com/book/chapter_unit_test_first_view.html
 """
-import datetime
 import os
 import unittest
 
 from distilling_flask import create_app, db
-from distilling_flask.models import AdminUser
-from distilling_flask.io_storages.strava.models import StravaImportStorage, StravaApiActivity
 
 
 BASEDIR = os.path.abspath(os.path.dirname(__file__))
@@ -23,8 +20,8 @@ class FlaskTestCase(unittest.TestCase):
     """
     self.app = create_app(config_name='test')
     # self.app.test_client_class = FlaskLoginClient
-    # self.test_request_context = self.app.test_request_context()
-    # self.test_request_context.push()
+    self.test_request_context = self.app.test_request_context()
+    self.test_request_context.push()
     self.app_context = self.app.app_context()
     self.app_context.push()
     self.client = self.app.test_client(use_cookies=True)
@@ -34,4 +31,4 @@ class FlaskTestCase(unittest.TestCase):
     db.session.remove()
     db.drop_all()
     self.app_context.pop()
-    # self.test_request_context.pop()
+    self.test_request_context.pop()

@@ -9,14 +9,6 @@ from distilling_flask.util.feature_flags import flag_set
 from tests.unit_tests.base import FlaskTestCase
 
 
-class AuthenticatedFlaskTestCase(FlaskTestCase):
-  def setUp(self):
-    super().setUp()
-    self.strava_acct = StravaImportStorage(strava_id=1, expires_at=0)
-    db.session.add(self.strava_acct)
-    db.session.commit()
-
-
 class StravaImportStorageTest(FlaskTestCase):
   def test_is_valid_with_id_only(self):
     strava_acct = StravaImportStorage()

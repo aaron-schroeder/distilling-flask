@@ -4,12 +4,16 @@ from flask import url_for
 import stravalib
 
 
+from distilling_flask import db
 from distilling_flask.models import AdminUser
+from distilling_flask.io_storages.strava.models import StravaImportStorage
 from distilling_flask.util.mock_stravalib import MOCK_TOKEN
-from .base import LoggedInFlaskTestCase, AuthenticatedFlaskTestCase
+from distilling_flask.util.feature_flags import flag_set
+from tests.unit_tests.base import FlaskTestCase
+from tests.unit_tests.io_storages.strava.base import AuthenticatedFlaskTestCase
 
 
-class TestAuthorize(LoggedInFlaskTestCase):
+class TestAuthorize(FlaskTestCase):
   def test_strava_oauth_authorize(self):
     rv = self.client.get(url_for('strava_api.authorize'))
     
@@ -24,7 +28,7 @@ class TestAuthorize(LoggedInFlaskTestCase):
     # TODO: figure out if more testing is called for
 
 
-class TestHandleCode(LoggedInFlaskTestCase):
+class TestHandleCode(FlaskTestCase):
 
   # def setUp(self):
   #   self.mock_stravalib_client = mock_stravalib.Client()
@@ -42,6 +46,7 @@ class TestHandleCode(LoggedInFlaskTestCase):
 
     rv = self.client.get(
       f'{url_for("strava_api.handle_code")}'
+      # f'{url_for("strava.handle_code")}'
       '?code=some_code&scope=read,activity:read_all'
     )
 
@@ -55,8 +60,10 @@ class TestHandleCode(LoggedInFlaskTestCase):
     # passed as a parameter on Strava's GET request to the callback url
     # (that strava interaction is mocked out here).
     # Then, the access token returned by strava is stored in the database.
+    acct = db.session.scalars(db.select(StravaImportStorage)).first()  \
+      if flag_set('ff_rename') else AdminUser().strava_accounts[0]
     self.assertEqual(
-      AdminUser().strava_accounts[0].access_token,
+      acct.access_token,
       MOCK_TOKEN['access_token']
     )
 
@@ -77,7 +84,6 @@ class TestHandleCode(LoggedInFlaskTestCase):
   def test_handle_insufficient_permissions(self):
     # should be `read,activity:read_all`, but `read` isn't
     # absolutely necessary
-
     rv = self.client.get(
       f'{url_for("strava_api.handle_code")}'
       '?code=some_code&scope=read'
