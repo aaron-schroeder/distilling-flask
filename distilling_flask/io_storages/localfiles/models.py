@@ -4,7 +4,7 @@ import re
 import zlib
 
 from distilling_flask import db
-from distilling_flask.io_storages.models import (
+from distilling_flask.io_storages.base_models import (
   ImportStorage,
   ImportStorageEntity
 )

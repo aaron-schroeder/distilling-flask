@@ -13,7 +13,7 @@ from stravalib.exc import RateLimitExceeded
 
 from distilling_flask import celery, db
 from distilling_flask.models import AdminUser
-from distilling_flask.io_storages.models import (
+from distilling_flask.io_storages.base_models import (
   ImportStorage,
   ImportStorageEntity
 )
