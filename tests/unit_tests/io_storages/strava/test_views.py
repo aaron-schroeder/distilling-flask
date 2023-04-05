@@ -129,15 +129,27 @@ class TestRevoke(AuthenticatedFlaskTestCase):
       firstname='Aaron', lastname='Schroeder')
     mock_refresh_access_token.return_value = MOCK_TOKEN
 
-    strava_accts = AdminUser().strava_accounts
+    strava_accts = (
+      db.session.scalars(db.select(StravaImportStorage)).all()
+      if flag_set('ff_rename')
+      else AdminUser().strava_accounts
+    )
     self.assertEqual(len(strava_accts), 1)
 
-    response = self.client.get(url_for('strava_api.revoke', id=strava_accts[0].strava_id))
+    response = self.client.get(url_for('strava_api.revoke',
+      id=(
+        strava_accts[0].id if flag_set('ff_rename') 
+        else strava_accts[0].strava_id
+      )))
 
     self.assertEqual(response.status_code, 302)
     self.assertEqual(response.location, '/settings/strava')
 
-    self.assertFalse(len(AdminUser().strava_accounts), 0)
+    self.assertEqual(
+      len(db.session.scalars(db.select(StravaImportStorage)).all()
+          if flag_set('ff_rename')
+          else AdminUser().strava_accounts), 
+      0)
 
   def test_revoke_on_strava(self):
     """The user revokes app access at https://www.strava.com/settings/apps
