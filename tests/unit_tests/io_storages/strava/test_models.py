@@ -1,15 +1,19 @@
 import datetime
+import json
+from unittest import mock
 
 import pytz
 from sqlalchemy import exc
+import responses
 
 from distilling_flask import db
 from distilling_flask.io_storages.strava.models import StravaImportStorage, StravaApiActivity
 from distilling_flask.util.feature_flags import flag_set
 from tests.unit_tests.base import FlaskTestCase
+from tests.unit_tests.io_storages.strava.base import StravaFlaskTestCase
 
 
-class StravaImportStorageTest(FlaskTestCase):
+class StravaImportStorageTest(StravaFlaskTestCase):
   def test_is_valid_with_id_only(self):
     strava_acct = StravaImportStorage()
     db.session.add(strava_acct)
@@ -24,12 +28,91 @@ class StravaImportStorageTest(FlaskTestCase):
     # user = AdminUser()
     # self.assertIs(strava_acct, user.strava_accounts[0])
 
+  def test_iterkeys(self):  
+    s = self.create_strava_acct()
+    # For the first page, spit out activity data.
+    with open('tests/unit_tests/sample_data/get_activities.json', 'r') as f:
+      resp_json = json.load(f)
+    self.api_mock.add(
+      responses.GET,
+      'https://www.strava.com/api/v3/athlete/activities',
+      match=[responses.matchers.query_param_matcher({'page': 1,
+        'per_page': 200, 'access_token': s.access_token})],
+      json=resp_json,
+      headers={'X-Ratelimit-Limit': '600,30000',
+               'X-Ratelimit-Usage': '100,1000'},
+      status=200)
+    # Simulate no activities on the second page.
+    self.api_mock.add(
+      responses.GET,
+      'https://www.strava.com/api/v3/athlete/activities',
+      match=[responses.matchers.query_param_matcher({'page': 2, 
+        'per_page': 200, 'access_token': s.access_token})],
+      json=[],
+      headers={'X-Ratelimit-Limit': '600,30000',
+               'X-Ratelimit-Usage': '101,1001'},
+      status=200)
+    for k in s.iterkeys():
+      self.assertIsInstance(k, int)
+
+  def test_iterkeys_rate_limited(self):
+    s = self.create_strava_acct()
+    self.api_mock.add(
+      responses.GET,
+      'https://www.strava.com/api/v3/athlete/activities',
+      match=[responses.matchers.query_param_matcher({'page': 1,
+        'per_page': 200, 'access_token': s.access_token})],
+      json={},
+      headers={'X-Ratelimit-Limit': '600,30000',
+               'X-Ratelimit-Usage': '629,29300'},
+      status=429)
+    for k in s.iterkeys():
+      self.assertIsInstance(k, int)
+
+
+  def test_get_data(self):
+    key = 1
+    with open('tests/unit_tests/sample_data/get_activity.json', 'r') as f:
+      resp_json = json.load(f)
+    self.api_mock.add(
+      responses.GET,
+      f'https://www.strava.com/api/v3/activities/{key}',
+      json=resp_json,
+      headers={'X-Ratelimit-Limit': '600,30000',
+               'X-Ratelimit-Usage': '100,1000'},
+      status=200)
+    self.api_mock.add(
+      responses.GET,
+      f'https://www.strava.com/api/v3/activities/{key}/streams/time,latlng,distance,altitude,'
+      f'velocity_smooth,heartrate,cadence,watts,temp,moving,grade_smooth',
+      json=[],
+      headers={'X-Ratelimit-Limit': '600,30000',
+               'X-Ratelimit-Usage': '101,1001'},
+      status=200)
+    result = self.create_strava_acct().get_data(key)
+    self.assertIsInstance(result, dict)
+    self.assertIsInstance(result.pop('summary_compressed'), bytes)
+    self.assertIsInstance(result.pop('streams_compressed'), bytes)
+    self.assertIsInstance(result.pop('created'), datetime.datetime)
+    self.assertEqual(result.pop('key'), key)
+    self.assertEqual(len(result), 0)
+
   def test_access_token(self):
     token = '4190a7feccff6acaeb6a78cadda52e65de85a75es'
     strava_acct = StravaImportStorage(access_token=token)
     db.session.add(strava_acct)
     db.session.commit()
     self.assertEqual(strava_acct.access_token, token)
+
+  def test_get_client_token_expired(self):
+    self.api_mock.add(
+      responses.POST,
+      'https://www.strava.com/oauth/token',
+      json=self.get_mock_token(),
+      status=200)
+    s = self.create_strava_acct(token_expired=True)
+    _ = s.get_client()
+    self.assertNotEqual(s.expires_at, 0)
 
 
 def create_activity(**kwargs):

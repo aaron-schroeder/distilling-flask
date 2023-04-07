@@ -1,22 +1,12 @@
-import json
-import os
-from unittest import skip, skipIf
+from unittest import skip
 
 from selenium.webdriver.common.by import By
 
-from tests import settings
 from tests.util import strava_auth_flow
 from .base import LoggedInFunctionalTest
 
 
-@skipIf(
-  settings.SKIP_STRAVA_OAUTH,
-  'Skipping tests that actually authenticate with Strava'
-)
-@skipIf(
-  settings.SKIP_STRAVA_API,
-  'Incompatible settings: dummy api + real auth flow'
-)
+@skip('Skipping tests that actually authenticate with Strava')
 class StravaAuthTest(LoggedInFunctionalTest):
 
   def test_can_authorize(self):

@@ -1,4 +1,5 @@
 import os
+import pickle
 
 from celery import Celery
 from flask import Flask

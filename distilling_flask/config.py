@@ -46,6 +46,9 @@ class Config:
     'DISTILLING_FLASK_LOCAL_FILES_DOCUMENT_ROOT'
   )
 
+  # TODO: Use the real bool env func
+  PICKLE_API_RESPONSES = os.getenv('PICKLE_API_RESPONSES', False)
+
 
 class TestingConfig(Config):
   """

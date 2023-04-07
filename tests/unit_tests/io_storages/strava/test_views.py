@@ -1,54 +1,43 @@
-from unittest.mock import Mock, patch
+import json
 
 from flask import url_for
-import stravalib
-
+import responses
 
 from distilling_flask import db
 from distilling_flask.models import AdminUser
 from distilling_flask.io_storages.strava.models import StravaImportStorage
-from distilling_flask.util.mock_stravalib import MOCK_TOKEN
 from distilling_flask.util.feature_flags import flag_set
 from tests.unit_tests.base import FlaskTestCase
-from tests.unit_tests.io_storages.strava.base import AuthenticatedFlaskTestCase
+from tests.unit_tests.io_storages.strava.base import StravaFlaskTestCase
 
 
-class TestAuthorize(FlaskTestCase):
+# class TestAuthorize(FlaskTestCase):
+class TestAuthorize(StravaFlaskTestCase):
   def test_strava_oauth_authorize(self):
     rv = self.client.get(url_for('strava_api.authorize'))
     
     # response should be a redirect
     self.assertEqual(rv.status_code, 302)
     # should redirect to strava's authorization endpoint
-    self.assertEqual(
-      rv.location.split('?')[0],
-      'https://www.strava.com/oauth/authorize'
-    )
+    self.assertEqual(rv.location.split('?')[0],
+                     'https://www.strava.com/oauth/authorize')
 
     # TODO: figure out if more testing is called for
 
 
-class TestHandleCode(FlaskTestCase):
-
-  # def setUp(self):
-  #   self.mock_stravalib_client = mock_stravalib.Client()
-  
-  # @patch('stravalib.Client', mock_stravalib.Client)
-  @patch('stravalib.Client.get_athlete')
-  @patch('stravalib.Client.exchange_code_for_token')
-  @patch('stravalib.Client.refresh_access_token')
-  def test_strava_oauth_callback(self, mock_refresh_access_token, mock_exchange_code_for_token, mock_get_athlete):
-    # mock_strava_api.get('/activities/{id}', response_update={'id': test_activity_id})
-    # self.mock_stravalib_client.get_token(response_update={''})
-    mock_refresh_access_token.return_value = MOCK_TOKEN
-    mock_exchange_code_for_token.return_value = MOCK_TOKEN
-    mock_get_athlete.return_value = Mock(id=1)
-
+class TestHandleCode(StravaFlaskTestCase):
+  def test_strava_oauth_callback(self):
+    with open('tests/unit_tests/sample_data/exchange_code_for_token.json', 'r') as f:
+      resp_json = json.load(f)
+    self.api_mock.add(
+      responses.POST,
+      'https://www.strava.com/oauth/token',
+      json=resp_json,
+      status=200)
     rv = self.client.get(
       f'{url_for("strava_api.handle_code")}'
       # f'{url_for("strava.handle_code")}'
-      '?code=some_code&scope=read,activity:read_all'
-    )
+      '?code=some_code&scope=read,activity:read_all')
 
     # Since the scope is accepted correctly, the user is redirected
     # to their strava account list. (Should it go to activity list instead?)
@@ -62,10 +51,7 @@ class TestHandleCode(FlaskTestCase):
     # Then, the access token returned by strava is stored in the database.
     acct = db.session.scalars(db.select(StravaImportStorage)).first()  \
       if flag_set('ff_rename') else AdminUser().strava_accounts[0]
-    self.assertEqual(
-      acct.access_token,
-      MOCK_TOKEN['access_token']
-    )
+    self.assertEqual(acct.access_token, resp_json['access_token'])
 
     # TODO, when making user model:
     # # when response is new user, db entry created
@@ -121,27 +107,14 @@ class TestHandleCode(FlaskTestCase):
     pass
 
 
-class TestRevoke(AuthenticatedFlaskTestCase):
-  @patch('stravalib.Client.get_athlete')
-  @patch('stravalib.Client.refresh_access_token')
-  def test_revoke(self, mock_refresh_access_token, mock_get_athlete):
-    mock_get_athlete.return_value = stravalib.model.Athlete(
-      firstname='Aaron', lastname='Schroeder')
-    mock_refresh_access_token.return_value = MOCK_TOKEN
-
-    strava_accts = (
-      db.session.scalars(db.select(StravaImportStorage)).all()
-      if flag_set('ff_rename')
-      else AdminUser().strava_accounts
-    )
-    self.assertEqual(len(strava_accts), 1)
+class TestRevoke(StravaFlaskTestCase):
+  def test_revoke(self):
+    strava_acct = self.create_strava_acct()
 
     response = self.client.get(url_for('strava_api.revoke',
-      id=(
-        strava_accts[0].id if flag_set('ff_rename') 
-        else strava_accts[0].strava_id
-      )))
-
+      id=strava_acct.id if flag_set('ff_rename') 
+        else strava_acct.strava_id
+      ))
     self.assertEqual(response.status_code, 302)
     self.assertEqual(response.location, '/settings/strava')
 

@@ -1,16 +1,12 @@
 import time
-from unittest import skipIf
+from unittest import skip
 
 from selenium.webdriver.common.by import By
 
-from tests import settings
 from .base import AuthenticatedUserFunctionalTest
 
 
-@skipIf(
-  settings.SKIP_STRAVA_OAUTH,
-  'This test would pass were I not locked out of my Strava acct. Skipping.'
-)
+@skip('This test would pass were I not locked out of my Strava acct. Skipping.')
 class TestStravaSave(AuthenticatedUserFunctionalTest):
   def test_can_save_activity(self):
     # The user checks the training log view and sees there are no

@@ -10,11 +10,9 @@ from distilling_flask.util.mock_stravalib import (
   MOCK_TOKEN, 
   BatchedResultsIterator as MockBatchIterator
 )
-from .base import (
-  AuthenticatedFlaskTestCase,
-  FlaskTestCase,
-  LoggedInFlaskTestCase
-)
+from tests.unit_tests.base import FlaskTestCase
+from tests.unit_tests.io_storages.strava.base import StravaFlaskTestCase
+
 
 
 class PagesFunctionalTest:
@@ -60,7 +58,7 @@ class StravaPageTest(unittest.TestCase):
 
 
 @unittest.skip('Needs to be converted to a dash test')
-class TestActivityListLoggedIn(LoggedInFlaskTestCase):
+class TestActivityListLoggedIn(StravaFlaskTestCase):
   def test_redirect_when_no_token(self):
     for account in AdminUser().strava_accounts:
       self.assertFalse(account.has_authorized)
@@ -71,7 +69,7 @@ class TestActivityListLoggedIn(LoggedInFlaskTestCase):
 
 
 @unittest.skip('Needs to be converted to a dash test')
-class TestActivityListAuthorized(AuthenticatedFlaskTestCase):
+class TestActivityListAuthorized(StravaFlaskTestCase):
   # @patch('stravalib.Client', mock_stravalib.Client)
   @patch('stravalib.Client.refresh_access_token')
   @patch('stravalib.Client.get_activities')
@@ -131,7 +129,7 @@ class ListPageTest(FlaskTestCase):
 
 
 @unittest.skip('Needs to be converted to a dash test')
-class SettingsPageTest(LoggedInFlaskTestCase):
+class SettingsPageTest(StravaFlaskTestCase):
 
   def test_settings_page_returns_correct_html(self):
     response = self.client.get('/settings')
@@ -142,7 +140,7 @@ class SettingsPageTest(LoggedInFlaskTestCase):
 
 
 @unittest.skip('Needs to be converted to a dash test')
-class TestManageAccounts(LoggedInFlaskTestCase):
+class TestManageAccounts(StravaFlaskTestCase):
   @patch('stravalib.model.Athlete.stats')
   @patch('stravalib.Client.get_athlete')
   @patch('stravalib.Client.refresh_access_token')

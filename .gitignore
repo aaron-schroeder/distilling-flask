@@ -2,6 +2,7 @@
 *.ipynb
 _wsgi.py
 data/
+*.pickle
 
 # Secrets
 tokens.json

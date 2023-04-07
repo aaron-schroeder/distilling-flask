@@ -7,7 +7,6 @@ from flask import url_for
 import stravalib
 
 from distilling_flask.util import mock_stravalib
-from tests import settings
 from tests.util import get_chromedriver, strava_auth_flow
 
 
@@ -47,14 +46,7 @@ def validate_structure(mocked, actual):
   return True
   
 
-@unittest.skipIf(
-  settings.SKIP_STRAVA_API,
-  'Skipping tests that hit the real strava API server'
-)
-@unittest.skipIf(
-  settings.SKIP_STRAVA_OAUTH,
-  'This test would pass were I not locked out of my Strava acct. Skipping.'
-)
+@unittest('Skipping tests that actually authenticate with Strava')
 class TestResponseFormat(unittest.TestCase):
 
   @classmethod

@@ -79,7 +79,7 @@ class ImportStorage(Storage):
       print(f'{self}: found new key {key}')
 
       data = self.get_data(key)
-      db.session.add(entity_cls(**data))
+      db.session.add(entity_cls(import_storage_id=self.id, **data))
       db.session.commit()  # check if intermediate commits could slow stuff down
 
       # logger.debug(

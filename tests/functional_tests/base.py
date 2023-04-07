@@ -18,8 +18,10 @@ from selenium.webdriver.common.by import By
 from distilling_flask import create_app, db
 from distilling_flask.io_storages.strava.models import StravaImportStorage
 from distilling_flask.util import mock_stravalib
+from distilling_flask.util.feature_flags import flag_set
 from tests.util import get_chromedriver, strava_auth_flow, wait_for_element
-from tests import settings
+if not flag_set('ff_rename'):
+  from tests import settings
 
 
 MAX_WAIT = 20
@@ -51,7 +53,8 @@ class LiveServerTestCase(unittest.TestCase):
 
     self.app = self.create_app()
     self.app.config['STRAVA_API_BACKEND'] = (
-      'distilling_flask.util.mock_stravalib.Client' if settings.SKIP_STRAVA_API 
+      'distilling_flask.util.mock_stravalib.Client' 
+      if not flag_set('ff_rename') and settings.SKIP_STRAVA_API
       else 'stravalib.Client'
     )
     
@@ -80,7 +83,7 @@ class LiveServerTestCase(unittest.TestCase):
     from flask_migrate import upgrade as _upgrade
     _upgrade()
 
-    if settings.SKIP_STRAVA_API:
+    if not flag_set('ff_rename') and settings.SKIP_STRAVA_API:
       # Spoof a StravaAccount that has authorized with strava.
       # This will only be used with mockstravatalk, not the real thing.
       db.session.add(
@@ -108,7 +111,7 @@ class LiveServerTestCase(unittest.TestCase):
     return f'http://localhost:{self._configured_port}'
 
   def _spawn_live_server(self):
-    if not settings.SKIP_STRAVA_API:
+    if not flag_set('ff_rename') and not settings.SKIP_STRAVA_API:
       worker = lambda app, port: app.run(port=port, use_reloader=False)
     else:
       def worker(app, port):
@@ -163,11 +166,14 @@ class FunctionalTest(LiveServerTestCase):
   dummy_password = 'ilovestrava'
 
   def create_app(self):
-    with open('client_secrets.json', 'r') as f:
-      client_secrets = json.load(f)
-    os.environ['STRAVA_CLIENT_ID'] = client_secrets['installed']['client_id']
-    os.environ['STRAVA_CLIENT_SECRET'] = client_secrets['installed']['client_secret']
-    os.environ['PASSWORD'] = self.dummy_password
+    if flag_set('ff_rename'):
+      pass
+    else:
+      with open('client_secrets.json', 'r') as f:
+        client_secrets = json.load(f)
+      os.environ['STRAVA_CLIENT_ID'] = client_secrets['installed']['client_id']
+      os.environ['STRAVA_CLIENT_SECRET'] = client_secrets['installed']['client_secret']
+      os.environ['PASSWORD'] = self.dummy_password
 
     return create_app(config_name='test')
 
@@ -209,7 +215,7 @@ class AuthenticatedUserFunctionalTest(LoggedInFunctionalTest):
 
   def setUp(self):
     super().setUp()
-    if settings.SKIP_STRAVA_API:
+    if not flag_set('ff_rename') and settings.SKIP_STRAVA_API:
       # No need to go through real auth process, since the
       # database is pre-spoofed.
       time.sleep(0.2)

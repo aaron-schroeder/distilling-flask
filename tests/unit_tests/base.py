@@ -12,6 +12,8 @@ BASEDIR = os.path.abspath(os.path.dirname(__file__))
 
 
 class FlaskTestCase(unittest.TestCase):
+  clean_db = True
+
   def setUp(self):
     """
     Refs:
@@ -25,10 +27,12 @@ class FlaskTestCase(unittest.TestCase):
     self.app_context = self.app.app_context()
     self.app_context.push()
     self.client = self.app.test_client(use_cookies=True)
-    db.create_all()
+    if self.clean_db:
+      db.create_all()
 
   def tearDown(self):
     db.session.remove()
-    db.drop_all()
+    if self.clean_db:
+      db.drop_all()
     self.app_context.pop()
     self.test_request_context.pop()

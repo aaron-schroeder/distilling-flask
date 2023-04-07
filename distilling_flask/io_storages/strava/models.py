@@ -1,5 +1,4 @@
 import datetime
-# import enum
 import json
 import os
 import zlib
@@ -11,7 +10,7 @@ import pytz
 from scipy.interpolate import interp1d
 from stravalib.exc import RateLimitExceeded
 
-from distilling_flask import celery, db
+from distilling_flask import db, celery
 from distilling_flask.models import AdminUser
 from distilling_flask.io_storages.base_models import (
   ImportStorage,
@@ -23,19 +22,10 @@ from distilling_flask.util.dataframe import calc_power
 from distilling_flask.util.feature_flags import flag_set
 
 
-# ActivityTypeEnum = enum.Enum('ActivityTypeEnum', 
-#   {f.upper(): f for f in stravalib.model.Activity.TYPES})
-
-
 class StravaStorageMixin:
   access_token = db.Column(db.String())
   refresh_token = db.Column(db.String())
   expires_at = db.Column(db.Integer)
-  # activity_type = db.Column(
-  #   db.Enum(ActivityTypeEnum), 
-  #   default=ActivityTypeEnum.RUN,
-  #   nullable=False
-  # )
 
   def get_client(
     self,
@@ -44,20 +34,20 @@ class StravaStorageMixin:
     client_secret=None,
     validate_connection=False
   ):
-    # access_token = access_token or os.getenv('STRAVA_ACCESS_TOKEN')
     client_id = client_id or os.getenv('STRAVA_CLIENT_ID')
     client_secret = client_secret or os.getenv('STRAVA_CLIENT_SECRET')
-    client = util.get_client()
+      # access_token = access_token or os.getenv('STRAVA_ACCESS_TOKEN')
     if self.token_expired:
-      token = client.refresh_access_token(
-        client_id,
-        client_secret,
-        self.refresh_token
-      )
+      auth_client = util.StravaOauthClient(client_id, client_secret)
+      resp = auth_client.post('/token', refresh_token=self.refresh_token,
+                              grant_type='refresh_token')
+      token = resp.json()
+      # token = client.refresh_access_token(self.refresh_token)
       self.access_token = token['access_token']
       self.refresh_token = token['refresh_token']
       self.expires_at = token['expires_at']
       db.session.commit()
+    client = util.StravaApiClient(client_id, client_secret, self.access_token)
     if validate_connection:
       self.validate_connection(client)
     return client
@@ -68,12 +58,13 @@ class StravaStorageMixin:
     if client is None:
       client = self.get_client()
 
+    # TODO GH48: Handle rate limiting here and wherever else it occurs.
     # logger.debug(f'Test connection to bucket {self.bucket} with prefix {self.prefix}')
-    client.get_activities(limit=5)
+    _ = client.get('/athlete')
 
   @property
   def token_expired(self):
-    return datetime.datetime.utcnow() < datetime.datetime.utcfromtimestamp(self.expires_at)
+    return datetime.datetime.utcnow() > datetime.datetime.utcfromtimestamp(self.expires_at)
 
 
 class StravaImportStorage(StravaStorageMixin, ImportStorage):
@@ -91,12 +82,24 @@ class StravaImportStorage(StravaStorageMixin, ImportStorage):
 
   def iterkeys(self):
     client = self.get_client()
-    for activity in client.get_activities():
-      yield activity.id
-      # if self.activity_type and activity.type != self.activity_type:
-      #   # logger.debug(
-      #   print(key + ' is skipped because it is not a ' + activity_type)
-      #   continue
+    page = 1
+    while True:
+      # TODO GH48
+      resp = client.get('/athlete/activities', page=page, per_page=200)
+
+      # TODO (GH??): Bring the following functionality into the package.
+      # Response pickling lets any user record sample responses for 
+      # their own strava interactions:
+      # import pickle
+      # with open('resp.pickle', 'wb') as f:
+      #   pickle.dump(resp, f)
+
+      if len(activity_list := resp.json()) and isinstance(activity_list, list):
+        for activity_summary in activity_list:
+          yield activity_summary['id']
+        page += 1
+      else:
+        break
 
   def scan_and_create_entities(self):
     return self._scan_and_create_entities(StravaApiActivity)
@@ -104,43 +107,28 @@ class StravaImportStorage(StravaStorageMixin, ImportStorage):
   def get_data(self, key):
     """
     `key` refers to Strava activity ID here.
-
-    NOTE: I just want raw responses. Can Stravalib do that?
-    Or should I throw stravalib out and interface with/test
-    the Strava API directly?? It now seems like stravalib
-    implements abstractions that I don't really want to take
-    advantage of anymore.
-    
-    Big decision though; TBD.
-
-    Follow-up: I think Stravalib will still be useful for convenience methods
-    like refresh_access_token, as well as (potentially) providing a
-    smoother interface for data I load from a stored doc.
     """
-    client = self.get_client()
-    summary_data = client.protocol.get(
-      '/activities/{id}',
-      id=key,
-      # include_all_efforts=include_all_efforts,
-    )
     data = dict(
       created=datetime.datetime.utcnow(),  
       # # ngp_ms=ngp_scalar,
     )
     data['key' if flag_set('ff_rename') else 'strava_id'] = key  # summary_data['id'] too
-    data['import_storage_id' if flag_set('ff_rename') else 'strava_acct_id'] = self.id
     
+    client = self.get_client()
+    # TODO GH48
+    summary_resp = client.get(f'/activities/{key}', include_all_efforts=True)
+    summary_data = summary_resp.json()
     if flag_set('ff_rename'):
       # activity_summary = client.get_activity(key)
       # summary_data = activity_summary.to_dict()
       # data['summary'] = json.dumps(summary_data).encode('utf-8')
       data['summary_compressed'] = zlib.compress(json.dumps(summary_data).encode('utf-8'))
 
-      # Not working yet
-      stream_data = client.protocol.get(
+      # TODO GH48
+      stream_resp = client.get(
         f'/activities/{key}/streams/time,latlng,distance,altitude,'
-        f'velocity_smooth,heartrate,cadence,watts,temp,moving,grade_smooth',
-      )
+        f'velocity_smooth,heartrate,cadence,watts,temp,moving,grade_smooth')
+      stream_data = stream_resp.json()
       # data['streams'] = json.dumps(stream_data).encode('utf-8')
       data['streams_compressed'] = zlib.compress(json.dumps(stream_data).encode('utf-8'))
     else:
@@ -193,7 +181,7 @@ class StravaImportStorage(StravaStorageMixin, ImportStorage):
 
   @property
   def url(self):
-    return f'https://www.strava.com/athletes/{self.strava_id}'
+    return f'https://www.strava.com/athletes/{self.id if flag_set("ff_rename") else self.strava_id}'
 
 
 class StravaApiActivity(ImportStorageEntity):
@@ -381,7 +369,6 @@ class StravaApiActivity(ImportStorageEntity):
 
   def __repr__(self):
       return '<Activity {}>'.format(self.id)
-
 
 if flag_set('ff_rename'):
 
