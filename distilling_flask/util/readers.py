@@ -28,10 +28,13 @@ def from_strava_streams(streams):
       as returned by `stravalib.Client.get_activity_streams()`.
 
   """
-  if not flag_set('ff_rename'):
-    streams = {key: stream.data for key, stream in streams.items()}
+  if flag_set('ff_rename'):
+    stream_data = {s['type']: s['data'] for s in streams}
+  else:
+    stream_data = {key: stream.data for key, stream in streams.items()}
 
-  df = pd.DataFrame.from_dict(streams)
+  # print(streams)
+  df = pd.DataFrame(stream_data)
 
   # Rename streams to standard names if they are there, ignore if not.
   df = df.rename(columns=dict(

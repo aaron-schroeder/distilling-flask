@@ -12,13 +12,14 @@ import pandas as pd
 from scipy.interpolate import interp1d
 from stravalib.exc import RateLimitExceeded
 
-from distilling_flask.models import AdminUser
+from distilling_flask.models import AdminUser, UserSettings
 from distilling_flask.plotlydash.figure_layout import (
   LAT, LON, ELEVATION, GRADE, SPEED, CADENCE, HEARTRATE, POWER,
   AXIS_LAYOUT, TRACE_LAYOUT
 )
 from distilling_flask.plotlydash.plots import Plotter
 from distilling_flask.util import labels, power, units
+from distilling_flask.util.feature_flags import flag_set
 
 
 MAP_ID = 'map'
@@ -791,7 +792,8 @@ class StatsDivAIO(dbc.Accordion):
         dbc.AccordionItem(
           TssDivAIO(
             aio_id=aio_id,
-            ftp=AdminUser().settings.ftp_ms,
+            ftp=float(str(UserSettings.cp_ms.server_default.arg))
+                if flag_set('ff_rename') else AdminUser().settings.ftp_ms,
             ngp=ngp_ms,
             total_time=df['time'].iloc[-1]-df['time'].iloc[0]
           ),
@@ -959,7 +961,7 @@ class StravaAccountRow(dbc.Row):
                         className='d-flex pt-1',
                         children=[
                           dbc.Button(
-                            href=f'/strava/activities?id={strava_account.strava_id}',
+                            href=f'/saved/activities?id={strava_account.strava_id}',
                             color='primary',
                             class_name='me-1 flex-grow-1',
                             external_link=True,

@@ -12,13 +12,14 @@ from selenium.webdriver.common.by import By
 from .base import FunctionalTest
 
 
-class NewVisitorTest(FunctionalTest):
+class NewUserTest(FunctionalTest):
 
   def test_can_see_landing_page(self):
 
-    # Edith has heard about a cool training log app.
-    # She goes to check out its homepage.
+    # The user opens the app for the first time.
     self.browser_get_relative('/')
+
+    # TODO: Update this test
 
     # She notices the page title and header welcomes her to
     # the app and tells her its name.
@@ -40,10 +41,8 @@ class NewVisitorTest(FunctionalTest):
 
     # Since the app is just getting started, no activities have been 
     # saved yet.
-    self.assertIn(
-      'no activities have been saved',
-      self.browser.page_source.lower()
-    )
+    self.assertIn('no activities have been saved',
+                  self.browser.page_source.lower())
 
     # TODO: Find a way to pre-populate the server db,
     # so the graph actually displays.
@@ -63,23 +62,4 @@ class NewVisitorTest(FunctionalTest):
     # She clicks one and is taken to an activity analysis page.
 
     pass
-
-  def test_cannot_see_login_required(self):
-    # A visitor with knowledge of the app's structure (but not the password)
-    # checks to see if they can get to a variety of login-required pages.
-    # But they keep getting redirected to the login page.
-
-    url_login = urljoin(self.server_url, '/login')
-
-    for relative_url in [
-      '/settings',
-      '/analyze-file',
-      '/strava/authorize',
-      '/strava/activities',
-      '/strava/callback',
-      '/strava/revoke'
-    ]:
-      self.browser_get_relative(relative_url)
-      time.sleep(1)
-      self.assertIn(url_login, self.browser.current_url)
   

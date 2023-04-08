@@ -19,98 +19,60 @@ PAGE_SIZE = 25
 
 
 def layout(**url_queries):
+  strava_accts = db.session.scalars(db.select(StravaImportStorage)).all()
+  style_data_conditional = [{'if': {'row_index': 'odd'}, 'opacity': '0.8'}] + [
+    {'if': {'filter_query': f'{{import_storage_id}} = {strava_acct.id}'},
+     'backgroundColor': COLORS['USERS'][i]}
+    for i, strava_acct in enumerate(strava_accts)]
+  import_storage_id_options = [acct.id for acct in strava_accts] + [None]
 
-  style_data_conditional = [
-    {
-      'if': {'row_index': 'odd'},
-      'opacity': '0.8',
-    }
-  ]
-  style_data_conditional.extend([
-    {
-      'if': {'filter_query': f'{{import_storage_id}} = {strava_acct.id}'},
-      'backgroundColor': COLORS['USERS'][i]
-    }
-    for i, strava_acct in enumerate(StravaImportStorage.query.all()) 
-  ])
-
-  out = dbc.Container(
-    [
-      html.H1('Strava API Activities'),
-      dbc.Form(
-        [
-          dbc.Label('Which activities to keep in the case of overlap?'),
-          dbc.RadioItems(
-            id='overlap-choice',
-            options=[
-              {'label': 'Existing', 'value': 'existing'},
-              {'label': 'Incoming', 'value': 'incoming', 'disabled': True},
-              {'label': 'Both', 'value': 'both', 'disabled': True}
-            ],
-            value='existing',
-            inline=True
-          ),
-          dbc.Checklist(
-            id='save-options',
-            options=[
-              {
-                'label': 'Save walks and hikes as runs?',
-                'value': 'add-walks',
-                'disabled': True,
-              },
-              # {
-              #   'label': 'Add bike rides?',
-              #   'value': 'add-rides',
-              #   'disabled': True,
-              # },
-            ],
-            value=['add-walks'],
-          ),
-          dbc.Button(
-            'Sync',
-            id='save-all',
-            type='submit',
-            class_name='me-2',
-            # disabled=True,
-          ),
-        ],
-        class_name='my-4'
-      ),
-
-      dash_table.DataTable(
-        id='datatable-saved',
-        cell_selectable=False,
-        page_current=0,
-        page_size=int(url_queries.get('limit', PAGE_SIZE)),
-        page_action='custom',
-        sort_action='custom',
-        # sort_mode='multi',
-        # filter_action='custom',
-        # filter_query='',
-        style_table={'overflowX': 'auto'},
-        css=[dict(selector= 'p', rule= 'margin: 0')],
-        style_cell={
-          'textAlign': 'right',
-          'padding-right': '30px', 
-        },
-        style_cell_conditional=[{
-          'if': {'column_id': ['Sport', 'Date', 'Title']},
-          'textAlign': 'left'
-        }],
-        style_data={
-          'whiteSpace': 'normal',
-          'height': 'auto',
-        },
-        style_data_conditional=style_data_conditional,
-        style_as_list_view=True,
-        markdown_options={'link_target': '_self'}
-      )
-    ],
-    id='dash-container',
-    fluid=True,
-  )
-
-  return out
+  return dbc.Container(id='dash-container', fluid=True, children=[
+    html.H1('Strava API Activities'),
+    dbc.Row([
+      dbc.Col(dcc.Dropdown(import_storage_id_options, 
+                            url_queries.get('id', None) or import_storage_id_options[0],
+                            id='import-storage-id', placeholder='null',
+                            searchable=False)),
+      dbc.Col(dbc.Form(class_name='my-4', children=[
+        dbc.Label('Which activities to keep in the case of overlap?'),
+        dbc.RadioItems(
+          id='overlap-choice',
+          options=[
+            {'label': 'Existing', 'value': 'existing'},
+            {'label': 'Incoming', 'value': 'incoming', 'disabled': True},
+            {'label': 'Both', 'value': 'both', 'disabled': True}
+          ],
+          value='existing',
+          inline=True
+        ),
+        dbc.Checklist(id='save-options', 
+                      options=[
+                        {'label': 'Save walks and hikes as runs?',
+                          'value': 'add-walks', 'disabled': True},
+                        # {'label': 'Add bike rides?', 'value': 'add-rides',
+                        #  'disabled': True},
+                      ],
+                      value=['add-walks']),
+        dbc.Button('Sync', id='save-all', type='submit',
+                   class_name='me-2')]))]),
+    dash_table.DataTable(id='datatable-saved', cell_selectable=False,
+      page_current=0, page_size=int(url_queries.get('limit', PAGE_SIZE)),
+      page_action='custom', sort_action='custom',
+      # sort_mode='multi',
+      # filter_action='custom',
+      # filter_query='',
+      style_table={'overflowX': 'auto'},
+      css=[dict(selector= 'p', rule= 'margin: 0')],
+      style_cell={'textAlign': 'right',
+                  'padding-right': '30px'},
+      style_cell_conditional=[{
+        'if': {'column_id': ['Sport', 'Date', 'Title']},
+        'textAlign': 'left'}],
+      style_data={'whiteSpace': 'normal',
+                  'height': 'auto'},
+      style_data_conditional=style_data_conditional,
+      style_as_list_view=True,
+      markdown_options={'link_target': '_self'})])
 
 
 @dash.callback(
@@ -121,18 +83,26 @@ def layout(**url_queries):
   Input('datatable-saved', 'page_size'),
   Input('datatable-saved', 'sort_by'),
   Input('save-all', 'n_clicks'),
+  Input('import-storage-id', 'value'),
   State('overlap-choice', 'value')
 )
-def update_table(page_current, page_size, sort_by, n_clicks, overlap_choice):
+def update_table(page_current, page_size, sort_by, n_clicks, import_storage_id, overlap_choice):
   # if not ctx.triggered_id:
     # raise PreventUpdate
+
+  if ctx.triggered_id == 'import-storage-id':
+    # The table's data needs to change.
+    pass
 
   # First, sync the db if requested.
   if ctx.triggered_id == 'save-all':
     # TODO: Display an animation or flash a message like:
     # flash('Activities will be added in the background.')
-    for storage in db.session.scalars(db.select(StravaImportStorage)).all():
+    if (storage := db.session.get(StravaImportStorage, import_storage_id)):
       storage.sync()
+    
+    # for storage in db.session.scalars(db.select(StravaImportStorage)).all():
+    #   storage.sync()
 
   order_by_args = []
   if (
@@ -150,11 +120,10 @@ def update_table(page_current, page_size, sort_by, n_clicks, overlap_choice):
   # order_by_args.append(StravaApiActivity.recorded.desc())
   order_by_args.append(StravaApiActivity.created.desc())
 
-  page = db.paginate(
-    db.select(StravaApiActivity).order_by(*order_by_args),
-    page=page_current + 1,
-    per_page=page_size
-  )
+  page = db.paginate(db.select(StravaApiActivity)  \
+                       .filter_by(import_storage_id=import_storage_id)  \
+                       .order_by(*order_by_args),
+                     page=page_current + 1, per_page=page_size)
 
   if page.total == 0:
     return ([], [], 0)
@@ -163,7 +132,6 @@ def update_table(page_current, page_size, sort_by, n_clicks, overlap_choice):
     {
       'id': activity.id,
       'key': activity.key,
-      'import_storage_id': activity.import_storage_id,
       # Pretty titles based on properties
       'Sport': 'Run*',
       'Date': activity.recorded,
@@ -180,7 +148,7 @@ def update_table(page_current, page_size, sort_by, n_clicks, overlap_choice):
       # ))
     }
     for activity in page
-  ]).dropna(axis=1)
+  ]) # .dropna(axis=1)
 
   if dfs.dtypes['Date'] == 'datetime64[ns]':
     dfs['Date'] = dfs['Date'].dt.strftime(date_format='%a, %m/%d/%Y %H:%M:%S')
@@ -188,7 +156,7 @@ def update_table(page_current, page_size, sort_by, n_clicks, overlap_choice):
     dfs['Distance'] = dfs['Distance'].apply(lambda meters: f'{meters/units.M_PER_MI:.2f} mi')
   if 'Elevation' in dfs.columns:
     dfs['Elevation'] = dfs['Elevation'].apply(lambda meters: f'{meters*units.FT_PER_M:.0f} ft')
-  if 'TSS' in dfs.columns:
+  if 'TSS' in dfs.columns and dfs.dtypes['TSS'] == 'float':
     dfs['TSS'] = dfs['TSS'].apply(lambda tss: f'{tss:.1f}')
   # eg "Sat, 12/31/2022 20:10:00"
 

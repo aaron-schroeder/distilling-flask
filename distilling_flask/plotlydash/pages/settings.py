@@ -18,7 +18,7 @@ def load_user_settings():
   if flag_set('ff_rename'):
     return UserSettings(cp_ms=float(str(UserSettings.cp_ms.server_default.arg)))
   else:
-    return db.session.execute(db.select(UserSettings)).scalar_one()
+    return db.session.scalars(db.select(UserSettings)).first()
   
 
 def layout(**_):
